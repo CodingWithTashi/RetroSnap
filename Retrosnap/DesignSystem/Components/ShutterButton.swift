@@ -7,6 +7,8 @@ struct ShutterButton: View {
     var isPosed = false
     var isDimmed = false
     let label: String
+    /// Called as a finger comes down on the button.
+    var onPress: () -> Void = {}
     let action: () -> Void
 
     private var innerSize: CGFloat {
@@ -34,7 +36,7 @@ struct ShutterButton: View {
                 .overlay { Circle().strokeBorder(RSColor.amber, lineWidth: 4) }
                 .contentShape(Circle())
         }
-        .buttonStyle(PressScaleStyle(scale: 0.92))
+        .buttonStyle(PressScaleStyle(scale: 0.92, onPress: onPress))
         .opacity(isDimmed ? 0.35 : 1)
         .accessibilityLabel(label)
     }

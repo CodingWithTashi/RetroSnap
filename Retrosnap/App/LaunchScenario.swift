@@ -1,3 +1,4 @@
+#if DEBUG
 import Foundation
 
 /// Launch arguments that open the app in any designed state, mirroring the prototype's props.
@@ -7,6 +8,7 @@ import Foundation
 ///     -rsScreen gallery -rsVariant empty
 ///     -rsScreen camera -rsCamera inst -rsSheet 1
 ///     -rsScenario returning
+///     -rsLive fresh
 nonisolated struct LaunchScenario: Equatable, Sendable {
     enum Screen: String, Sendable {
         case welcome, how, permCam, permLib
@@ -18,6 +20,14 @@ nonisolated struct LaunchScenario: Equatable, Sendable {
     enum Variant: String, Sendable {
         case capture, saved, processing, recording, videoMode, video
         case denied, unavailable, libDenied, lowStorage, empty
+    }
+
+    /// What the live services start from when a launch asks for them where mocks would run.
+    enum LiveData: String, Sendable {
+        /// Whatever earlier launches saved.
+        case kept = "1"
+        /// Nothing: saved settings and photos are wiped first.
+        case fresh
     }
 
     var screen: Screen?
@@ -33,6 +43,10 @@ nonisolated struct LaunchScenario: Equatable, Sendable {
     var reviewRule = CaptureReviewRule.first
     /// Skip onboarding and open on the camera with no prompts.
     var isReturningUser = false
+    /// Run the live services, for checking in the simulator what otherwise needs a device.
+    var liveData: LiveData?
+    /// Any scenario argument was passed.
+    private var isScripted = false
 
     init() {}
 
@@ -57,6 +71,13 @@ nonisolated struct LaunchScenario: Equatable, Sendable {
         selector = value("-rsSelector").flatMap(CameraSelectorStyle.init(rawValue:)) ?? .strip
         reviewRule = value("-rsAfterCapture").flatMap(CaptureReviewRule.init(rawValue:)) ?? .first
         isReturningUser = value("-rsScenario") == "returning"
+        liveData = value("-rsLive").flatMap(LiveData.init(rawValue:))
+        isScripted = arguments.contains { $0.hasPrefix("-rs") }
+    }
+
+    /// A device runs the live services. The simulator and every scenario stay on mocks unless `-rsLive` says otherwise.
+    func runsLive(onSimulator: Bool) -> Bool {
+        liveData != nil || (!onSimulator && !isScripted)
     }
 
     var config: AppConfig {
@@ -109,3 +130,4 @@ nonisolated struct LaunchScenario: Equatable, Sendable {
         return adjustments
     }
 }
+#endif

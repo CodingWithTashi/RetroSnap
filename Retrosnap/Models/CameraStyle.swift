@@ -1,7 +1,7 @@
 import Foundation
 
 /// The five cameras. Raw values are the ids used by the design prototype.
-nonisolated enum CameraStyle: String, CaseIterable, Identifiable, Hashable, Sendable {
+nonisolated enum CameraStyle: String, CaseIterable, Identifiable, Hashable, Sendable, Codable {
     case film
     case disposable = "disp"
     case instant = "inst"

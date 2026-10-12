@@ -1,5 +1,47 @@
 import SwiftUI
 
+/// The text burned into a photo, laid out in the photo's box: the orange date bottom right, or the tape overlay.
+/// Sizes follow the CSS: max(9px, N cqw) of the photo box width; insets are fractions of the box.
+struct PhotoStampView: View {
+    let text: PhotoStampText
+    let kind: LookStamp
+    let size: CGSize
+    /// Insets as a fraction of the photo's height.
+    var bottomInset: CGFloat = 0.05
+    var topInset: CGFloat = 0.05
+
+    var body: some View {
+        switch kind {
+        case .none:
+            EmptyView()
+        case .date:
+            DateStampView(text: text.date, size: max(9, size.width * 0.075))
+                .padding(.trailing, size.width * 0.06)
+                .padding(.bottom, size.height * bottomInset)
+                .frame(width: size.width, height: size.height, alignment: .bottomTrailing)
+        case .vhs:
+            let small = max(9, size.width * 0.065)
+            ZStack {
+                TapePlayLabel(size: max(9, size.width * 0.07))
+                    .padding(.leading, size.width * 0.06)
+                    .padding(.top, size.height * topInset)
+                    .frame(width: size.width, height: size.height, alignment: .topLeading)
+                TapeText {
+                    HStack {
+                        Text(text.tapeDate)
+                        Spacer(minLength: 0)
+                        Text(text.tapeTime)
+                    }
+                    .font(RSFont.stamp(small))
+                }
+                .padding(.horizontal, size.width * 0.06)
+                .padding(.bottom, size.height * bottomInset)
+                .frame(width: size.width, height: size.height, alignment: .bottom)
+            }
+        }
+    }
+}
+
 /// The orange date in the corner: VT323 with a soft glow.
 struct DateStampView: View {
     let text: String

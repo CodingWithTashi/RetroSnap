@@ -1,15 +1,15 @@
 import SwiftUI
 
+/// The red, green and blue of a `0xRRGGBB` literal, each from 0 to 1.
+nonisolated func rgbComponents(hex: UInt32) -> (red: Double, green: Double, blue: Double) {
+    (Double((hex >> 16) & 0xFF) / 255, Double((hex >> 8) & 0xFF) / 255, Double(hex & 0xFF) / 255)
+}
+
 extension Color {
     /// An sRGB colour from a `0xRRGGBB` literal, as written in the design files.
     nonisolated init(hex: UInt32, opacity: Double = 1) {
-        self.init(
-            .sRGB,
-            red: Double((hex >> 16) & 0xFF) / 255,
-            green: Double((hex >> 8) & 0xFF) / 255,
-            blue: Double(hex & 0xFF) / 255,
-            opacity: opacity
-        )
+        let rgb = rgbComponents(hex: hex)
+        self.init(.sRGB, red: rgb.red, green: rgb.green, blue: rgb.blue, opacity: opacity)
     }
 }
 
@@ -37,7 +37,8 @@ nonisolated enum RSColor {
     static let hairline = Color(hex: 0xF4EEE6, opacity: 0.07)
 
     // Prints
-    static let printFrame = Color(hex: 0xF7F3EC)
+    static let printFrameHex: UInt32 = 0xF7F3EC
+    static let printFrame = Color(hex: printFrameHex)
     static let printPaper = Color(hex: 0xFBF8F2)
     static let photoBacking = Color(hex: 0x1A1714)
     static let stamp = Color(hex: 0xFF8A2A)

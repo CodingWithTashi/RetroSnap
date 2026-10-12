@@ -67,6 +67,55 @@ nonisolated enum CollageBorder: String, CaseIterable, Identifiable, Hashable, Se
     }
 }
 
+/// A collage as arranged: the layout, the frame, and the photos in cell order.
+nonisolated struct Collage: Hashable, Sendable {
+    var template: CollageTemplate
+    var border: CollageBorder
+    var photos: [Photo]
+}
+
+/// Where everything sits in a collage, in points, measured from the top-left corner.
+/// The Arrange screen and the saved picture are both drawn from it.
+nonisolated struct CollageLayout: Hashable, Sendable {
+    /// How many pixels of the saved picture make one point of the frame on screen.
+    static let pixelsPerPoint: CGFloat = 10
+
+    let template: CollageTemplate
+    let border: CollageBorder
+
+    var frameSize: CGSize {
+        template == .strip ? CGSize(width: 170, height: 170 * 2.7) : CGSize(width: 300, height: 400)
+    }
+
+    /// Border thickness around the whole collage.
+    var inset: CGFloat {
+        border == .none ? 0 : 10
+    }
+
+    /// Half the gutter between photos.
+    var gap: CGFloat {
+        border == .none ? 0 : 4
+    }
+
+    /// Each photo's cell inside the frame's border.
+    var photoCells: [CGRect] {
+        let inner = CGSize(width: frameSize.width - inset * 2, height: frameSize.height - inset * 2)
+        return Self.cells(of: template, in: inner, gap: gap).map { $0.offsetBy(dx: inset, dy: inset) }
+    }
+
+    /// A template's cells laid out in a box: percentages of the box, each inset by `gap` on every side.
+    static func cells(of template: CollageTemplate, in size: CGSize, gap: CGFloat) -> [CGRect] {
+        template.cells.map { cell in
+            CGRect(
+                x: size.width * cell.minX / 100 + gap,
+                y: size.height * cell.minY / 100 + gap,
+                width: max(0, size.width * cell.width / 100 - gap * 2),
+                height: max(0, size.height * cell.height / 100 - gap * 2)
+            )
+        }
+    }
+}
+
 nonisolated enum CollageStep: Int, Hashable, Sendable {
     case layout = 1
     case pick

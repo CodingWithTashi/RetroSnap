@@ -48,7 +48,7 @@ struct CameraCarouselView: View {
             viewModel.pickFromCarousel(camera)
         } label: {
             VStack(alignment: .leading, spacing: 14) {
-                PhotoLookView(image: camera.sample, camera: camera, stamp: stamp)
+                PhotoLookView(image: .sample(camera.sample), camera: camera, stamp: stamp)
                     .frame(height: 380)
                     .clipShape(RoundedRectangle(cornerRadius: 18))
                 HStack(spacing: 10) {

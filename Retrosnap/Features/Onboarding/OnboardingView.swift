@@ -34,7 +34,7 @@ struct WelcomeView: View {
     var body: some View {
         ZStack(alignment: .top) {
             RSColor.ink
-            PhotoLookView(image: .welcomeHero, camera: .film, stamp: stamp, stampBottom: 0.22)
+            PhotoLookView(image: .sample(.welcomeHero), camera: .film, stamp: stamp, stampBottom: 0.22)
                 .frame(height: 560)
                 .overlay(alignment: .bottom) {
                     LinearGradient(colors: [RSColor.ink(0), RSColor.ink], startPoint: .top, endPoint: .bottom)
@@ -115,7 +115,7 @@ struct HowItWorksView: View {
                         }
                 }
                 StepCard(number: 3, title: "Get the vintage look", detail: "Saved to Photos automatically.") {
-                    PhotoLookView(image: .tile(1016), camera: .film, stamp: stamp)
+                    PhotoLookView(image: .sample(.tile(1016)), camera: .film, stamp: stamp)
                 }
             }
             .padding(.top, 28)
@@ -140,7 +140,7 @@ struct HowItWorksView: View {
         ]
         return LazyVGrid(columns: [GridItem(.fixed(47.5), spacing: 3), GridItem(.fixed(47.5))], spacing: 3) {
             ForEach(cells, id: \.0) { cell in
-                PhotoLookView(image: .tile(cell.0), camera: cell.1)
+                PhotoLookView(image: .sample(.tile(cell.0)), camera: cell.1)
                     .frame(width: 47.5, height: 47.5)
                     .clipShape(cell.2)
             }

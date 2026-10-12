@@ -15,10 +15,14 @@ nonisolated struct PermissionContent: Hashable, Sendable {
 final class OnboardingViewModel {
     @ObservationIgnored private let router: AppRouter
     @ObservationIgnored private let permissions: any PermissionServicing
+    @ObservationIgnored private let settings: any SettingsStoring
+    /// A system prompt is up; the buttons wait for its answer.
+    @ObservationIgnored private var isAsking = false
 
-    init(router: AppRouter, permissions: any PermissionServicing) {
+    init(router: AppRouter, permissions: any PermissionServicing, settings: any SettingsStoring) {
         self.router = router
         self.permissions = permissions
+        self.settings = settings
     }
 
     private var step: OnboardingStep? {
@@ -33,13 +37,20 @@ final class OnboardingViewModel {
 
     /// The amber button on a permission screen.
     func allowTapped() {
+        guard !isAsking else { return }
         switch step {
         case .cameraPermission:
-            permissions.requestCameraAccess()
-            router.advanceOnboarding()
+            isAsking = true
+            permissions.requestCameraAccess { [weak self] in
+                self?.isAsking = false
+                self?.router.advanceOnboarding()
+            }
         case .photosPermission:
-            permissions.requestPhotoLibraryAccess()
-            router.finishOnboarding()
+            isAsking = true
+            permissions.requestPhotoLibraryAccess { [weak self] in
+                self?.isAsking = false
+                self?.finish()
+            }
         default:
             break
         }
@@ -47,8 +58,14 @@ final class OnboardingViewModel {
 
     /// "Not now" on the Photos screen: the camera still opens, photos stay inside the app.
     func notNowTapped() {
-        guard step == .photosPermission else { return }
+        guard step == .photosPermission, !isAsking else { return }
         permissions.declinePhotoLibraryAccess()
+        finish()
+    }
+
+    /// Opens the camera and remembers it, so onboarding is shown only once.
+    private func finish() {
+        settings.hasCompletedOnboarding = true
         router.finishOnboarding()
     }
 

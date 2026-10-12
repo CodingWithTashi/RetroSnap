@@ -3,6 +3,7 @@ import SwiftUI
 /// The app's single window: onboarding, then one `NavigationStack` rooted on the camera, with the toast above both.
 struct RootView: View {
     let app: AppDependencies
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         @Bindable var router = app.router
@@ -11,10 +12,16 @@ struct RootView: View {
                 RSColor.ink.ignoresSafeArea()
                 switch app.router.root {
                 case .onboarding(let step):
-                    OnboardingView(step: step, viewModel: app.onboarding, stamp: app.dayLabeler.stamp(for: app.clock.now))
+                    OnboardingView(step: step, viewModel: app.onboarding, stamp: app.dayLabeler.stamp(for: app.services.clock.now))
                 case .camera:
                     NavigationStack(path: $router.path) {
-                        CameraView(viewModel: app.cameraViewModel, stamp: app.dayLabeler.stamp(for: app.clock.now))
+                        // The viewfinder's stamp shows the time, so it is redrawn as the minute turns.
+                        TimelineView(.everyMinute) { _ in
+                            CameraView(
+                                viewModel: app.cameraViewModel, stamp: app.dayLabeler.stamp(for: app.services.clock.now),
+                                shotFrames: app.services.shotPreview
+                            )
+                        }
                             .background(PopGestureDisabler())
                             .toolbar(.hidden, for: .navigationBar)
                             .navigationDestination(for: Route.self) { route in
@@ -29,6 +36,13 @@ struct RootView: View {
             }
             .animation(.easeInOut(duration: 0.3), value: app.router.root)
         }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                app.cameraViewModel.becameActive()
+            }
+        }
+        .environment(\.photoImageLoader, app.services.imageLoader)
+        .environment(\.liveFrames, app.services.viewfinder)
         .preferredColorScheme(.dark)
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
     }
@@ -52,7 +66,7 @@ struct RootView: View {
             SettingsView(viewModel: app.makeSettingsViewModel())
         case .cameraCarousel:
             CameraCarouselView(
-                viewModel: app.cameraViewModel, stamp: app.dayLabeler.stamp(for: app.clock.now),
+                viewModel: app.cameraViewModel, stamp: app.dayLabeler.stamp(for: app.services.clock.now),
                 onClose: app.router.returnToCamera
             )
         }

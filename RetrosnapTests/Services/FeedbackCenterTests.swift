@@ -33,4 +33,27 @@ struct FeedbackCenterTests {
         #expect(spy.haptics == [.soft])
         #expect(spy.clicks == 0)
     }
+
+    @Test func hapticsAndTheClickAreMadeReadyAhead() {
+        feedback.prepare(click: true)
+        #expect(spy.hapticPrepareCount == 1)
+        #expect(spy.clickPrepareCount == 1)
+    }
+
+    @Test func theClickIsLeftAloneWhenNoneWillFollow() {
+        feedback.prepare(click: false)
+        #expect(spy.hapticPrepareCount == 1)
+        #expect(spy.clickPrepareCount == 0)
+    }
+
+    @Test func nothingIsMadeReadyForWhatIsTurnedOff() {
+        settings.haptics = false
+        feedback.prepare(click: true)
+        #expect(spy.hapticPrepareCount == 0)
+        #expect(spy.clickPrepareCount == 1)
+
+        settings.shutterSound = false
+        feedback.prepare(click: true)
+        #expect(spy.clickPrepareCount == 1)
+    }
 }

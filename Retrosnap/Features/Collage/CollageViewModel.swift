@@ -14,27 +14,41 @@ final class CollageViewModel {
     private(set) var border = CollageBorder.cream
 
     @ObservationIgnored private let photos: any PhotoStoring
+    @ObservationIgnored private let exporter: any PhotoExporting
+    @ObservationIgnored private let saver: PhotosSaver
+    @ObservationIgnored private let sharing: any PhotoSharing
     @ObservationIgnored private let router: AppRouter
     @ObservationIgnored private let toasts: ToastCenter
     @ObservationIgnored private let feedback: FeedbackCenter
+    /// The collage is being baked.
+    @ObservationIgnored private var isSaving = false
 
-    /// - Parameter startStep: Opens straight on a later step, for the design's Arrange board.
+    /// - Parameters:
+    ///   - startStep: Opens straight on a later step, for the design's Arrange board.
+    ///   - boardPicks: The photos that board shows as already picked.
     init(
         seedID: Photo.ID?,
         photos: any PhotoStoring,
+        exporter: any PhotoExporting,
+        saver: PhotosSaver,
+        sharing: any PhotoSharing,
         router: AppRouter,
         toasts: ToastCenter,
         feedback: FeedbackCenter,
-        startStep: Int = 1
+        startStep: Int = 1,
+        boardPicks: [Photo.ID] = []
     ) {
         self.photos = photos
+        self.exporter = exporter
+        self.saver = saver
+        self.sharing = sharing
         self.router = router
         self.toasts = toasts
         self.feedback = feedback
         let start = CollageStep(rawValue: startStep) ?? .layout
         step = start
         if start != .layout {
-            pickedIDs = ["s1", "s3", "s2"].filter { photos.photo(id: $0) != nil }
+            pickedIDs = boardPicks.filter { photos.photo(id: $0) != nil }
         } else if let seed = seedID.flatMap(photos.photo(id:)), !seed.isVideo {
             // The photo you came from is already chosen. Clips cannot go in a collage.
             pickedIDs = [seed.id]
@@ -126,22 +140,31 @@ final class CollageViewModel {
         border = newBorder
     }
 
+    private var layout: CollageLayout {
+        CollageLayout(template: template, border: border)
+    }
+
     var frameSize: CGSize {
-        template == .strip ? CGSize(width: 170, height: 170 * 2.7) : CGSize(width: 300, height: 400)
+        layout.frameSize
     }
 
     /// Border thickness around the whole collage.
     var frameInset: CGFloat {
-        border == .none ? 0 : 10
+        layout.inset
     }
 
     /// Half the gutter between photos.
     var cellGap: CGFloat {
-        border == .none ? 0 : 4
+        layout.gap
+    }
+
+    /// The collage as it stands on the Arrange step.
+    private var collage: Collage {
+        Collage(template: template, border: border, photos: arrangedPhotos)
     }
 
     func shareTapped() {
-        toasts.show("Share sheet opens here")
+        sharing.share(collage)
     }
 
     // MARK: Moving between steps
@@ -155,9 +178,26 @@ final class CollageViewModel {
             swapSelection = nil
             step = .arrange
         case .arrange:
-            feedback.haptic(.firm)
+            save()
+        }
+    }
+
+    /// Bakes the collage into one picture, files it in the library like a shot, and goes back to the gallery.
+    private func save() {
+        guard !isSaving else { return }
+        feedback.haptic(.firm)
+        isSaving = true
+        exporter.makeCollage(collage) { [weak self] made in
+            guard let self else { return }
+            isSaving = false
+            guard let made else {
+                toasts.show("Couldn’t save the collage")
+                return
+            }
+            photos.add(made)
+            saver.save(made)
             router.returnToGallery()
-            toasts.show("Collage saved to Photos")
+            toasts.show(saver.isSaving ? "Collage saved to Photos" : "Collage saved in RetroSnap")
         }
     }
 

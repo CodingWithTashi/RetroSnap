@@ -71,8 +71,8 @@ struct ResultView: View {
             if let photo = viewModel.photo {
                 PhotoLookView(photo: photo, framed: true, stamp: viewModel.stamp)
             }
-            if viewModel.isProcessing {
-                processingCover
+            if let progress = viewModel.processingProgress {
+                processingCover(progress)
             } else if !reduceMotion {
                 // The print develops: a warm dark cover fades away.
                 CSSLinearGradient(degrees: 160, colors: [Color(hex: 0x4A3F33), Color(hex: 0x1F1B17)])
@@ -80,7 +80,7 @@ struct ResultView: View {
                     .allowsHitTesting(false)
             }
         }
-        .frame(width: width, height: width * (isInstant ? 107.0 / 88.0 : 4.0 / 3.0))
+        .frame(width: width, height: width * (isInstant ? InstantPrint.size.height / InstantPrint.size.width : 4.0 / 3.0))
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .compositingGroup()
         .shadow(color: .black.opacity(0.55), radius: 25, y: 24)
@@ -89,7 +89,7 @@ struct ResultView: View {
         .accessibilityLabel(viewModel.metaText)
     }
 
-    private var processingCover: some View {
+    private func processingCover(_ progress: Double) -> some View {
         CSSLinearGradient(degrees: 160, colors: [Color(hex: 0x3A322A), Color(hex: 0x1F1B17)])
             .overlay(alignment: .bottom) {
                 Capsule()
@@ -97,7 +97,7 @@ struct ResultView: View {
                     .frame(height: 4)
                     .overlay(alignment: .leading) {
                         GeometryReader { proxy in
-                            Capsule().fill(RSColor.amber).frame(width: proxy.size.width * 0.62)
+                            Capsule().fill(RSColor.amber).frame(width: proxy.size.width * progress)
                         }
                     }
                     .clipShape(Capsule())

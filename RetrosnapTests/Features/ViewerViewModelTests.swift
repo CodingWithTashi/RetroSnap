@@ -5,11 +5,20 @@ import Testing
 struct ViewerViewModelTests {
     private let world = TestWorld(path: [.gallery, .viewer("s2")])
 
-    private func make(_ id: Photo.ID = "s2") -> ViewerViewModel {
+    private func make(_ id: Photo.ID = "s2", sharing: (any PhotoSharing)? = nil) -> ViewerViewModel {
         ViewerViewModel(
-            photoID: id, photos: world.photos, router: world.router, toasts: world.toasts,
+            photoID: id, photos: world.photos, player: world.clipPlayer, sharing: sharing ?? world.sharing,
+            router: world.router, toasts: world.toasts,
             dayLabeler: DayLabeler(clock: world.clock)
         )
+    }
+
+    /// A recorded clip in the library, with its movie on file.
+    private func recordedClip() -> Photo {
+        var clip = world.photo("clip", camera: .camcorder, video: 12)
+        clip.videoFile = "clip.mov"
+        world.photos.add(clip)
+        return clip
     }
 
     @Test func opensOnThePhotoThatWasTapped() {
@@ -54,6 +63,89 @@ struct ViewerViewModelTests {
         #expect(make(clip.id).subtitle == "Camcorder · Video")
     }
 
+    // MARK: Playing a clip
+
+    @Test func aClipShowsItsFirstFrameAndItsLengthUntilItIsPlayed() {
+        let clip = recordedClip()
+        let vm = make(clip.id)
+        #expect(vm.picture == clip.image)
+        #expect(vm.badgeText == "0:12")
+        #expect(!world.clipPlayer.isPlaying)
+    }
+
+    @Test func tappingAClipPlaysItInPlaceAndTappingAgainPauses() {
+        let vm = make(recordedClip().id)
+        vm.photoTapped()
+        #expect(world.clipPlayer.playedFiles == ["clip.mov"])
+        #expect(vm.picture == .live)
+        #expect(vm.badgeText == nil)
+
+        vm.photoTapped()
+        #expect(!world.clipPlayer.isPlaying)
+        // Paused on the frame it reached, with the badge back to say it can go on.
+        #expect(vm.picture == .live)
+        #expect(vm.badgeText == "0:12")
+
+        vm.photoTapped()
+        #expect(world.clipPlayer.isPlaying)
+        #expect(world.clipPlayer.playedFiles == ["clip.mov", "clip.mov"])
+    }
+
+    @Test func aClipThatPlaysToItsEndGoesBackToItsFirstFrame() {
+        let clip = recordedClip()
+        let vm = make(clip.id)
+        vm.photoTapped()
+        world.clipPlayer.finish()
+        #expect(vm.picture == clip.image)
+        #expect(vm.badgeText == "0:12")
+    }
+
+    @Test func tappingAPhotoPlaysNothing() {
+        let vm = make()
+        vm.photoTapped()
+        #expect(world.clipPlayer.playedFiles.isEmpty)
+        #expect(vm.picture == .photo(237))
+        #expect(vm.badgeText == nil)
+    }
+
+    @Test func aClipWithoutAMovieOnFileCannotBePlayed() {
+        let clip = world.photo("sample", camera: .camcorder, video: 24)
+        world.photos.add(clip)
+        let vm = make(clip.id)
+        vm.photoTapped()
+        #expect(world.clipPlayer.playedFiles.isEmpty)
+        #expect(vm.badgeText == "0:24")
+    }
+
+    @Test func swipingToAnotherPhotoStopsTheClip() {
+        let vm = make(recordedClip().id)
+        vm.photoTapped()
+        vm.swiped(.left)
+        #expect(!world.clipPlayer.isPlaying)
+        #expect(world.clipPlayer.openFile == nil)
+        #expect(vm.photo?.id == "s1")
+        #expect(vm.picture == .photo(1011))
+    }
+
+    @Test func leavingTheViewerStopsTheClip() {
+        let back = make(recordedClip().id)
+        back.photoTapped()
+        back.backTapped()
+        #expect(world.clipPlayer.openFile == nil)
+
+        let edit = make("clip")
+        edit.photoTapped()
+        edit.perform(.edit)
+        #expect(world.clipPlayer.openFile == nil)
+    }
+
+    @Test func aCollageIsNamedAsOneInsteadOfByACamera() {
+        var collage = world.photo("collage")
+        collage.isCollage = true
+        world.photos.add(collage)
+        #expect(make("collage").subtitle == "Collage")
+    }
+
     @Test func backPopsToTheGallery() {
         make().backTapped()
         #expect(world.router.path == [.gallery])
@@ -75,6 +167,16 @@ struct ViewerViewModelTests {
     @Test func shareIsAPlaceholderToast() {
         make().perform(.share)
         #expect(world.toasts.current?.text == "Share sheet opens here")
+        #expect(world.router.path == [.gallery, .viewer("s2")])
+    }
+
+    @Test func shareHandsThePhotoOnScreenToTheShareSheet() {
+        let sheet = ShareSpy()
+        let vm = make(sharing: sheet)
+        vm.perform(.share)
+        vm.swiped(.left)
+        vm.perform(.share)
+        #expect(sheet.sharedIDs == ["s2", "s3"])
         #expect(world.router.path == [.gallery, .viewer("s2")])
     }
 

@@ -25,6 +25,15 @@ nonisolated enum PrintSize: String, CaseIterable, Identifiable, Hashable, Sendab
         }
     }
 
+    /// The real print in points (72 to the inch): 4x6, 4x4 and a 2x6 strip.
+    var pageSize: CGSize {
+        switch self {
+        case .fourBySix: CGSize(width: 288, height: 432)
+        case .square: CGSize(width: 288, height: 288)
+        case .strip: CGSize(width: 144, height: 432)
+        }
+    }
+
     var borderWidth: CGFloat {
         self == .strip ? 8 : 14
     }

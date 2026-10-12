@@ -6,10 +6,14 @@ import Testing
 struct CollageViewModelTests {
     private let world = TestWorld(path: [.gallery, .viewer("s1"), .collage(seed: "s1")])
 
-    private func make(seed: Photo.ID? = "s1", step: Int = 1) -> CollageViewModel {
+    private func make(
+        seed: Photo.ID? = "s1", step: Int = 1, exporter: (any PhotoExporting)? = nil,
+        saver: PhotosSaver? = nil, sharing: (any PhotoSharing)? = nil
+    ) -> CollageViewModel {
         CollageViewModel(
-            seedID: seed, photos: world.photos, router: world.router, toasts: world.toasts,
-            feedback: world.feedback, startStep: step
+            seedID: seed, photos: world.photos, exporter: exporter ?? world.exporter, saver: saver ?? world.saver,
+            sharing: sharing ?? world.sharing, router: world.router, toasts: world.toasts,
+            feedback: world.feedback, startStep: step, boardPicks: SeedData.arrangeBoardPicks
         )
     }
 
@@ -113,8 +117,10 @@ struct CollageViewModelTests {
 
     // MARK: Step 3, arranging
 
-    private func arranged() -> CollageViewModel {
-        let vm = make()
+    private func arranged(
+        exporter: (any PhotoExporting)? = nil, saver: PhotosSaver? = nil, sharing: (any PhotoSharing)? = nil
+    ) -> CollageViewModel {
+        let vm = make(exporter: exporter, saver: saver, sharing: sharing)
         vm.actionTapped()
         vm.togglePick("s3")
         vm.togglePick("s2")
@@ -182,11 +188,95 @@ struct CollageViewModelTests {
     @Test func saveFromAResultOpensTheGallery() {
         let world = TestWorld(path: [.result("s1"), .collage(seed: "s1")])
         let vm = CollageViewModel(
-            seedID: "s1", photos: world.photos, router: world.router, toasts: world.toasts,
-            feedback: world.feedback, startStep: 3
+            seedID: "s1", photos: world.photos, exporter: world.exporter, saver: world.saver, sharing: world.sharing,
+            router: world.router, toasts: world.toasts, feedback: world.feedback, startStep: 3,
+            boardPicks: SeedData.arrangeBoardPicks
         )
         vm.actionTapped()
         #expect(world.router.path == [.gallery])
+    }
+
+    // MARK: A real collage
+
+    @Test func savingFilesTheCollageInTheLibraryAndSendsItToPhotos() throws {
+        let vm = arranged()
+        vm.select(.black)
+        vm.actionTapped()
+        let collage = try #require(world.photos.photos.first)
+        #expect(world.photos.photos.count == 14)
+        #expect(collage.isCollage)
+        #expect(world.exporter.savedIDs == [collage.id])
+    }
+
+    @Test func theCollageIsMadeFromTheArrangementOnScreen() throws {
+        let exporter = ExporterSpy()
+        let vm = arranged(exporter: exporter)
+        vm.cellTapped(0)
+        vm.cellTapped(2)
+        vm.select(.none)
+        vm.actionTapped()
+        let collage = try #require(exporter.collages.first)
+        #expect(collage.template == .feature)
+        #expect(collage.border == .none)
+        #expect(collage.photos.map(\.id) == ["s2", "s3", "s1"])
+    }
+
+    @Test func theScreenStaysUntilTheCollageIsMade() {
+        let exporter = ExporterSpy()
+        let vm = arranged(exporter: exporter)
+        vm.actionTapped()
+        vm.actionTapped()
+        #expect(exporter.collages.count == 1)
+        #expect(world.router.topRoute == .collage(seed: "s1"))
+        #expect(world.toasts.current == nil)
+
+        var made = world.photo("collage")
+        made.isCollage = true
+        exporter.deliver(made)
+        #expect(world.photos.photos.first?.id == "collage")
+        #expect(world.router.path == [.gallery])
+        #expect(world.toasts.current?.text == "Collage saved to Photos")
+    }
+
+    @Test func aCollageThatCouldNotBeMadeSaysSoAndStaysOnTheScreen() {
+        let exporter = ExporterSpy()
+        let vm = arranged(exporter: exporter)
+        vm.actionTapped()
+        exporter.deliver(nil)
+        #expect(world.photos.photos.count == 13)
+        #expect(world.router.topRoute == .collage(seed: "s1"))
+        #expect(world.toasts.current?.text == "Couldn’t save the collage")
+
+        vm.actionTapped()
+        #expect(exporter.collages.count == 2)
+    }
+
+    @Test func aCollageKeptInsideTheAppSaysSo() {
+        let inApp = PhotosSaver(
+            exporter: world.exporter, permissions: MockPermissionService(photoLibraryAccess: .denied),
+            settings: world.settings, toasts: world.toasts
+        )
+        let vm = arranged(saver: inApp)
+        vm.actionTapped()
+        #expect(world.photos.photos.count == 14)
+        #expect(world.exporter.savedIDs.isEmpty)
+        #expect(world.toasts.current?.text == "Collage saved in RetroSnap")
+    }
+
+    @Test func shareHandsTheArrangementToTheShareSheet() throws {
+        let sheet = ShareSpy()
+        let vm = arranged(sharing: sheet)
+        vm.shareTapped()
+        let collage = try #require(sheet.sharedCollages.first)
+        #expect(collage.photos.map(\.id) == ["s1", "s3", "s2"])
+        #expect(world.photos.photos.count == 13)
+    }
+
+    @Test func aSavedCollageCanGoIntoAnotherOne() {
+        var collage = world.photo("collage")
+        collage.isCollage = true
+        world.photos.add(collage)
+        #expect(make().candidates.contains { $0.id == "collage" })
     }
 
     @Test func shareIsAPlaceholderToast() {

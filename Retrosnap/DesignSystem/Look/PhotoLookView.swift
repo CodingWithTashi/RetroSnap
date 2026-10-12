@@ -4,7 +4,7 @@ import SwiftUI
 /// the plain image, the filtered image at the effect strength, the tint/flash/fade/bleed/scanline/
 /// vignette/warmth/grain layers, stamps, then Light and Contrast over the lot.
 struct PhotoLookView: View {
-    var image: SampleImage
+    var image: PhotoImage
     var camera: CameraStyle
     var adjustments = PhotoAdjustments.neutral
     /// Instant photos get the white print frame when this is set.
@@ -17,6 +17,8 @@ struct PhotoLookView: View {
     /// Shows the play badge and this duration.
     var videoDuration: String?
     var usesThumbnail = false
+    /// Enlarges the picture inside its box, under the look: a still scene standing in for a zoomed lens.
+    var magnification: CGFloat = 1
 
     var body: some View {
         GeometryReader { proxy in
@@ -25,8 +27,8 @@ struct PhotoLookView: View {
             let height = proxy.size.height
             if model.isFramed {
                 // padding: 5.5% 5.5% 22% 5.5%, every side measured against the width.
-                let side = width * 0.055
-                let box = CGSize(width: width - side * 2, height: max(0, height - side - width * 0.22))
+                let side = width * InstantPrint.side
+                let box = CGSize(width: width - side * 2, height: max(0, height - side - width * InstantPrint.bottom))
                 ZStack(alignment: .topLeading) {
                     RSColor.printFrame
                     photo(model, size: box)
@@ -38,15 +40,10 @@ struct PhotoLookView: View {
         }
     }
 
-    private var assetName: String {
-        usesThumbnail ? image.thumbnail : image.full
-    }
-
     private func source(_ size: CGSize) -> some View {
-        Image(assetName)
-            .resizable()
-            .scaledToFill()
+        PhotoPicture(image: image, usesThumbnail: usesThumbnail)
             .frame(width: size.width, height: size.height)
+            .scaleEffect(magnification)
             .clipped()
     }
 
@@ -73,7 +70,7 @@ struct PhotoLookView: View {
         ZStack {
             rendered(model, size: size)
             if let stamp {
-                stamps(stamp, kind: model.stamp, size: size)
+                PhotoStampView(text: stamp, kind: model.stamp, size: size, bottomInset: stampBottom, topInset: stampTop)
             }
             if let videoDuration {
                 videoBadge(model, duration: videoDuration, size: size)
@@ -85,39 +82,6 @@ struct PhotoLookView: View {
             LookShaders.adjust(brightness: model.brightness, contrast: model.contrast),
             isEnabled: model.needsAdjustmentPass
         )
-    }
-
-    // Sizes follow the CSS: max(9px, N cqw) of the photo box width; insets are percentages of the box.
-    @ViewBuilder
-    private func stamps(_ text: PhotoStampText, kind: LookStamp, size: CGSize) -> some View {
-        switch kind {
-        case .none:
-            EmptyView()
-        case .date:
-            DateStampView(text: text.date, size: max(9, size.width * 0.075))
-                .padding(.trailing, size.width * 0.06)
-                .padding(.bottom, size.height * stampBottom)
-                .frame(width: size.width, height: size.height, alignment: .bottomTrailing)
-        case .vhs:
-            let small = max(9, size.width * 0.065)
-            ZStack {
-                TapePlayLabel(size: max(9, size.width * 0.07))
-                    .padding(.leading, size.width * 0.06)
-                    .padding(.top, size.height * stampTop)
-                    .frame(width: size.width, height: size.height, alignment: .topLeading)
-                TapeText {
-                    HStack {
-                        Text(text.tapeDate)
-                        Spacer(minLength: 0)
-                        Text(text.tapeTime)
-                    }
-                    .font(RSFont.stamp(small))
-                }
-                .padding(.horizontal, size.width * 0.06)
-                .padding(.bottom, size.height * stampBottom)
-                .frame(width: size.width, height: size.height, alignment: .bottom)
-            }
-        }
     }
 
     private func videoBadge(_ model: LookRenderModel, duration: String, size: CGSize) -> some View {

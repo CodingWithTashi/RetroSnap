@@ -25,7 +25,9 @@ final class ToastCenter {
     }
 
     /// Shows a toast, replacing any current one and restarting the clock.
-    func show(_ text: String, actionTitle: String? = nil, action: (@MainActor () -> Void)? = nil) {
+    /// - Returns: The toast's id, for taking it down early with `dismiss(_:)`.
+    @discardableResult
+    func show(_ text: String, actionTitle: String? = nil, action: (@MainActor () -> Void)? = nil) -> Toast.ID {
         dismissal?.cancel()
         nextID += 1
         current = Toast(id: nextID, text: text, actionTitle: actionTitle)
@@ -33,6 +35,7 @@ final class ToastCenter {
         dismissal = scheduler.after(Self.displayDuration) { [weak self] in
             self?.dismiss()
         }
+        return nextID
     }
 
     /// Runs the toast's action (Undo) and clears it.
@@ -40,6 +43,12 @@ final class ToastCenter {
         let action = action
         dismiss()
         action?()
+    }
+
+    /// Takes down one toast, and does nothing if another has taken its place since.
+    func dismiss(_ id: Toast.ID) {
+        guard current?.id == id else { return }
+        dismiss()
     }
 
     func dismiss() {

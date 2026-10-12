@@ -113,7 +113,11 @@ struct PrintView: View {
             }
             .buttonStyle(.plain)
             if viewModel.isMoreExpanded {
-                detail("Printer", viewModel.printerName)
+                Button(action: viewModel.printerTapped) {
+                    detail("Printer", viewModel.printerName)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
                 detail("Paper", viewModel.paperName)
             }
         }

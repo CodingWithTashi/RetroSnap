@@ -1,8 +1,11 @@
 #include <metal_stdlib>
 #include <SwiftUI/SwiftUI_Metal.h>
+#include <CoreImage/CoreImage.h>
 using namespace metal;
 
-// The camera looks from the design's Photo component, as SwiftUI colour effects.
+// The camera looks from the design's Photo component. The maths is written once, as plain functions,
+// and entered two ways: as SwiftUI colour effects for the screen, and as Core Image kernels for the
+// files and video frames that leave the app.
 // All maths runs on gamma-encoded sRGB and clamps after every step, as CSS filters and blend modes do.
 
 // MARK: CSS filter functions (W3C Filter Effects)
@@ -34,17 +37,13 @@ static float3 rs_filter(float3 c, float2 op) {
     return clamp(c, 0.0, 1.0);
 }
 
-[[ stitchable ]] half4 rsFilterChain(float2 position, half4 color,
-                                     float2 op0, float2 op1, float2 op2, float2 op3, float2 op4) {
-    if (color.a <= 0.0h) { return color; }
-    float alpha = float(color.a);
-    float3 c = float3(color.rgb) / alpha;
+static float3 rs_filterChain(float3 c, float2 op0, float2 op1, float2 op2, float2 op3, float2 op4) {
     c = rs_filter(c, op0);
     c = rs_filter(c, op1);
     c = rs_filter(c, op2);
     c = rs_filter(c, op3);
     c = rs_filter(c, op4);
-    return half4(half3(c * alpha), color.a);
+    return c;
 }
 
 // MARK: Blend modes (W3C Compositing and Blending)
@@ -102,15 +101,9 @@ static float rs_linearToSRGB(float v) {
 
 // MARK: Look layers
 
-// bounds: the photo box. tint/warm: rgb + opacity.
+// p: the point inside the photo box, from its top-left corner. size: the box. tint/warm: rgb + opacity.
 // fx: flash, fade, chroma, scanline opacities. fx2: vignette, grain opacities.
-[[ stitchable ]] half4 rsOverlays(float2 position, half4 color, float4 bounds,
-                                  float4 tint, float4 warm, float4 fx, float2 fx2) {
-    if (color.a <= 0.0h) { return color; }
-    float alpha = float(color.a);
-    float3 c = float3(color.rgb) / alpha;
-    float2 size = max(bounds.zw, float2(1.0));
-    float2 p = position - bounds.xy;
+static float3 rs_overlays(float3 c, float2 p, float2 size, float4 tint, float4 warm, float4 fx, float2 fx2) {
     float2 uv = p / size;
 
     // Tint, overlay.
@@ -160,15 +153,65 @@ static float rs_linearToSRGB(float v) {
         c = mix(c, rs_overlay(c, float3(grey)), coverage * fx2.y);
     }
 
-    return half4(half3(clamp(c, 0.0, 1.0) * alpha), color.a);
+    return clamp(c, 0.0, 1.0);
 }
 
 // The Light and Contrast sliders: filter: brightness() contrast() over the finished photo.
+static float3 rs_adjust(float3 c, float brightness, float contrast) {
+    c = clamp(c * brightness, 0.0, 1.0);
+    return clamp((c - 0.5) * contrast + 0.5, 0.0, 1.0);
+}
+
+// MARK: SwiftUI colour effects (the screen)
+
+[[ stitchable ]] half4 rsFilterChain(float2 position, half4 color,
+                                     float2 op0, float2 op1, float2 op2, float2 op3, float2 op4) {
+    if (color.a <= 0.0h) { return color; }
+    float alpha = float(color.a);
+    float3 c = rs_filterChain(float3(color.rgb) / alpha, op0, op1, op2, op3, op4);
+    return half4(half3(c * alpha), color.a);
+}
+
+// bounds: the photo box.
+[[ stitchable ]] half4 rsOverlays(float2 position, half4 color, float4 bounds,
+                                  float4 tint, float4 warm, float4 fx, float2 fx2) {
+    if (color.a <= 0.0h) { return color; }
+    float alpha = float(color.a);
+    float2 size = max(bounds.zw, float2(1.0));
+    float3 c = rs_overlays(float3(color.rgb) / alpha, position - bounds.xy, size, tint, warm, fx, fx2);
+    return half4(half3(c * alpha), color.a);
+}
+
 [[ stitchable ]] half4 rsAdjust(float2 position, half4 color, float brightness, float contrast) {
     if (color.a <= 0.0h) { return color; }
     float alpha = float(color.a);
-    float3 c = float3(color.rgb) / alpha;
-    c = clamp(c * brightness, 0.0, 1.0);
-    c = clamp((c - 0.5) * contrast + 0.5, 0.0, 1.0);
+    float3 c = rs_adjust(float3(color.rgb) / alpha, brightness, contrast);
     return half4(half3(c * alpha), color.a);
+}
+
+// MARK: Core Image kernels (files and video frames)
+
+[[ stitchable ]] float4 rsFilterChainKernel(coreimage::sample_t color,
+                                            float2 op0, float2 op1, float2 op2, float2 op3, float2 op4) {
+    if (color.a <= 0.0) { return color; }
+    float3 c = rs_filterChain(color.rgb / color.a, op0, op1, op2, op3, op4);
+    return float4(c * color.a, color.a);
+}
+
+// size: the photo box in points. scale: pixels per point, so grain, scanlines and gradients keep the
+// size they have on screen. Core Image counts rows from the bottom; the look counts them from the top.
+[[ stitchable ]] float4 rsOverlaysKernel(coreimage::sample_t color, float2 size, float scale,
+                                         float4 tint, float4 warm, float4 fx, float2 fx2,
+                                         coreimage::destination destination) {
+    if (color.a <= 0.0) { return color; }
+    float2 pixel = destination.coord();
+    float2 p = float2(pixel.x / scale, size.y - pixel.y / scale);
+    float3 c = rs_overlays(color.rgb / color.a, p, size, tint, warm, fx, fx2);
+    return float4(c * color.a, color.a);
+}
+
+[[ stitchable ]] float4 rsAdjustKernel(coreimage::sample_t color, float brightness, float contrast) {
+    if (color.a <= 0.0) { return color; }
+    float3 c = rs_adjust(color.rgb / color.a, brightness, contrast);
+    return float4(c * color.a, color.a);
 }

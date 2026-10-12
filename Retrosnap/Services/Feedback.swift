@@ -13,6 +13,10 @@ nonisolated enum HapticKind: Hashable, Sendable {
 
 /// Raw haptics and sound.
 protocol FeedbackProviding: AnyObject {
+    /// Wakes the Taptic Engine for a moment, so that the haptic that follows comes with no delay.
+    func prepareHaptics()
+    /// Builds and loads the click ahead of the shot, instead of during it.
+    func prepareClick()
     func haptic(_ kind: HapticKind)
     func shutterClick()
 }
@@ -25,6 +29,17 @@ final class FeedbackCenter {
     init(output: any FeedbackProviding, settings: any SettingsStoring) {
         self.output = output
         self.settings = settings
+    }
+
+    /// Called when feedback is about to be wanted: the camera has come up, or a finger is on the shutter.
+    /// - Parameter click: The shutter click may follow, and not only a haptic.
+    func prepare(click: Bool) {
+        if settings.haptics {
+            output.prepareHaptics()
+        }
+        if click, settings.shutterSound {
+            output.prepareClick()
+        }
     }
 
     func haptic(_ kind: HapticKind) {
@@ -42,7 +57,16 @@ final class FeedbackCenter {
 final class SystemFeedback: FeedbackProviding {
     private let light = UIImpactFeedbackGenerator(style: .light)
     private let medium = UIImpactFeedbackGenerator(style: .medium)
-    private lazy var clickPlayer: AVAudioPlayer? = Self.makeClickPlayer()
+    private let click = ClickSound()
+
+    func prepareHaptics() {
+        light.prepare()
+        medium.prepare()
+    }
+
+    func prepareClick() {
+        click.prepare()
+    }
 
     func haptic(_ kind: HapticKind) {
         switch kind {
@@ -53,15 +77,46 @@ final class SystemFeedback: FeedbackProviding {
     }
 
     func shutterClick() {
-        guard let clickPlayer else { return }
-        clickPlayer.currentTime = 0
-        clickPlayer.play()
+        click.play()
+    }
+}
+
+/// The shutter click. Building its player and starting it both wait on the audio server: on a phone the
+/// first shot spent 70ms and then 90ms there, so the sound has a queue of its own and never holds up the screen.
+private nonisolated final class ClickSound: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "com.retrosnap.vintagecamera.click", qos: .userInteractive)
+    /// Both are touched only on `queue`. A lazy property would do, but Swift does not allow one outside an actor here.
+    private var player: AVAudioPlayer?
+    private var isBuilt = false
+
+    /// Builds the click and loads it, ahead of the shot.
+    func prepare() {
+        queue.async {
+            self.built()?.prepareToPlay()
+        }
+    }
+
+    func play() {
+        queue.async {
+            guard let player = self.built() else { return }
+            player.currentTime = 0
+            player.play()
+        }
+    }
+
+    private func built() -> AVAudioPlayer? {
+        if !isBuilt {
+            isBuilt = true
+            player = Self.makePlayer()
+        }
+        return player
     }
 
     /// The prototype's click: 70ms of noise with a fast decay and a short dip, band-passed around 2.2kHz.
     /// Played in the ambient category, so the silent switch mutes it and the haptic remains.
-    private static func makeClickPlayer() -> AVAudioPlayer? {
-        try? AVAudioSession.sharedInstance().setCategory(.ambient, options: .mixWithOthers)
+    private static func makePlayer() -> AVAudioPlayer? {
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.ambient, options: .mixWithOthers)
 
         let sampleRate = 44_100.0
         let count = Int(sampleRate * 0.07)
@@ -101,6 +156,8 @@ final class SystemFeedback: FeedbackProviding {
         samples.forEach { append($0) }
 
         let player = try? AVAudioPlayer(data: wav)
+        // Starting the session here, and not with the first click, is what lets that click play at once.
+        try? session.setActive(true)
         player?.prepareToPlay()
         return player
     }

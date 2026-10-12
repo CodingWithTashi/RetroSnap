@@ -3,11 +3,18 @@ import SwiftUI
 /// Scales the label down while pressed, like the prototype's `style-active`.
 struct PressScaleStyle: ButtonStyle {
     var scale: CGFloat = 0.97
+    /// Called as a finger comes down, ahead of the tap that follows when it lifts.
+    var onPress: () -> Void = {}
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? scale : 1)
             .animation(RSMotion.press, value: configuration.isPressed)
+            .onChange(of: configuration.isPressed) { _, isPressed in
+                if isPressed {
+                    onPress()
+                }
+            }
     }
 }
 

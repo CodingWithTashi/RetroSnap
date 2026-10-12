@@ -4,8 +4,17 @@ import SwiftUI
 struct CameraView: View {
     let viewModel: CameraViewModel
     let stamp: PhotoStampText
+    /// What the viewfinder showed as the shutter last fired. It stands for the shot until the camera delivers it.
+    /// Nil while the camera shows a still scene, which is its own shot.
+    let shotFrames: FrameFeed?
     @Environment(\.designLayout) private var layout
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// The camera's own frames; nil while it shows a still scene.
+    @Environment(\.liveFrames) private var viewfinderFrames
+    @GestureState private var isTouchingViewfinder = false
+    @GestureState private var isPinching = false
+    /// The touch on the viewfinder became a pinch, so the fingers lifting is neither a tap nor a swipe.
+    @State private var touchWasPinch = false
 
     var body: some View {
         GlassContainer {
@@ -15,11 +24,24 @@ struct CameraView: View {
         }
         .overlay {
             if !reduceMotion {
-                CaptureEffects(shotCount: viewModel.shotCount, mode: viewModel.mode, lastPhoto: viewModel.lastPhoto)
+                CaptureEffects(shutterCount: viewModel.shutterCount, mode: viewModel.mode, scene: viewModel.scene)
+                    .environment(\.liveFrames, shotFrames)
             }
         }
         .background(.black)
         .ignoresSafeArea()
+        .onAppear(perform: viewModel.appeared)
+        .onDisappear(perform: viewModel.disappeared)
+        .onChange(of: isTouchingViewfinder) { _, isTouching in
+            if isTouching {
+                touchWasPinch = false
+            }
+        }
+        .onChange(of: isPinching) { _, isPinching in
+            if !isPinching {
+                viewModel.viewfinderPinchEnded()
+            }
+        }
     }
 
     // MARK: Backdrop (everything the glass controls blur)
@@ -28,7 +50,13 @@ struct CameraView: View {
         ZStack {
             Color.black
             if viewModel.block == nil {
+                // The picture fades in with the camera's first frame, and goes out of focus while the camera
+                // changes lens or mode, so neither arrives as a jump.
                 viewfinder
+                    .blur(radius: viewModel.isViewfinderSettling ? 18 : 0, opaque: true)
+                    .opacity(viewfinderFrames?.hasFrame == false ? 0 : 1)
+                    .animation(RSMotion.crossFade, value: viewModel.isViewfinderSettling)
+                    .animation(RSMotion.crossFade, value: viewfinderFrames?.hasFrame)
             } else {
                 BlockedBackdrop()
             }
@@ -40,12 +68,26 @@ struct CameraView: View {
         .contentShape(Rectangle())
         .gesture(
             DragGesture(minimumDistance: 0)
+                .updating($isTouchingViewfinder) { _, isTouching, _ in
+                    isTouching = true
+                }
                 .onEnded { value in
+                    guard !touchWasPinch else { return }
                     if abs(value.translation.width) > 40 {
                         viewModel.viewfinderSwiped(value.translation.width < 0 ? .left : .right)
                     } else {
                         viewModel.viewfinderTapped()
                     }
+                }
+        )
+        .simultaneousGesture(
+            MagnifyGesture()
+                .updating($isPinching) { _, isPinching, _ in
+                    isPinching = true
+                }
+                .onChanged { value in
+                    touchWasPinch = true
+                    viewModel.viewfinderPinched(value.magnification)
                 }
         )
         .accessibilityElement()
@@ -59,7 +101,8 @@ struct CameraView: View {
     private var viewfinder: some View {
         ZStack {
             PhotoLookView(
-                image: viewModel.scene, camera: viewModel.style, stamp: stamp, stampBottom: 0.27, stampTop: 0.17
+                image: viewModel.scene, camera: viewModel.style, stamp: stamp, stampBottom: 0.27, stampTop: 0.17,
+                magnification: viewModel.sceneMagnification
             )
             .id(viewModel.style)
             .transition(.opacity)
@@ -128,6 +171,12 @@ struct CameraView: View {
                 .padding(.bottom, layout.bottom(146))
                 .frame(maxHeight: .infinity, alignment: .bottom)
 
+            // Centred over the lens button below it.
+            ZoomButton(viewModel: viewModel)
+                .padding(.trailing, 36)
+                .padding(.bottom, layout.bottom(146))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+
             CameraStrip(viewModel: viewModel)
                 .padding(.horizontal, 8)
                 .padding(.bottom, layout.bottom(136))
@@ -153,7 +202,11 @@ struct CameraView: View {
             Button(action: viewModel.galleryTapped) {
                 ZStack {
                     RSColor.raised
-                    if let photo = viewModel.lastPhoto {
+                    if let look = viewModel.pendingShot {
+                        // The shot on its way, as the viewfinder saw it.
+                        PhotoLookView(image: viewModel.scene, camera: look, usesThumbnail: true)
+                            .environment(\.liveFrames, shotFrames)
+                    } else if let photo = viewModel.lastPhoto {
                         PhotoLookView(image: photo.image, camera: photo.camera, adjustments: photo.adjustments, usesThumbnail: true)
                     }
                 }
@@ -172,6 +225,7 @@ struct CameraView: View {
                 isPosed: viewModel.isPosed,
                 isDimmed: !viewModel.isShutterEnabled,
                 label: viewModel.shutterLabel,
+                onPress: viewModel.shutterPressed,
                 action: viewModel.shutterTapped
             )
 
@@ -278,7 +332,7 @@ private struct CameraChip: View {
         let visible = viewModel.isChipVisible
         Button(action: viewModel.chipTapped) {
             HStack(spacing: 8) {
-                PhotoLookView(image: viewModel.style.sample, camera: viewModel.style, usesThumbnail: true)
+                PhotoLookView(image: .sample(viewModel.style.sample), camera: viewModel.style, usesThumbnail: true)
                     .frame(width: 32, height: 32)
                     .clipShape(Circle())
                     .overlay { Circle().strokeBorder(Color(hex: viewModel.style.accentHex), lineWidth: 2).padding(-2) }
@@ -300,6 +354,30 @@ private struct CameraChip: View {
         .animation(RSMotion.fade, value: visible)
         .animation(RSMotion.chip, value: viewModel.isStripVisible)
         .accessibilityLabel(viewModel.chipLabel)
+        .accessibilityHidden(!visible)
+    }
+}
+
+/// The round button beside the chip: the zoom as a number. A tap steps through the lenses; a pinch on the
+/// viewfinder moves it freely.
+private struct ZoomButton: View {
+    let viewModel: CameraViewModel
+
+    var body: some View {
+        let visible = viewModel.isZoomVisible
+        Button(action: viewModel.zoomTapped) {
+            Text(viewModel.zoomTitle)
+                .rsText(.chip.tabularDigits())
+                .foregroundStyle(viewModel.isZoomed ? RSColor.amber : RSColor.paper)
+                .frame(width: 44, height: 44)
+                .glass(cornerRadius: 22, tint: RSColor.glass(0.5), visibility: visible ? 1 : 0)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .opacity(visible ? 1 : 0)
+        .allowsHitTesting(visible)
+        .animation(RSMotion.fade, value: visible)
+        .accessibilityLabel(viewModel.zoomLabel)
         .accessibilityHidden(!visible)
     }
 }
@@ -392,7 +470,7 @@ struct CameraCard: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 8) {
-                PhotoLookView(image: camera.sample, camera: camera, usesThumbnail: true)
+                PhotoLookView(image: .sample(camera.sample), camera: camera, usesThumbnail: true)
                     .frame(width: 88, height: 110)
                     .overlay(alignment: .bottom) {
                         Color(hex: camera.accentHex).frame(height: 4)
@@ -524,15 +602,16 @@ private struct CameraNameLabel: View {
     }
 }
 
-/// The 240ms white flash, then the shot shrinking into the gallery button.
+/// What the shutter sets off: the 240ms white flash, and over it the picture the lens saw shrinking into the
+/// gallery button. Both start as the shutter fires; the photo itself lands in the library when the camera is done.
 private struct CaptureEffects: View {
-    let shotCount: Int
+    let shutterCount: Int
     let mode: CaptureMode
-    let lastPhoto: Photo?
+    /// What the lens sees. A live scene is drawn from the frames around this view, frozen as the shutter fired.
+    let scene: PhotoImage
     @Environment(\.designLayout) private var layout
 
-    private struct Values {
-        var flash = 0.0
+    private struct Flight {
         var progress = 1.0
         var opacity = 0.0
     }
@@ -541,34 +620,37 @@ private struct CaptureEffects: View {
         GeometryReader { proxy in
             let size = proxy.size
             let landing = size.height - layout.bottom(122)
-            let image = lastPhoto?.image.full
+            let picture = PhotoPicture(image: scene)
             let flashes = mode == .photo
-            Color.clear
-                .keyframeAnimator(initialValue: Values(), trigger: shotCount) { _, value in
-                    ZStack(alignment: .topLeading) {
-                        if let image {
-                            Self.flyingShot(image, progress: value.progress, in: size, landingY: landing)
-                                .opacity(value.opacity)
-                        }
-                        Color.white.opacity(flashes ? value.flash : 0)
-                    }
-                    .frame(width: size.width, height: size.height, alignment: .topLeading)
-                } keyframes: { _ in
-                    KeyframeTrack(\.flash) {
+            ZStack(alignment: .topLeading) {
+                Color.clear
+                    .keyframeAnimator(initialValue: 0.0, trigger: shutterCount) { _, flash in
+                        Color.white.opacity(flashes ? flash : 0)
+                    } keyframes: { _ in
                         MoveKeyframe(0.92)
                         CubicKeyframe(0, duration: RSMotion.flashDuration)
                     }
-                    KeyframeTrack(\.progress) {
-                        MoveKeyframe(0)
-                        LinearKeyframe(0, duration: RSMotion.flyDelay)
-                        LinearKeyframe(1, duration: RSMotion.flyDuration, timingCurve: Self.flyCurve)
+                Color.clear
+                    .keyframeAnimator(initialValue: Flight(), trigger: shutterCount) { _, value in
+                        ZStack(alignment: .topLeading) {
+                            Self.flyingShot(picture, progress: value.progress, in: size, landingY: landing)
+                                .opacity(value.opacity)
+                        }
+                        .frame(width: size.width, height: size.height, alignment: .topLeading)
+                    } keyframes: { _ in
+                        KeyframeTrack(\.progress) {
+                            MoveKeyframe(0)
+                            LinearKeyframe(0, duration: RSMotion.flyDelay)
+                            LinearKeyframe(1, duration: RSMotion.flyDuration, timingCurve: Self.flyCurve)
+                        }
+                        KeyframeTrack(\.opacity) {
+                            MoveKeyframe(1)
+                            LinearKeyframe(1, duration: RSMotion.flyDelay + RSMotion.flyDuration * 0.85)
+                            LinearKeyframe(0, duration: RSMotion.flyDuration * 0.15, timingCurve: Self.flyCurve)
+                        }
                     }
-                    KeyframeTrack(\.opacity) {
-                        MoveKeyframe(1)
-                        LinearKeyframe(1, duration: RSMotion.flyDelay + RSMotion.flyDuration * 0.85)
-                        LinearKeyframe(0, duration: RSMotion.flyDuration * 0.15, timingCurve: Self.flyCurve)
-                    }
-                }
+            }
+            .frame(width: size.width, height: size.height, alignment: .topLeading)
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
@@ -580,14 +662,12 @@ private struct CaptureEffects: View {
 
     /// From the whole screen down to the 56pt gallery button, as in the prototype's keyframes.
     private nonisolated static func flyingShot(
-        _ image: String, progress: Double, in size: CGSize, landingY: CGFloat
+        _ picture: PhotoPicture, progress: Double, in size: CGSize, landingY: CGFloat
     ) -> some View {
         let width = size.width + (56 - size.width) * progress
         let height = size.height + (56 - size.height) * progress
         let radius = 50 + (16 - 50) * progress
-        return Image(image)
-            .resizable()
-            .scaledToFill()
+        return picture
             .frame(width: width, height: height)
             .colorEffect(LookShaders.filterChain([.sepia(0.3), .saturate(1.2)]))
             .clipShape(RoundedRectangle(cornerRadius: radius))

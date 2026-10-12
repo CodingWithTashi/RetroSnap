@@ -44,7 +44,8 @@ final class GalleryViewModel {
     }
 
     func accessibilityLabel(for photo: Photo) -> String {
-        "\(photo.camera.name) \(photo.isVideo ? "video" : "photo"), \(dayLabeler.label(for: photo.capturedAt))"
+        let name = photo.isCollage ? "Collage" : "\(photo.camera.name) \(photo.isVideo ? "video" : "photo")"
+        return "\(name), \(dayLabeler.label(for: photo.capturedAt))"
     }
 
     func open(_ photo: Photo) {

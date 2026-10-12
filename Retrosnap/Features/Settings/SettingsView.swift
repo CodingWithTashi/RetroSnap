@@ -67,19 +67,24 @@ struct SettingsView: View {
             .buttonStyle(.plain)
             .accessibilityAddTraits(.isToggle)
             .accessibilityValue(viewModel.isOn(toggle) ? "On" : "Off")
-        case .link(let value):
+        case .value(let value):
+            rowLabel(row.label) {
+                Text(value)
+                    .rsText(.bodySmall)
+                    .foregroundStyle(RSColor.secondaryText)
+            }
+            .accessibilityElement(children: .combine)
+        case .link(let url):
             Button {
-                viewModel.linkTapped(row.label)
+                viewModel.linkTapped(url)
             } label: {
                 rowLabel(row.label) {
-                    HStack(spacing: 6) {
-                        Text(value).rsText(.bodySmall)
-                        RSIconView(.chevronRight, size: 14, lineWidth: 2.4)
-                    }
-                    .foregroundStyle(RSColor.secondaryText)
+                    RSIconView(.chevronRight, size: 14, lineWidth: 2.4)
+                        .foregroundStyle(RSColor.secondaryText)
                 }
             }
             .buttonStyle(.plain)
+            .accessibilityAddTraits(.isLink)
         }
     }
 

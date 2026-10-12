@@ -41,6 +41,14 @@ final class RetrosnapUITests: XCTestCase {
         XCTAssertTrue(button(label).waitForExistence(timeout: 5), "Expected button “\(label)”", file: file, line: line)
     }
 
+    /// Answers a system permission prompt if one is up. It belongs to SpringBoard, not to the app.
+    private func answerSystemPrompt(_ button: String) {
+        let prompt = XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.buttons[button]
+        if prompt.waitForExistence(timeout: 3) {
+            prompt.tap()
+        }
+    }
+
     private func finishOnboarding() {
         tap("Continue")
         expectText("Step 1")
@@ -93,6 +101,55 @@ final class RetrosnapUITests: XCTestCase {
         tap("Allow")
         expectText("Saving to Photos")
         expectButton("Take photo")
+    }
+
+    // MARK: Across launches
+
+    @MainActor
+    func testOnboardingShowsOnceAndTheCameraLibraryAndSettingsAreRemembered() throws {
+        app.launchArguments = ["-rsLive", "fresh"]
+        app.launch()
+        tap("Continue")
+        tap("Continue")
+        // The live services ask iOS itself, so the camera prompt may come up here.
+        tap("Allow Camera")
+        answerSystemPrompt("Allow")
+        expectText("Save to your photos")
+        tap("Not now")
+        expectText("Saving inside RetroSnap only")
+
+        // Leave the camera on Instant with the flash on, take one photo, then turn the timer on.
+        let instant = buttonStarting(with: "Instant.")
+        XCTAssertTrue(instant.waitForExistence(timeout: 5))
+        instant.tap()
+        tap("Flash: auto")
+        tap("Take photo")
+        tap("Take another")
+        tap("Self-timer off")
+
+        tap("Open photos")
+        tap("Settings")
+        let haptics = app.switches["Haptics"].firstMatch
+        XCTAssertTrue(haptics.waitForExistence(timeout: 5))
+        haptics.tap()
+        XCTAssertEqual(haptics.value as? String, "Off")
+
+        app.terminate()
+        app.launchArguments = ["-rsLive", "1"]
+        app.launch()
+
+        // Straight to the camera, as it was left: no onboarding and no first-launch strip.
+        expectButton("Camera: Instant. Change camera")
+        expectButton("Flash: on")
+        expectButton("Self-timer on, 3 seconds")
+        XCTAssertFalse(button("Continue").exists)
+
+        // The photo and the setting are still there.
+        tap("Open photos")
+        expectButton("Instant photo, Today")
+        tap("Settings")
+        XCTAssertTrue(haptics.waitForExistence(timeout: 5))
+        XCTAssertEqual(haptics.value as? String, "Off")
     }
 
     // MARK: Behind a photo
@@ -168,13 +225,40 @@ final class RetrosnapUITests: XCTestCase {
         XCTAssertEqual(haptics.value as? String, "On")
         haptics.tap()
         XCTAssertEqual(haptics.value as? String, "Off")
-        let about = buttonStarting(with: "About")
-        XCTAssertTrue(about.waitForExistence(timeout: 5))
-        about.tap()
-        expectText("About")
+        // About is a fact to read, not a button; Privacy and Help are the rows that lead somewhere.
+        expectText("About, Version 1.0")
+        XCTAssertFalse(buttonStarting(with: "About").exists)
+        expectButton("Privacy")
+        expectButton("Help")
         tap("Back")
         tap("Close photos")
         expectButton("Take photo")
+    }
+
+    @MainActor
+    func testZoomButtonAndPinchZoomTheViewfinder() throws {
+        app.launchArguments = ["-rsScenario", "returning"]
+        app.launch()
+
+        // The button steps through the lenses and comes round again.
+        tap("Zoom: 1×")
+        expectButton("Zoom: 2×")
+        tap("Zoom: 2×")
+        expectButton("Zoom: 1×")
+
+        // Two fingers spreading zoom in, and are not taken for a swipe to the next camera.
+        let viewfinder = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label BEGINSWITH %@", "Viewfinder")).firstMatch
+        XCTAssertTrue(viewfinder.waitForExistence(timeout: 5))
+        viewfinder.pinch(withScale: 2, velocity: 2)
+        let zoom = buttonStarting(with: "Zoom: ")
+        XCTAssertTrue(zoom.waitForExistence(timeout: 5))
+        XCTAssertNotEqual(zoom.label, "Zoom: 1×")
+        expectButton("Camera: 35mm Film. Change camera")
+
+        // One finger still swipes to the next camera.
+        viewfinder.swipeLeft()
+        expectButton("Camera: Disposable. Change camera")
     }
 
     @MainActor

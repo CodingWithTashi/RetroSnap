@@ -77,5 +77,8 @@ struct GalleryViewModelTests {
         #expect(vm.accessibilityLabel(for: world.photos.photos[0]) == "35mm Film photo, Today")
         let clip = world.camera.finishRecording(seconds: 5, style: .camcorder, facing: .back)
         #expect(vm.accessibilityLabel(for: clip) == "Camcorder video, Today")
+        var collage = world.photo("collage")
+        collage.isCollage = true
+        #expect(vm.accessibilityLabel(for: collage) == "Collage, Today")
     }
 }

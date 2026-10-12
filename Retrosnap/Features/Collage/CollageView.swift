@@ -14,10 +14,18 @@ struct CollageView: View {
 
             switch viewModel.step {
             case .layout:
-                layoutStep
-                    .padding(.horizontal, 20)
-                    .padding(.top, layout.top(124))
-                    .frame(maxHeight: .infinity, alignment: .top)
+                // On a phone the six layouts fit as the design draws them. A wide screen keeps them phone-sized
+                // instead of stretching them off the bottom, and a short one scrolls.
+                ScrollView {
+                    layoutStep
+                        .frame(maxWidth: Self.widestLayoutGrid)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 20)
+                        .padding(.top, layout.top(124))
+                        .padding(.bottom, layout.bottom(120))
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
             case .pick:
                 pickStep
                     .padding(.top, layout.top(110))
@@ -52,6 +60,9 @@ struct CollageView: View {
     }
 
     // MARK: Step 1
+
+    /// Wider than any phone, so only an iPad is held back by it.
+    private static let widestLayoutGrid: CGFloat = 480
 
     private var layoutStep: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 0), spacing: 12), count: 3), spacing: 14) {
@@ -104,7 +115,10 @@ struct CollageView: View {
                         RSColor.surface
                             .aspectRatio(3.0 / 4.0, contentMode: .fit)
                             .overlay {
-                                PhotoLookView(image: photo.image, camera: photo.camera, usesThumbnail: true)
+                                PhotoLookView(
+                                    image: photo.image, camera: photo.camera, adjustments: photo.adjustments,
+                                    usesThumbnail: true
+                                )
                             }
                             .overlay {
                                 RoundedRectangle(cornerRadius: 4)
@@ -145,7 +159,7 @@ struct CollageView: View {
                     ZStack {
                         RSColor.raised
                         if let photo = photos.indices.contains(index) ? photos[index] : photos.first {
-                            PhotoLookView(image: photo.image, camera: photo.camera)
+                            PhotoLookView(image: photo.image, camera: photo.camera, adjustments: photo.adjustments)
                         }
                     }
                     .overlay {
@@ -194,19 +208,14 @@ private struct TemplateCells<Cell: View>: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let cells = template.cells
+            let cells = CollageLayout.cells(of: template, in: proxy.size, gap: gap)
             ZStack(alignment: .topLeading) {
                 ForEach(cells.indices, id: \.self) { index in
                     let rect = cells[index]
-                    let width = max(0, proxy.size.width * rect.width / 100 - gap * 2)
-                    let height = max(0, proxy.size.height * rect.height / 100 - gap * 2)
                     cell(index)
-                        .frame(width: width, height: height)
+                        .frame(width: rect.width, height: rect.height)
                         .clipped()
-                        .offset(
-                            x: proxy.size.width * rect.minX / 100 + gap,
-                            y: proxy.size.height * rect.minY / 100 + gap
-                        )
+                        .offset(x: rect.minX, y: rect.minY)
                 }
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .topLeading)

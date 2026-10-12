@@ -18,6 +18,11 @@ final class AppRouter {
         self.path = root == .camera ? path : []
     }
 
+    /// An ordinary launch: onboarding until it has been finished once, the camera from then on.
+    convenience init(hasCompletedOnboarding: Bool) {
+        self.init(root: hasCompletedOnboarding ? .camera : .onboarding(.welcome))
+    }
+
     var topRoute: Route? {
         path.last
     }

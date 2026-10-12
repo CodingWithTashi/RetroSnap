@@ -38,11 +38,16 @@ struct ViewerView: View {
 
     @ViewBuilder
     private var photo: some View {
-        if let photo = viewModel.photo {
-            PhotoLookView(photo: photo, framed: true, stamp: viewModel.stamp)
-                .aspectRatio(viewModel.isInstant ? 88.0 / 107.0 : 3.0 / 4.0, contentMode: .fit)
-                .frame(maxWidth: viewModel.isInstant ? 340 : .infinity)
+        if let photo = viewModel.photo, let picture = viewModel.picture {
+            PhotoLookView(
+                image: picture, camera: photo.camera, adjustments: photo.adjustments, framed: true,
+                stamp: viewModel.stamp, videoDuration: viewModel.badgeText
+            )
+                .environment(\.liveFrames, viewModel.movieFrames)
+                .aspectRatio(viewModel.isInstant ? InstantPrint.size.width / InstantPrint.size.height : 3.0 / 4.0, contentMode: .fit)
+                .frame(maxWidth: viewModel.isInstant ? InstantPrint.viewerWidth : .infinity)
                 .id(photo.id)
+                .onTapGesture(perform: viewModel.photoTapped)
                 .accessibilityElement()
                 .accessibilityLabel("\(viewModel.subtitle), \(viewModel.title)")
                 .accessibilityAdjustableAction { direction in

@@ -59,6 +59,35 @@ struct LaunchScenarioTests {
         #expect(scenario("-rsCollageStep", "0").collageStep == 1)
     }
 
+    // MARK: Live or mocked services
+
+    @Test func aDeviceRunsTheLiveServicesAndTheSimulatorRunsMocks() {
+        #expect(scenario().runsLive(onSimulator: false))
+        #expect(!scenario().runsLive(onSimulator: true))
+    }
+
+    @Test func anyScenarioKeepsADeviceOnMocks() {
+        #expect(!scenario("-rsScreen", "gallery").runsLive(onSimulator: false))
+        #expect(!scenario("-rsScenario", "returning").runsLive(onSimulator: false))
+        #expect(!scenario("-rsCamera", "vhs").runsLive(onSimulator: false))
+    }
+
+    @Test func theLiveFlagRunsTheLiveServicesInTheSimulator() {
+        let kept = scenario("-rsLive", "1")
+        #expect(kept.liveData == .kept)
+        #expect(kept.runsLive(onSimulator: true))
+
+        let fresh = scenario("-rsLive", "fresh")
+        #expect(fresh.liveData == .fresh)
+        #expect(fresh.runsLive(onSimulator: true))
+    }
+
+    @Test func theLiveFlagIsOffUnlessAskedFor() {
+        #expect(scenario().liveData == nil)
+        #expect(scenario("-rsLive", "0").liveData == nil)
+        #expect(scenario("-rsScreen", "camera").liveData == nil)
+    }
+
     @Test func returningUserSkipsOnboarding() {
         let s = scenario("-rsScenario", "returning")
         #expect(s.isReturningUser)

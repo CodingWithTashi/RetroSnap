@@ -16,6 +16,18 @@ struct AppRouterTests {
         #expect(router.path.isEmpty)
     }
 
+    @Test func aLaunchBeforeOnboardingIsFinishedStartsAtWelcome() {
+        let router = AppRouter(hasCompletedOnboarding: false)
+        #expect(router.root == .onboarding(.welcome))
+        #expect(router.path.isEmpty)
+    }
+
+    @Test func aLaunchAfterOnboardingOpensOnTheCamera() {
+        let router = AppRouter(hasCompletedOnboarding: true)
+        #expect(router.root == .camera)
+        #expect(router.path.isEmpty)
+    }
+
     @Test func onboardingAdvancesOneStepAtATimeAndStopsAtTheLast() {
         let router = AppRouter()
         router.advanceOnboarding()

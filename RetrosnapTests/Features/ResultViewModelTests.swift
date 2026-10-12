@@ -14,10 +14,14 @@ struct ResultViewModelTests {
         self.world = world
     }
 
-    private func make(_ id: Photo.ID? = nil, isProcessing: Bool = false) -> ResultViewModel {
+    private func make(
+        _ id: Photo.ID? = nil, isProcessing: Bool = false, saver: PhotosSaver? = nil, sharing: (any PhotoSharing)? = nil
+    ) -> ResultViewModel {
         ResultViewModel(
-            photoID: id ?? fresh.id, photos: world.photos, router: world.router, toasts: world.toasts,
-            scheduler: world.scheduler, dayLabeler: DayLabeler(clock: world.clock), isProcessing: isProcessing
+            photoID: id ?? fresh.id, photos: world.photos, saver: saver ?? world.saver,
+            sharing: sharing ?? world.sharing, router: world.router,
+            toasts: world.toasts, scheduler: world.scheduler, dayLabeler: DayLabeler(clock: world.clock),
+            isProcessing: isProcessing
         )
     }
 
@@ -48,6 +52,32 @@ struct ResultViewModelTests {
         world.scheduler.advance(by: .seconds(10))
         #expect(vm.isDeveloping)
         #expect(vm.isProcessing)
+    }
+
+    @Test func aClipBeingBakedShowsItsProgressUntilItIsDone() {
+        let vm = make()
+        world.exporter.progress[fresh.id] = 0.3
+        vm.appeared()
+        world.scheduler.advance(by: .seconds(2))
+        #expect(vm.isProcessing)
+        #expect(vm.processingProgress == 0.3)
+        #expect(vm.isDeveloping)
+        #expect(vm.statusText == "Developing…")
+
+        world.exporter.progress[fresh.id] = nil
+        #expect(!vm.isProcessing)
+        #expect(!vm.isDeveloping)
+        #expect(vm.statusText == "Saved to Photos")
+    }
+
+    @Test func aPhotoIsNeverShownAsProcessing() {
+        let vm = make()
+        #expect(!vm.isProcessing)
+        #expect(vm.processingProgress == nil)
+    }
+
+    @Test func theProcessingBoardIsStuckPartWay() {
+        #expect(make(isProcessing: true).processingProgress == 0.62)
     }
 
     @Test func metaLineNamesTheCameraAndWhen() {
@@ -81,10 +111,31 @@ struct ResultViewModelTests {
         #expect(world.toasts.current?.text == "Saved to Photos")
     }
 
+    @Test func aShotKeptInsideTheAppSaysSoInsteadOfPhotos() {
+        let inApp = PhotosSaver(
+            exporter: world.exporter, permissions: MockPermissionService(photoLibraryAccess: .denied),
+            settings: world.settings, toasts: world.toasts
+        )
+        let vm = make(saver: inApp)
+        vm.appeared()
+        world.scheduler.advance(by: ResultViewModel.developTime)
+        #expect(vm.statusText == "Saved in RetroSnap")
+
+        vm.takeAnotherTapped()
+        #expect(world.toasts.current?.text == "Saved in RetroSnap")
+    }
+
     @Test func shareIsAPlaceholderToast() {
         let vm = make()
         vm.perform(.share)
         #expect(world.toasts.current?.text == "Share sheet opens here")
+        #expect(world.router.path == [.result(fresh.id)])
+    }
+
+    @Test func shareHandsTheShotToTheShareSheet() {
+        let sheet = ShareSpy()
+        make(sharing: sheet).perform(.share)
+        #expect(sheet.sharedIDs == [fresh.id])
         #expect(world.router.path == [.result(fresh.id)])
     }
 
