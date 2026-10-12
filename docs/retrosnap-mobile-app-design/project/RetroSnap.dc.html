@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><meta name="design_doc_mode" content="canvas"><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&family=VT323&display=swap" rel="stylesheet"><style>
+body{margin:0;background:#E9E4DC;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',system-ui,sans-serif;color:#1A1714;-webkit-font-smoothing:antialiased}
+a{color:#B4661A}a:hover{color:#7A420C}
+.dv-turn{padding:44px 48px 40px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:12px;margin:0 0 22px}
+.dv-tid{font:600 11px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:800 22px/1.2 ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;color:#1A1714}
+.dv-opts{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px;width:414px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:600 14px/1.3 system-ui,sans-serif;color:#1A1714}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:26px 0 0;font:13px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+</style></helmet>
+
+<section class="dv-turn" id="t0" style="padding-top:56px;">
+<div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start;">
+<div style="flex:none;display:flex;flex-direction:column;gap:12px;">
+<dc-import name="RetroSnapApp" screen="welcome" selector="{{ selector }}" after-capture="{{ afterCapture }}" sound="{{ sound }}" style="width:414px;height:868px" hint-size="414px,868px"></dc-import>
+<div style="font-size:13px;color:rgba(0,0,0,.55);text-align:center;">Live prototype · click through from Welcome</div>
+</div>
+<div style="flex:1;min-width:320px;max-width:640px;display:flex;flex-direction:column;gap:28px;padding-top:12px;">
+<div style="display:flex;flex-direction:column;gap:10px;">
+<div style="font:600 12px ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#B4661A;">RETROSNAP · VINTAGE CAMERA · iOS</div>
+<div style="font:800 52px/1.02 ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;letter-spacing:-.02em;text-wrap:balance;">A camera, not a photo editor.</div>
+<div style="font-size:18px;line-height:1.5;color:#4A443D;text-wrap:pretty;">The viewfinder is the home screen, the shutter is the biggest thing on it, and the selected look is live before you shoot. Every photo saves itself.</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;">
+<div style="display:flex;flex-direction:column;gap:8px;">
+<div style="font:700 15px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Try in the prototype</div>
+<div style="font-size:14px;line-height:1.55;color:#4A443D;">Continue → allow → shoot. Tap a camera card or swipe the viewfinder to switch looks. The first photo opens the result; after that, shots fly into the gallery button so you keep shooting. Gallery → photo → Edit, Print, Collage, Delete (with Undo).</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;">
+<div style="font:700 15px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Recommendations</div>
+<div style="font-size:14px;line-height:1.55;color:#4A443D;"><b>Camera selection:</b> bottom strip over the live preview (<a class="dv-oid" href="#1a">1a</a>). It keeps the shutter and the look in view.<br><b>Controls:</b> five, no more. Flash, Photo/Video and timer at the top. Camera chip, gallery, shutter and flip under the thumb.</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;">
+<div style="font:700 15px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Assumptions</div>
+<div style="font-size:14px;line-height:1.55;color:#4A443D;">Default camera: 35mm Film (the most flattering look). Sample photos are stock stand-ins with the looks applied live in CSS. Swap in real sample shots before review. Restore Purchases is left out of Settings because nothing is for sale.</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;">
+<div style="font:700 15px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">After capture: one decision</div>
+<div style="font-size:14px;line-height:1.55;color:#4A443D;">The brief wants a result screen and also a thumbnail that flies to the gallery. I show the result after the <i>first</i> photo only, to teach where photos go, then stay in the camera. This is a Tweak if you want “always” or “never”.</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="dv-turn" id="ds">
+<div class="dv-thd"><span class="dv-tid">01</span><span class="dv-tname">Design system</span></div>
+<div style="background:#0E0D0C;color:#F4EEE6;border-radius:28px;padding:40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:40px 48px;max-width:1500px;">
+
+<div style="display:flex;flex-direction:column;gap:16px;">
+<div style="font-size:13px;color:#A79F94;font-weight:600;letter-spacing:.04em;">COLOR · CORE</div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;">
+<div style="display:flex;flex-direction:column;gap:6px;"><div style="height:64px;border-radius:16px;background:#0E0D0C;box-shadow:inset 0 0 0 1px rgba(244,238,230,.15);"></div><div style="font-size:13px;font-weight:600;">Ink</div><div style="font:12px ui-monospace,Menlo,monospace;color:#A79F94;">#0E0D0C</div></div>
+<div style="display:flex;flex-direction:column;gap:6px;"><div style="height:64px;border-radius:16px;background:#1B1916;"></div><div style="font-size:13px;font-weight:600;">Surface</div><div style="font:12px ui-monospace,Menlo,monospace;color:#A79F94;">#1B1916</div></div>
+<div style="display:flex;flex-direction:column;gap:6px;"><div style="height:64px;border-radius:16px;background:#26231F;"></div><div style="font-size:13px;font-weight:600;">Raised</div><div style="font:12px ui-monospace,Menlo,monospace;color:#A79F94;">#26231F</div></div>
+<div style="display:flex;flex-direction:column;gap:6px;"><div style="height:64px;border-radius:16px;background:#F4EEE6;"></div><div style="font-size:13px;font-weight:600;">Paper</div><div style="font:12px ui-monospace,Menlo,monospace;color:#A79F94;">#F4EEE6</div></div>
+<div style="display:flex;flex-direction:column;gap:6px;"><div style="height:64px;border-radius:16px;background:#A79F94;"></div><div style="font-size:13px;font-weight:600;">Secondary text</div><div style="font:12px ui-monospace,Menlo,monospace;color:#A79F94;">#A79F94 · 7.4:1</div></div>
+<div style="display:flex;flex-direction:column;gap:6px;"><div style="height:64px;border-radius:16px;background:#F2A33A;"></div><div style="font-size:13px;font-weight:600;">Amber accent</div><div style="font:12px ui-monospace,Menlo,monospace;color:#A79F94;">#F2A33A</div></div>
+<div style="display:flex;flex-direction:column;gap:6px;"><div style="height:64px;border-radius:16px;background:#E5483B;"></div><div style="font-size:13px;font-weight:600;">Record</div><div style="font:12px ui-monospace,Menlo,monospace;color:#A79F94;">#E5483B</div></div>
+<div style="display:flex;flex-direction:column;gap:6px;"><div style="height:64px;border-radius:16px;background:#FF8A7A;"></div><div style="font-size:13px;font-weight:600;">Destructive</div><div style="font:12px ui-monospace,Menlo,monospace;color:#A79F94;">#FF8A7A</div></div>
+</div>
+<div style="font-size:13px;line-height:1.5;color:#A79F94;">Amber marks only three things: the shutter ring, the current selection and the one primary button. Warm off-white text, never pure white.</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:16px;">
+<div style="font-size:13px;color:#A79F94;font-weight:600;letter-spacing:.04em;">COLOR · CAMERA ACCENTS</div>
+<div style="display:flex;flex-direction:column;gap:10px;">
+<div style="display:flex;align-items:center;gap:14px;"><div style="width:44px;height:44px;border-radius:22px;background:#F2A33A;"></div><div style="flex:1;font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">35mm Film</div><div style="font:12px ui-monospace,Menlo,monospace;color:#A79F94;">#F2A33A</div></div>
+<div style="display:flex;align-items:center;gap:14px;"><div style="width:44px;height:44px;border-radius:22px;background:#F5C84B;"></div><div style="flex:1;font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Disposable</div><div style="font:12px ui-monospace,Menlo,monospace;color:#A79F94;">#F5C84B</div></div>
+<div style="display:flex;align-items:center;gap:14px;"><div style="width:44px;height:44px;border-radius:22px;background:#F4A99B;"></div><div style="flex:1;font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Instant</div><div style="font:12px ui-monospace,Menlo,monospace;color:#A79F94;">#F4A99B</div></div>
+<div style="display:flex;align-items:center;gap:14px;"><div style="width:44px;height:44px;border-radius:22px;background:#6FA8FF;"></div><div style="flex:1;font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Digicam</div><div style="font:12px ui-monospace,Menlo,monospace;color:#A79F94;">#6FA8FF</div></div>
+<div style="display:flex;align-items:center;gap:14px;"><div style="width:44px;height:44px;border-radius:22px;background:linear-gradient(135deg,#FF5A4E 50%,#3FC8C0 50%);"></div><div style="flex:1;font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Camcorder</div><div style="font:12px ui-monospace,Menlo,monospace;color:#A79F94;">#FF5A4E / #3FC8C0</div></div>
+</div>
+<div style="font-size:13px;line-height:1.5;color:#A79F94;">Used only on that camera's card bar, badge and chip ring. Never for text and never as the only cue: the name is always shown.</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:16px;">
+<div style="font-size:13px;color:#A79F94;font-weight:600;letter-spacing:.04em;">TYPE · MAX THREE SIZES PER SCREEN</div>
+<div style="display:flex;flex-direction:column;gap:14px;">
+<div style="display:flex;align-items:baseline;gap:16px;"><div style="width:110px;flex:none;font:12px ui-monospace,Menlo,monospace;color:#A79F94;">Title 28</div><div style="font:800 28px/1.15 ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Choose a camera</div></div>
+<div style="display:flex;align-items:baseline;gap:16px;"><div style="width:110px;flex:none;font:12px ui-monospace,Menlo,monospace;color:#A79F94;">Label 17 Rnd</div><div style="font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">35mm Film · Take another</div></div>
+<div style="display:flex;align-items:baseline;gap:16px;"><div style="width:110px;flex:none;font:12px ui-monospace,Menlo,monospace;color:#A79F94;">Body 17 / 15</div><div style="font-size:17px;">Golden tones, fine grain, soft edges.</div></div>
+<div style="display:flex;align-items:baseline;gap:16px;"><div style="width:110px;flex:none;font:12px ui-monospace,Menlo,monospace;color:#A79F94;">Caption 13</div><div style="font-size:13px;color:#A79F94;">Saved to Photos</div></div>
+<div style="display:flex;align-items:baseline;gap:16px;"><div style="width:110px;flex:none;font:12px ui-monospace,Menlo,monospace;color:#A79F94;">Stamp</div><div style="font:26px VT323,monospace;color:#FF8A2A;text-shadow:0 0 6px rgba(255,110,20,.8);">'26 10 11</div></div>
+</div>
+<div style="font-size:13px;line-height:1.5;color:#A79F94;">SF Pro for UI, SF Pro Rounded for names and buttons. All sizes follow Dynamic Type text styles (Title 1, Headline, Body, Footnote). The date stamp is a motif, not a UI font.</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:16px;">
+<div style="font-size:13px;color:#A79F94;font-weight:600;letter-spacing:.04em;">SHUTTER · THE HERO</div>
+<div style="display:flex;gap:22px;align-items:flex-end;flex-wrap:wrap;">
+<div style="display:flex;flex-direction:column;align-items:center;gap:10px;"><div style="width:84px;height:84px;border-radius:50%;border:4px solid #F2A33A;display:flex;align-items:center;justify-content:center;box-sizing:border-box;"><div style="width:66px;height:66px;border-radius:50%;background:radial-gradient(circle at 38% 30%, #FFFDF8, #EEE6D9 55%, #CDBFAa);box-shadow:inset 0 -3px 6px rgba(0,0,0,.18), inset 0 2px 2px rgba(255,255,255,.5), 0 2px 8px rgba(0,0,0,.35);"></div></div><div style="font-size:13px;color:#A79F94;">Photo</div></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:10px;"><div style="width:84px;height:84px;border-radius:50%;border:4px solid #F2A33A;display:flex;align-items:center;justify-content:center;box-sizing:border-box;transform:scale(.92);"><div style="width:66px;height:66px;border-radius:50%;background:radial-gradient(circle at 38% 30%, #F4EEE6, #DDD3C4 55%, #BFB09B);box-shadow:inset 0 2px 6px rgba(0,0,0,.25);"></div></div><div style="font-size:13px;color:#A79F94;">Pressed</div></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:10px;"><div style="width:84px;height:84px;border-radius:50%;border:4px solid #F2A33A;display:flex;align-items:center;justify-content:center;box-sizing:border-box;"><div style="width:62px;height:62px;border-radius:50%;background:#E5483B;box-shadow:inset 0 -3px 6px rgba(0,0,0,.18), 0 2px 8px rgba(0,0,0,.35);"></div></div><div style="font-size:13px;color:#A79F94;">Video</div></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:10px;"><div style="width:84px;height:84px;border-radius:50%;border:4px solid #F2A33A;display:flex;align-items:center;justify-content:center;box-sizing:border-box;"><div style="width:30px;height:30px;border-radius:8px;background:#E5483B;"></div></div><div style="font-size:13px;color:#A79F94;">Recording</div></div>
+</div>
+<div style="font-size:13px;line-height:1.5;color:#A79F94;">84pt target. Amber ring, cream “button” with a soft top light and a pressed-in shadow. Press: scale .92, light haptic, short shutter click, 240ms white flash, then the thumbnail flies into the gallery button.</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:16px;">
+<div style="font-size:13px;color:#A79F94;font-weight:600;letter-spacing:.04em;">BUTTONS & CONTROLS</div>
+<div style="display:flex;flex-direction:column;gap:12px;max-width:340px;">
+<div style="height:56px;border-radius:28px;background:#F2A33A;color:#1E1206;font:700 17px/56px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;text-align:center;">Primary · one per screen</div>
+<div style="height:56px;border-radius:28px;background:#26231F;color:#F4EEE6;font:700 17px/56px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;text-align:center;">Secondary</div>
+<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+<div style="width:44px;height:44px;border-radius:22px;background:rgba(244,238,230,.12);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F4EEE6" stroke-width="1.8" stroke-linejoin="round"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12z"></path></svg></div>
+<div style="display:flex;padding:3px;border-radius:20px;background:rgba(244,238,230,.12);"><div style="height:32px;padding:0 16px;border-radius:16px;background:#F4EEE6;color:#1A1714;font:700 13px/32px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Photo</div><div style="height:32px;padding:0 16px;font:700 13px/32px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Video</div></div>
+<div style="width:51px;height:31px;border-radius:16px;background:#F2A33A;padding:2px;box-sizing:border-box;display:flex;justify-content:flex-end;"><div style="width:27px;height:27px;border-radius:50%;background:#fff;"></div></div>
+<div style="height:44px;padding:0 14px 0 6px;border-radius:22px;background:rgba(244,238,230,.12);display:flex;align-items:center;gap:8px;"><div style="width:32px;height:32px;border-radius:50%;overflow:hidden;position:relative;box-shadow:0 0 0 2px #F2A33A;"><dc-import name="Photo" src="https://picsum.photos/id/1015/200/200" cam="film" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import></div><span style="font:700 15px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">35mm Film</span></div>
+</div>
+</div>
+<div style="font-size:13px;line-height:1.5;color:#A79F94;">Full-round buttons. Glass controls (blurred ink at 45%) float over the viewfinder. All targets are at least 44pt.</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:16px;">
+<div style="font-size:13px;color:#A79F94;font-weight:600;letter-spacing:.04em;">SHAPE, SPACE & MOTION</div>
+<div style="display:flex;gap:10px;align-items:flex-end;">
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:8px;height:8px;background:#F2A33A;border-radius:2px;"></div><span style="font:11px ui-monospace,Menlo,monospace;color:#A79F94;">8</span></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:16px;height:16px;background:#F2A33A;border-radius:3px;"></div><span style="font:11px ui-monospace,Menlo,monospace;color:#A79F94;">16</span></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:24px;height:24px;background:#F2A33A;border-radius:4px;"></div><span style="font:11px ui-monospace,Menlo,monospace;color:#A79F94;">24</span></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:32px;height:32px;background:#F2A33A;border-radius:5px;"></div><span style="font:11px ui-monospace,Menlo,monospace;color:#A79F94;">32</span></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:48px;height:48px;background:#F2A33A;border-radius:6px;"></div><span style="font:11px ui-monospace,Menlo,monospace;color:#A79F94;">48</span></div>
+<div style="width:20px;"></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:48px;height:48px;background:#26231F;border-radius:16px;"></div><span style="font:11px ui-monospace,Menlo,monospace;color:#A79F94;">r16</span></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:48px;height:48px;background:#26231F;border-radius:20px;"></div><span style="font:11px ui-monospace,Menlo,monospace;color:#A79F94;">r20</span></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:48px;height:48px;background:#26231F;border-radius:28px;"></div><span style="font:11px ui-monospace,Menlo,monospace;color:#A79F94;">full</span></div>
+</div>
+<div style="font-size:13px;line-height:1.6;color:#A79F94;">8pt grid. Cards r16 to r28. Motion runs 200 to 300ms on a soft spring. Camera switches cross-fade the preview over 280ms. Reduce Motion removes the flash, fly-in and spring; silent mode mutes the click and keeps the haptic.</div>
+</div>
+
+<div style="grid-column:1/-1;display:flex;flex-direction:column;gap:16px;">
+<div style="font-size:13px;color:#A79F94;font-weight:600;letter-spacing:.04em;">THE FIVE CAMERAS · SAME SCENE, FIVE LOOKS</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+<sc-for list="{{ cams }}" as="c" hint-placeholder-count="5">
+<div style="border-radius:24px;background:{{ c.bg }};padding:10px 10px 18px;display:flex;flex-direction:column;gap:12px;">
+<div style="position:relative;aspect-ratio:3/4;border-radius:16px;overflow:hidden;"><dc-import name="Photo" src="https://picsum.photos/id/1011/600/800" cam="{{ c.id }}" stamp="{{ true }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import></div>
+<div style="display:flex;align-items:center;gap:8px;padding:0 6px;"><div style="flex:1;font:800 20px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">{{ c.name }}</div><div style="height:24px;padding:0 9px;border-radius:12px;background:{{ c.accent }};color:#17120C;font:700 12px/24px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">{{ c.badge }}</div></div>
+<div style="font-size:14px;line-height:1.45;color:#CFC6BA;padding:0 6px;">{{ c.desc }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</section>
+
+<section class="dv-turn" id="gp">
+<div class="dv-thd"><span class="dv-tid">02</span><span class="dv-tname">Golden path · first photo in under a minute</span></div>
+<div class="dv-opts">
+<sc-for list="{{ golden }}" as="b" hint-placeholder-count="4">
+<div class="dv-opt">
+<div style="display:flex;flex-direction:column;gap:3px;"><div style="font:800 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">{{ b.n }} · {{ b.title }}</div><div style="font-size:13px;color:#7A7066;"><b style="color:#B4661A;">Primary:</b> {{ b.primary }}</div></div>
+<dc-import name="RetroSnapApp" screen="{{ b.screen }}" variant="{{ b.variant }}" cam="{{ b.cam }}" first-run="{{ b.firstRun }}" sheet="{{ b.sheet }}" after-capture="{{ afterCapture }}" sound="{{ sound }}" style="width:414px;height:868px" hint-size="414px,868px"></dc-import>
+<div style="font-size:13px;line-height:1.5;color:#4A443D;text-wrap:pretty;">{{ b.note }}</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Camera selection · two layouts</span></div>
+<div class="dv-opts">
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Bottom strip over live preview <span style="padding:2px 8px;border-radius:10px;background:#F2A33A;color:#1E1206;font:700 11px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Recommended</span></div>
+<dc-import name="RetroSnapApp" screen="camera" cam="inst" sheet="{{ true }}" selector="sheet" sound="{{ sound }}" style="width:414px;height:868px" hint-size="414px,868px"></dc-import>
+<div style="font-size:13px;line-height:1.5;color:#4A443D;">One tap on a card switches the look and the strip folds back into the chip. The viewfinder and shutter stay visible the whole time, so you choose by seeing the real scene change.</div>
+</div>
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Full-screen card carousel</div>
+<dc-import name="RetroSnapApp" screen="carousel" cam="film" selector="carousel" sound="{{ sound }}" style="width:414px;height:868px" hint-size="414px,868px"></dc-import>
+<div style="font-size:13px;line-height:1.5;color:#4A443D;">Bigger samples and room for a description, which helps discovery. The cost: it hides the viewfinder and adds a screen between you and the shutter. Good as a “browse all cameras” page later.</div>
+</div>
+</div>
+<p class="dv-next">Try next: “carousel cards but inside the <a class="dv-oid" href="#1a">1a</a> sheet” · “show the camera’s badge on the chip in <a class="dv-oid" href="#1a">1a</a>” · switch the live prototype to <a class="dv-oid" href="#1b">1b</a> in Tweaks</p>
+</section>
+
+<section class="dv-turn" id="sec">
+<div class="dv-thd"><span class="dv-tid">03</span><span class="dv-tname">Secondary screens</span></div>
+<div class="dv-opts">
+<sc-for list="{{ secondary }}" as="b" hint-placeholder-count="4">
+<div class="dv-opt">
+<div style="display:flex;flex-direction:column;gap:3px;"><div style="font:800 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">{{ b.n }} · {{ b.title }}</div><div style="font-size:13px;color:#7A7066;"><b style="color:#B4661A;">Primary:</b> {{ b.primary }}</div></div>
+<dc-import name="RetroSnapApp" screen="{{ b.screen }}" variant="{{ b.variant }}" cam="{{ b.cam }}" collage-step="{{ b.step }}" tool="{{ b.tool }}" edit-preset="{{ b.preset }}" sound="{{ sound }}" style="width:414px;height:868px" hint-size="414px,868px"></dc-import>
+<div style="font-size:13px;line-height:1.5;color:#4A443D;text-wrap:pretty;">{{ b.note }}</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section class="dv-turn" id="st">
+<div class="dv-thd"><span class="dv-tid">04</span><span class="dv-tname">States · every one has a way forward</span></div>
+<div class="dv-opts">
+<sc-for list="{{ states }}" as="b" hint-placeholder-count="4">
+<div class="dv-opt">
+<div style="display:flex;flex-direction:column;gap:3px;"><div style="font:800 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">{{ b.title }}</div><div style="font-size:13px;color:#7A7066;"><b style="color:#B4661A;">Way forward:</b> {{ b.primary }}</div></div>
+<dc-import name="RetroSnapApp" screen="{{ b.screen }}" variant="{{ b.variant }}" cam="{{ b.cam }}" sound="{{ sound }}" style="width:414px;height:868px" hint-size="414px,868px"></dc-import>
+<div style="font-size:13px;line-height:1.5;color:#4A443D;text-wrap:pretty;">{{ b.note }}</div>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section class="dv-turn" id="qa" style="border-bottom:none;padding-bottom:80px;">
+<div class="dv-thd"><span class="dv-tid">05</span><span class="dv-tname">Quality bar check</span></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;max-width:1400px;">
+<sc-for list="{{ checks }}" as="q" hint-placeholder-count="6">
+<div style="background:#F6F2EC;border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:6px;">
+<div style="display:flex;align-items:center;gap:8px;font:700 15px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;"><span style="width:22px;height:22px;border-radius:50%;background:#F2A33A;display:flex;align-items:center;justify-content:center;flex:none;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1E1206" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg></span>{{ q.t }}</div>
+<div style="font-size:14px;line-height:1.5;color:#4A443D;">{{ q.d }}</div>
+</div>
+</sc-for>
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;selector&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;sheet&quot;,&quot;carousel&quot;],&quot;default&quot;:&quot;sheet&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype&quot;},&quot;afterCapture&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;first&quot;,&quot;always&quot;,&quot;never&quot;],&quot;default&quot;:&quot;first&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype&quot;},&quot;sound&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Prototype&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const sel = this.props.selector || 'sheet';
+    const B = (o) => ({ variant: '', cam: 'film', firstRun: false, sheet: false, step: 1, tool: 'intensity', preset: null, ...o });
+    return {
+      selector: sel, afterCapture: this.props.afterCapture || 'first', sound: this.props.sound ?? true,
+      cams: [
+        ['film', '35mm Film', 'Golden', 'Golden tones, fine grain, soft vignette.', '#F2A33A'],
+        ['disp', 'Disposable', 'Flash', 'Flash-lit, grainy, warm, blown highlights.', '#F5C84B'],
+        ['inst', 'Instant', 'Square', 'Square, white frame, soft and faded.', '#F4A99B'],
+        ['digi', 'Digicam', 'Date stamp', 'Early-2000s digital. Cool, crisp, dated.', '#6FA8FF'],
+        ['vhs', 'Camcorder', 'Home video', 'VHS softness, color bleed, scanlines.', '#FF5A4E']
+      ].map(([id, name, badge, desc, accent]) => ({ id, name, badge, desc, accent, bg: `color-mix(in oklab, ${accent} 12%, #1B1916)` })),
+      golden: [
+        B({ n: '01', title: 'Welcome', screen: 'welcome', primary: 'Continue', note: 'One real photo, one line, one button. No sign-in.' }),
+        B({ n: '02', title: 'How it works', screen: 'how', primary: 'Continue', note: 'Three steps shown as pictures, with a few words each.' }),
+        B({ n: '03', title: 'Camera permission', screen: 'permCam', primary: 'Allow Camera', note: 'One sentence explains why, then the iOS prompt.' }),
+        B({ n: '04', title: 'Photos permission', screen: 'permLib', primary: 'Allow Photos', note: '“Not now” still lands on the camera. Photos stay in the app until access is given. Notifications are never requested.' }),
+        B({ n: '05', title: 'Camera · first launch', screen: 'camera', firstRun: true, primary: 'Shutter', note: 'The camera strip opens with a soft amber glow, but 35mm Film is already on, so the shutter works straight away.' }),
+        B({ n: '06', title: 'Camera selection', screen: 'camera', cam: 'disp', sheet: true, primary: 'Tap a camera', note: 'Tap a card: the preview cross-fades and the strip closes. No confirm step. Swiping the viewfinder also switches cameras.' }),
+        B({ n: '07', title: 'Live preview', screen: 'camera', cam: 'vhs', primary: 'Shutter', note: 'The look is applied live, overlays included. Instant shows its square crop and Camcorder shows its timestamp before you shoot.' }),
+        B({ n: '08', title: 'Capture', screen: 'camera', variant: 'capture', primary: 'Shutter', note: 'Press: scale .92, haptic, click, 240ms flash, thumbnail flies to the gallery button. Nothing to save or confirm.' }),
+        B({ n: '09', title: 'Photo result', screen: 'result', primary: 'Take another', note: 'Shown after the first photo. It develops in under a second. Share, Edit, Print, Collage and Delete are there but quiet.' }),
+        B({ n: '10', title: 'Return to camera', screen: 'camera', variant: 'saved', primary: 'Shutter', note: 'Same camera, same settings. The new shot is in the thumbnail and a toast confirms it saved.' })
+      ],
+      secondary: [
+        B({ n: '11', title: 'Gallery', screen: 'gallery', primary: 'Open a photo', note: 'Grouped by day. A floating “Camera” pill goes straight back to shooting. Settings sits here, outside the core path.' }),
+        B({ n: '12', title: 'Photo viewer', screen: 'viewer', primary: 'The photo itself', note: 'Full screen, swipe between shots. Actions sit in a labeled row. Delete offers Undo instead of a dialog.' }),
+        B({ n: '13', title: 'Edit', screen: 'edit', tool: 'warmth', preset: { warmth: 18, grain: 64 }, primary: 'Done', note: 'Five plain-language sliders, one at a time. Hold the photo to see the original.' }),
+        B({ n: '14', title: 'Video · recording', screen: 'camera', variant: 'recording', cam: 'vhs', primary: 'Stop', note: 'Same screen, same mental model. The shutter turns into record, then stop, and the timer replaces the mode switch.' }),
+        B({ n: '14b', title: 'Video result', screen: 'result', variant: 'video', cam: 'vhs', primary: 'Take another', note: 'Finished clip with the same quiet actions as photos.' }),
+        B({ n: '15', title: 'Collage · layout', screen: 'collage', primary: 'Choose 3 photos', note: 'Layouts drawn as shapes. The current photo is pre-picked.' }),
+        B({ n: '15b', title: 'Collage · arrange', screen: 'collage', step: 3, primary: 'Save collage', note: 'Tap two photos to swap them. Border color is the only customization shown.' }),
+        B({ n: '16', title: 'Print', screen: 'print', primary: 'Print', note: 'Size, copies and border. Printer and paper stay under “More options”.' }),
+        B({ n: '17', title: 'Settings', screen: 'settings', primary: '—', note: 'Short and plain. No account, no upgrade.' })
+      ],
+      states: [
+        B({ title: 'Camera permission denied', screen: 'camera', variant: 'denied', primary: 'Open Settings', note: 'The camera chrome stays, so the app still feels like a camera. The gallery still works.' }),
+        B({ title: 'Photo library denied', screen: 'camera', variant: 'libDenied', primary: 'Shutter (banner offers Allow)', note: 'Shooting still works and photos save inside the app. The banner can be dismissed by allowing access.' }),
+        B({ title: 'Processing', screen: 'result', variant: 'processing', primary: 'Take another (works during develop)', note: 'Developing shows as a short progress bar. You can leave right away; saving finishes in the background.' }),
+        B({ title: 'Empty gallery', screen: 'gallery', variant: 'empty', primary: 'Take a photo', note: 'A blank instant print and one button back to the camera.' }),
+        B({ title: 'Low storage', screen: 'camera', variant: 'lowStorage', cam: 'digi', primary: 'Shutter (banner offers Manage)', note: 'Says how many photos are left, in plain words. Shooting is never blocked early.' }),
+        B({ title: 'Camera unavailable', screen: 'camera', variant: 'unavailable', primary: 'Try again', note: 'Explains the likely cause (another app is using it) and gives one action.' }),
+        B({ title: 'Returning user', screen: 'camera', cam: 'inst', primary: 'Shutter', note: 'Opens on the last camera used (Instant here) with no prompts. Compare with first launch, 05.' })
+      ],
+      checks: [
+        { t: 'Shutter is the hero', d: 'An 84pt amber ring, the biggest and brightest thing on the camera screen, centered under the thumb.' },
+        { t: 'One primary per screen', d: 'Each screen has one amber button or the shutter. Everything else is quiet surface or glass.' },
+        { t: 'Second photo, no instructions', d: 'Result → “Take another” → same camera → shutter. From the second shot on you stay in the camera.' },
+        { t: 'Defaults over decisions', d: '35mm Film is on from the start. Flash is Auto. Saving is automatic. Nothing to confirm.' },
+        { t: 'No upsell surface', d: 'No Pro badges, locks, sign-in, ads or Restore Purchases.' },
+        { t: 'Accessible by default', d: 'Every control has a VoiceOver label, text contrast is 4.5:1 or better, and cameras are named, never shown by color alone. Reduce Motion is respected.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

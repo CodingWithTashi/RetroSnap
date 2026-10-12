@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800&family=VT323&display=swap" rel="stylesheet"><style>
+@keyframes rsFlash{0%{opacity:.92}100%{opacity:0}}
+@keyframes rsFly{0%{left:0;top:0;width:390px;height:844px;border-radius:50px;opacity:1}85%{opacity:1}100%{left:30px;top:722px;width:56px;height:56px;border-radius:16px;opacity:0}}
+@keyframes rsLabel{0%{opacity:0;transform:translate(-50%,8px) scale(.96)}15%{opacity:1;transform:translate(-50%,0) scale(1)}75%{opacity:1}100%{opacity:0}}
+@keyframes rsDev{0%{opacity:1}100%{opacity:0}}
+@keyframes rsPulse{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes rsToast{0%{opacity:0;transform:translate(-50%,-8px)}100%{opacity:1;transform:translate(-50%,0)}}
+button{font-family:inherit}
+</style></helmet>
+<div style="width:414px;height:868px;border-radius:62px;background:#050505;padding:12px;box-sizing:border-box;box-shadow:0 0 0 1.5px #34312c, 0 30px 70px rgba(30,20,10,.28);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',system-ui,sans-serif;-webkit-font-smoothing:antialiased;">
+<div style="position:relative;width:390px;height:844px;border-radius:50px;overflow:hidden;background:#0E0D0C;color:#F4EEE6;user-select:none;">
+
+<sc-if value="{{ isWelcome }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;">
+<div style="position:relative;height:560px;flex:none;">
+<dc-import name="Photo" src="https://picsum.photos/id/1011/780/1120" cam="film" stamp="{{ true }}" stamp-bottom="22%" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+<div style="position:absolute;left:0;right:0;bottom:0;height:220px;background:linear-gradient(rgba(14,13,12,0),#0E0D0C);"></div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;padding:0 32px 44px;margin-top:-40px;position:relative;">
+<div style="display:flex;align-items:center;gap:10px;">
+<div style="width:30px;height:30px;border-radius:50%;background:#F2A33A;display:flex;align-items:center;justify-content:center;"><div style="width:12px;height:12px;border-radius:50%;background:#0E0D0C;box-shadow:0 0 0 3px rgba(14,13,12,.25);"></div></div>
+<div style="font:800 34px/1 ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;letter-spacing:-.02em;">RetroSnap</div>
+</div>
+<div style="margin-top:14px;font-size:17px;line-height:1.4;color:#A79F94;text-align:center;text-wrap:pretty;">Vintage photos, straight from the camera. No editing needed.</div>
+<div style="flex:1;"></div>
+<button onClick="{{ toHow }}" style="width:100%;height:56px;border-radius:28px;border:none;background:#F2A33A;color:#1E1206;font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;cursor:pointer;" style-active="transform:scale(.97)">Continue</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isHow }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:96px 24px 44px;box-sizing:border-box;">
+<div style="font:800 28px/1.15 ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;letter-spacing:-.01em;">Three taps to a<br>vintage photo</div>
+<div style="display:flex;flex-direction:column;gap:14px;margin-top:28px;">
+<div style="display:flex;align-items:center;gap:16px;padding:12px;border-radius:24px;background:#1B1916;">
+<div style="width:104px;height:104px;flex:none;border-radius:16px;background:#26231F;position:relative;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;padding:3px;box-sizing:border-box;">
+<div style="position:relative;border-radius:12px 4px 4px 4px;overflow:hidden;"><dc-import name="Photo" src="https://picsum.photos/id/1015/300/300" cam="film" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import></div>
+<div style="position:relative;border-radius:4px 12px 4px 4px;overflow:hidden;"><dc-import name="Photo" src="https://picsum.photos/id/237/300/300" cam="disp" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import></div>
+<div style="position:relative;border-radius:4px 4px 4px 12px;overflow:hidden;"><dc-import name="Photo" src="https://picsum.photos/id/1027/300/300" cam="inst" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import></div>
+<div style="position:relative;border-radius:4px 4px 12px 4px;overflow:hidden;"><dc-import name="Photo" src="https://picsum.photos/id/1039/300/300" cam="vhs" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px;"><div style="font-size:13px;font-weight:600;color:#F2A33A;">Step 1</div><div style="font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Choose a camera</div><div style="font-size:13px;color:#A79F94;line-height:1.35;">Five looks. One tap to switch.</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:16px;padding:12px;border-radius:24px;background:#1B1916;">
+<div style="width:104px;height:104px;flex:none;border-radius:16px;position:relative;overflow:hidden;">
+<img src="https://picsum.photos/id/1016/300/300" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">
+<div style="position:absolute;left:50%;bottom:10px;transform:translateX(-50%);width:34px;height:34px;border-radius:50%;border:3px solid #F2A33A;display:flex;align-items:center;justify-content:center;box-sizing:border-box;"><div style="width:22px;height:22px;border-radius:50%;background:#F4EEE6;"></div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px;"><div style="font-size:13px;font-weight:600;color:#F2A33A;">Step 2</div><div style="font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Take a photo</div><div style="font-size:13px;color:#A79F94;line-height:1.35;">What you see is what you get.</div></div>
+</div>
+<div style="display:flex;align-items:center;gap:16px;padding:12px;border-radius:24px;background:#1B1916;">
+<div style="width:104px;height:104px;flex:none;border-radius:16px;position:relative;overflow:hidden;"><dc-import name="Photo" src="https://picsum.photos/id/1016/300/300" cam="film" stamp="{{ true }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import></div>
+<div style="display:flex;flex-direction:column;gap:4px;"><div style="font-size:13px;font-weight:600;color:#F2A33A;">Step 3</div><div style="font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Get the vintage look</div><div style="font-size:13px;color:#A79F94;line-height:1.35;">Saved to Photos automatically.</div></div>
+</div>
+</div>
+<div style="flex:1;"></div>
+<button onClick="{{ toPermCam }}" style="width:100%;height:56px;border-radius:28px;border:none;background:#F2A33A;color:#1E1206;font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;cursor:pointer;" style-active="transform:scale(.97)">Continue</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isPerm }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:0 32px 44px;box-sizing:border-box;text-align:center;">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+<div style="width:132px;height:132px;border-radius:50%;background:radial-gradient(circle at 50% 40%, #2c2722, #1B1916);box-shadow:0 0 0 10px rgba(242,163,58,.08), 0 0 0 22px rgba(242,163,58,.04);display:flex;align-items:center;justify-content:center;color:#F2A33A;">
+<sc-if value="{{ isPermCam }}" hint-placeholder-val="{{ true }}"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"></path><circle cx="12" cy="13.5" r="3.6"></circle></svg></sc-if>
+<sc-if value="{{ isPermLib }}" hint-placeholder-val="{{ false }}"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"></rect><path d="m3 16 5-5 4 4 3-3 6 6"></path><circle cx="16" cy="9" r="1.5"></circle></svg></sc-if>
+</div>
+<div style="font:800 28px/1.15 ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;letter-spacing:-.01em;">{{ permTitle }}</div>
+<div style="font-size:17px;line-height:1.4;color:#A79F94;text-wrap:pretty;max-width:300px;">{{ permBody }}</div>
+</div>
+<div style="width:100%;display:flex;flex-direction:column;gap:8px;">
+<button onClick="{{ permAllow }}" style="width:100%;height:56px;border-radius:28px;border:none;background:#F2A33A;color:#1E1206;font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;cursor:pointer;" style-active="transform:scale(.97)">{{ permCta }}</button>
+<button onClick="{{ permSkip }}" style="width:100%;height:44px;border:none;background:transparent;color:#A79F94;font-size:15px;cursor:pointer;visibility:{{ permSkipVis }};">Not now</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCamera }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:#000;">
+<div onPointerDown="{{ vfDown }}" onPointerUp="{{ vfUp }}" style="position:absolute;inset:0;touch-action:pan-y;cursor:grab;">
+<sc-if value="{{ showVf }}" hint-placeholder-val="{{ true }}">
+<sc-for list="{{ vfLayers }}" as="l" hint-placeholder-count="1">
+<div style="position:absolute;inset:0;opacity:{{ l.op }};transition:opacity 280ms ease;">
+<dc-import name="Photo" src="{{ l.src }}" cam="{{ l.cam }}" stamp="{{ true }}" stamp-bottom="27%" stamp-top="17%" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+</div>
+</sc-for>
+<div style="position:absolute;left:0;right:0;top:0;height:227px;background:rgba(10,9,8,.72);opacity:{{ instOp }};transition:opacity 280ms;pointer-events:none;"></div>
+<div style="position:absolute;left:0;right:0;top:617px;bottom:0;background:rgba(10,9,8,.72);opacity:{{ instOp }};transition:opacity 280ms;pointer-events:none;"></div>
+</sc-if>
+<sc-if value="{{ isBlocked }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%, #221f1b, #0E0D0C 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:0 44px 180px;text-align:center;">
+<div style="width:72px;height:72px;border-radius:50%;background:#26231F;display:flex;align-items:center;justify-content:center;color:#A79F94;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"></path><circle cx="12" cy="13.5" r="3.6"></circle><path d="M3 3l18 18"></path></svg></div>
+<div style="font:800 22px/1.2 ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">{{ blockTitle }}</div>
+<div style="font-size:15px;line-height:1.4;color:#A79F94;text-wrap:pretty;">{{ blockBody }}</div>
+<button onClick="{{ unblock }}" style="margin-top:8px;height:48px;padding:0 28px;border-radius:24px;border:none;background:#F2A33A;color:#1E1206;font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;cursor:pointer;">{{ blockCta }}</button>
+</div>
+</sc-if>
+</div>
+{{ flashEl }}
+{{ flyEl }}
+{{ labelEl }}
+<sc-if value="{{ showPoseFlash }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:#fff;opacity:.55;pointer-events:none;"></div></sc-if>
+<sc-if value="{{ counting }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;left:0;right:0;top:330px;text-align:center;font:800 120px/1 ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;color:#F4EEE6;text-shadow:0 4px 30px rgba(0,0,0,.5);pointer-events:none;">{{ count }}</div></sc-if>
+
+<div style="position:absolute;top:0;left:0;right:0;height:150px;background:linear-gradient(rgba(0,0,0,.55),rgba(0,0,0,0));pointer-events:none;"></div>
+<div style="position:absolute;left:0;right:0;bottom:0;height:330px;background:linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.72));pointer-events:none;"></div>
+
+<div style="position:absolute;top:56px;left:16px;right:16px;display:flex;align-items:center;justify-content:space-between;">
+<button onClick="{{ cycleFlash }}" aria-label="{{ flashLabel }}" style="width:44px;height:44px;border-radius:22px;border:none;background:rgba(20,18,16,.45);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);color:{{ flashColor }};display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12z"></path><sc-if value="{{ flashOff }}" hint-placeholder-val="{{ false }}"><path d="M3.5 3.5l17 17"></path></sc-if></svg>
+<sc-if value="{{ flashAuto }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;right:5px;bottom:5px;font:800 9px ui-rounded,'SF Pro Rounded',Nunito,sans-serif;">A</span></sc-if>
+</button>
+<sc-if value="{{ notRecording }}" hint-placeholder-val="{{ true }}">
+<div role="tablist" style="display:flex;padding:3px;border-radius:20px;background:rgba(20,18,16,.45);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);">
+<button onClick="{{ setPhoto }}" aria-selected="{{ isPhotoMode }}" style="height:32px;padding:0 16px;border-radius:16px;border:none;background:{{ photoTabBg }};color:{{ photoTabColor }};font:700 13px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;cursor:pointer;transition:all 200ms;">Photo</button>
+<button onClick="{{ setVideo }}" aria-selected="{{ isVideoMode }}" style="height:32px;padding:0 16px;border-radius:16px;border:none;background:{{ videoTabBg }};color:{{ videoTabColor }};font:700 13px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;cursor:pointer;transition:all 200ms;">Video</button>
+</div>
+</sc-if>
+<sc-if value="{{ recordingNow }}" hint-placeholder-val="{{ false }}">
+<div aria-live="polite" style="height:38px;padding:0 14px;border-radius:19px;background:#E5483B;display:flex;align-items:center;gap:8px;font:700 15px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;font-variant-numeric:tabular-nums;"><span style="width:8px;height:8px;border-radius:50%;background:#fff;animation:rsPulse 1.2s infinite;"></span>{{ recTime }}</div>
+</sc-if>
+<button onClick="{{ toggleTimer }}" aria-label="{{ timerLabel }}" style="width:44px;height:44px;border-radius:22px;border:none;background:rgba(20,18,16,.45);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);color:{{ timerColor }};display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2.5 2M9.5 2.5h5"></path></svg>
+<sc-if value="{{ timer }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;right:3px;bottom:4px;font:800 9px ui-rounded,'SF Pro Rounded',Nunito,sans-serif;">3s</span></sc-if>
+</button>
+</div>
+
+<sc-if value="{{ hasBanner }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;top:112px;left:16px;right:16px;padding:12px 12px 12px 16px;border-radius:20px;background:rgba(20,18,16,.72);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);display:flex;align-items:center;gap:12px;">
+<div style="flex:1;display:flex;flex-direction:column;gap:2px;"><div style="font-size:15px;font-weight:600;">{{ bannerTitle }}</div><div style="font-size:13px;color:#A79F94;line-height:1.3;">{{ bannerBody }}</div></div>
+<button onClick="{{ bannerAction }}" style="height:36px;padding:0 14px;border-radius:18px;border:none;background:#F4EEE6;color:#1A1714;font:700 13px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;cursor:pointer;">{{ bannerCta }}</button>
+</div>
+</sc-if>
+
+<button onClick="{{ openSel }}" aria-label="{{ chipLabel }}" style="position:absolute;left:50%;bottom:146px;transform:translateX(-50%) {{ chipTf }};opacity:{{ chipOp }};pointer-events:{{ chipPe }};transition:opacity 220ms ease, transform 260ms cubic-bezier(.3,1.3,.5,1);height:44px;padding:0 14px 0 6px;border-radius:22px;border:none;background:rgba(20,18,16,.5);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;align-items:center;gap:8px;color:#F4EEE6;cursor:pointer;white-space:nowrap;">
+<span style="width:32px;height:32px;border-radius:50%;overflow:hidden;position:relative;box-shadow:0 0 0 2px {{ camAccent }};flex:none;"><dc-import name="Photo" src="{{ camSample }}" cam="{{ cam }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import></span>
+<span style="font:700 15px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">{{ camName }}</span>
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 15 6-6 6 6"></path></svg>
+</button>
+
+<div style="position:absolute;left:8px;right:8px;bottom:136px;border-radius:28px;background:rgba(14,13,12,.74);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);padding:16px 0 14px;transform:{{ sheetTf }};opacity:{{ sheetOp }};pointer-events:{{ sheetPe }};transition:opacity 220ms ease, transform 280ms cubic-bezier(.3,1.25,.5,1);box-shadow:{{ sheetRing }};">
+<div style="display:flex;align-items:center;gap:12px;padding:0 12px 0 18px;">
+<div style="flex:1;display:flex;flex-direction:column;gap:2px;"><div style="font:700 15px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">{{ sheetTitle }}</div><div style="font-size:13px;color:#A79F94;">{{ sheetSub }}</div></div>
+<button onClick="{{ closeSheet }}" aria-label="Hide cameras" style="width:36px;height:36px;border-radius:18px;border:none;background:#26231F;color:#F4EEE6;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></button>
+</div>
+<div style="display:flex;gap:10px;overflow-x:auto;padding:14px 16px 2px;scrollbar-width:none;">
+<sc-for list="{{ camCards }}" as="c" hint-placeholder-count="5">
+<button onClick="{{ c.pick }}" aria-label="{{ c.aria }}" aria-pressed="{{ c.sel }}" style="flex:none;width:88px;padding:0;border:none;background:transparent;color:#F4EEE6;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;" style-active="transform:scale(.95)">
+<span style="position:relative;width:88px;height:110px;border-radius:16px;overflow:hidden;box-shadow:{{ c.ring }};transition:box-shadow 200ms;">
+<dc-import name="Photo" src="{{ c.sample }}" cam="{{ c.id }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+<span style="position:absolute;left:0;right:0;bottom:0;height:4px;background:{{ c.accent }};"></span>
+<sc-if value="{{ c.sel }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:#F2A33A;color:#1E1206;display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg></span></sc-if>
+</span>
+<span style="font:700 13px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;white-space:nowrap;color:{{ c.nameColor }};">{{ c.name }}</span>
+</button>
+</sc-for>
+</div>
+</div>
+
+<div style="position:absolute;left:0;right:0;bottom:40px;height:84px;display:flex;align-items:center;justify-content:space-between;padding:0 30px;">
+<button onClick="{{ openGallery }}" aria-label="Open photos" style="width:56px;height:56px;border-radius:16px;border:2px solid rgba(244,238,230,.85);padding:0;overflow:hidden;position:relative;background:#26231F;cursor:pointer;box-sizing:border-box;">
+<sc-if value="{{ hasLast }}" hint-placeholder-val="{{ true }}"><dc-import name="Photo" src="{{ last.src }}" cam="{{ last.cam }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import></sc-if>
+</button>
+<button onClick="{{ shoot }}" aria-label="{{ shutterLabel }}" style="width:84px;height:84px;border-radius:50%;border:4px solid #F2A33A;background:rgba(0,0,0,.12);padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:{{ shutterOp }};box-sizing:border-box;transition:transform 120ms ease;" style-active="transform:scale(.92)">
+<span style="display:block;width:{{ innerSize }};height:{{ innerSize }};border-radius:{{ innerRadius }};background:{{ innerBg }};box-shadow:inset 0 -3px 6px rgba(0,0,0,.18), inset 0 2px 2px rgba(255,255,255,.5), 0 2px 8px rgba(0,0,0,.35);transform:{{ innerTf }};transition:all 220ms cubic-bezier(.3,1.4,.5,1);"></span>
+</button>
+<button onClick="{{ flip }}" aria-label="Switch to front or back camera" style="width:56px;height:56px;border-radius:28px;border:none;background:rgba(20,18,16,.5);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);color:#F4EEE6;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10a8 8 0 0 1 14-3.5L20 8M19.5 14a8 8 0 0 1-14 3.5L4 16"></path><path d="M20 3.5V8h-4.5M4 20.5V16h4.5"></path></svg>
+</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCarousel }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#0E0D0C;">
+<div style="height:44px;margin-top:54px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;">
+<button onClick="{{ toCamera }}" aria-label="Close" style="width:44px;height:44px;border-radius:22px;border:none;background:#1B1916;color:#F4EEE6;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+<div style="font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Cameras</div>
+<div style="width:44px;"></div>
+</div>
+<div style="flex:1;display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:28px 38px 0;scrollbar-width:none;align-items:flex-start;">
+<sc-for list="{{ camCards }}" as="c" hint-placeholder-count="2">
+<button onClick="{{ c.pick }}" aria-label="{{ c.aria }}" style="flex:none;width:314px;scroll-snap-align:center;border:none;border-radius:28px;background:{{ c.cardBg }};padding:14px 14px 22px;display:flex;flex-direction:column;gap:14px;text-align:left;color:#F4EEE6;cursor:pointer;box-shadow:{{ c.ring }};box-sizing:border-box;" style-active="transform:scale(.98)">
+<span style="position:relative;display:block;width:100%;height:380px;border-radius:18px;overflow:hidden;"><dc-import name="Photo" src="{{ c.sample }}" cam="{{ c.id }}" stamp="{{ true }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import></span>
+<span style="display:flex;align-items:center;gap:10px;padding:0 6px;">
+<span style="font:800 28px/1 ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;letter-spacing:-.01em;flex:1;">{{ c.name }}</span>
+<span style="height:26px;padding:0 10px;border-radius:13px;background:{{ c.accent }};color:#17120C;font:700 13px/26px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;white-space:nowrap;">{{ c.badge }}</span>
+</span>
+<span style="font-size:15px;line-height:1.4;color:#CFC6BA;padding:0 6px;text-wrap:pretty;">{{ c.desc }}</span>
+</button>
+</sc-for>
+</div>
+<div style="padding:0 24px 44px;text-align:center;font-size:13px;color:#A79F94;">Tap a camera to use it · Swipe for more</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isResult }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:#0E0D0C;display:flex;flex-direction:column;align-items:center;">
+<div style="width:100%;height:44px;margin-top:54px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;box-sizing:border-box;">
+<button onClick="{{ toCamera }}" aria-label="Back to camera" style="width:44px;height:44px;border-radius:22px;border:none;background:#1B1916;color:#F4EEE6;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></button>
+<div aria-live="polite" style="display:flex;align-items:center;gap:6px;font-size:13px;color:#A79F94;">
+<sc-if value="{{ developing }}" hint-placeholder-val="{{ false }}"><span>Developing…</span></sc-if>
+<sc-if value="{{ developed }}" hint-placeholder-val="{{ true }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F2A33A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg><span>Saved to Photos</span></sc-if>
+</div>
+<div style="width:44px;"></div>
+</div>
+<div style="margin-top:24px;width:{{ resW }};aspect-ratio:{{ resAspect }};position:relative;border-radius:6px;overflow:hidden;box-shadow:0 24px 50px rgba(0,0,0,.55);transform:{{ resTilt }};">
+<sc-if value="{{ hasCur }}" hint-placeholder-val="{{ true }}"><dc-import name="Photo" src="{{ cur.src }}" cam="{{ cur.cam }}" framed="{{ true }}" stamp="{{ true }}" video="{{ cur.video }}" dur="{{ cur.dur }}" intensity="{{ cur.intensity }}" grain="{{ cur.grain }}" exposure="{{ cur.exposure }}" contrast="{{ cur.contrast }}" warmth="{{ cur.warmth }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import></sc-if>
+{{ devEl }}
+<sc-if value="{{ devStatic }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;background:linear-gradient(160deg,#3a322a,#1f1b17);opacity:.82;display:flex;align-items:flex-end;padding:16px;"><div style="flex:1;height:4px;border-radius:2px;background:rgba(244,238,230,.15);overflow:hidden;"><div style="width:62%;height:100%;background:#F2A33A;"></div></div></div></sc-if>
+</div>
+<div style="margin-top:16px;font-size:13px;color:#A79F94;">{{ curMeta }}</div>
+<div style="position:absolute;left:0;right:0;bottom:122px;display:flex;justify-content:center;gap:10px;">
+<sc-for list="{{ resultActions }}" as="a" hint-placeholder-count="5">
+<button onClick="{{ a.fn }}" aria-label="{{ a.label }}" style="width:62px;border:none;background:transparent;padding:0;display:flex;flex-direction:column;align-items:center;gap:6px;color:{{ a.color }};cursor:pointer;">
+<span style="width:48px;height:48px;border-radius:24px;background:#1B1916;display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.d }}"></path></svg></span>
+<span style="font-size:13px;">{{ a.label }}</span>
+</button>
+</sc-for>
+</div>
+<button onClick="{{ toCamera }}" style="position:absolute;left:24px;right:24px;bottom:44px;height:56px;border-radius:28px;border:none;background:#F2A33A;color:#1E1206;font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;" style-active="transform:scale(.97)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"></path><circle cx="12" cy="13.5" r="3.6"></circle></svg>Take another</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isGallery }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:#0E0D0C;">
+<div style="position:absolute;inset:0;overflow-y:auto;padding:104px 0 130px;scrollbar-width:none;">
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+<div style="display:flex;align-items:baseline;gap:8px;padding:16px 20px 10px;"><div style="font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">{{ g.day }}</div><div style="font-size:13px;color:#A79F94;">{{ g.count }}</div></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;padding:0 3px;">
+<sc-for list="{{ g.items }}" as="p" hint-placeholder-count="3">
+<button onClick="{{ p.open }}" aria-label="{{ p.aria }}" style="position:relative;aspect-ratio:3/4;border:none;padding:0;border-radius:4px;overflow:hidden;background:#1B1916;cursor:pointer;">
+<dc-import name="Photo" src="{{ p.src }}" cam="{{ p.cam }}" video="{{ p.video }}" dur="{{ p.dur }}" intensity="{{ p.intensity }}" grain="{{ p.grain }}" exposure="{{ p.exposure }}" contrast="{{ p.contrast }}" warmth="{{ p.warmth }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+</button>
+</sc-for>
+</div>
+</sc-for>
+<sc-if value="{{ galleryEmpty }}" hint-placeholder-val="{{ false }}">
+<div style="height:560px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:0 48px;text-align:center;">
+<div style="width:120px;height:146px;border-radius:8px;background:#F7F3EC;padding:9px 9px 32px;box-sizing:border-box;transform:rotate(-4deg);box-shadow:0 20px 40px rgba(0,0,0,.4);"><div style="width:100%;height:100%;background:linear-gradient(160deg,#3a322a,#1f1b17);"></div></div>
+<div style="margin-top:14px;font:800 22px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">No photos yet</div>
+<div style="font-size:15px;color:#A79F94;line-height:1.4;">Your shots land here the moment you take them.</div>
+</div>
+</sc-if>
+</div>
+<div style="position:absolute;left:0;right:0;top:0;height:100px;background:rgba(14,13,12,.86);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;align-items:flex-end;justify-content:space-between;padding:0 16px 4px;box-sizing:border-box;">
+<button onClick="{{ toCamera }}" aria-label="Close photos" style="width:44px;height:44px;border-radius:22px;border:none;background:#1B1916;color:#F4EEE6;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></button>
+<div style="height:44px;line-height:44px;font:700 17px/44px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Photos</div>
+<button onClick="{{ toSettings }}" aria-label="Settings" style="width:44px;height:44px;border-radius:22px;border:none;background:#1B1916;color:#F4EEE6;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"></path></svg></button>
+</div>
+<button onClick="{{ toCamera }}" style="position:absolute;left:50%;bottom:40px;transform:translateX(-50%);height:52px;padding:0 22px 0 18px;border-radius:26px;border:none;background:{{ galleryCtaBg }};color:{{ galleryCtaColor }};display:flex;align-items:center;gap:10px;font:700 15px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;white-space:nowrap;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.4);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"></path><circle cx="12" cy="13.5" r="3.6"></circle></svg>{{ galleryCta }}</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isViewer }}" hint-placeholder-val="{{ false }}">
+<div onPointerDown="{{ vwDown }}" onPointerUp="{{ vwUp }}" style="position:absolute;inset:0;background:#000;">
+<div style="position:absolute;top:104px;left:0;right:0;bottom:148px;display:flex;align-items:center;justify-content:center;">
+<div style="width:{{ viewW }};aspect-ratio:{{ resAspect }};position:relative;">
+<sc-if value="{{ hasCur }}" hint-placeholder-val="{{ true }}"><dc-import name="Photo" src="{{ cur.src }}" cam="{{ cur.cam }}" framed="{{ true }}" stamp="{{ true }}" video="{{ cur.video }}" dur="{{ cur.dur }}" intensity="{{ cur.intensity }}" grain="{{ cur.grain }}" exposure="{{ cur.exposure }}" contrast="{{ cur.contrast }}" warmth="{{ cur.warmth }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import></sc-if>
+</div>
+</div>
+<div style="position:absolute;top:54px;left:16px;right:16px;height:44px;display:flex;align-items:center;justify-content:space-between;">
+<button onClick="{{ toGallery }}" aria-label="Back to photos" style="width:44px;height:44px;border-radius:22px;border:none;background:#1B1916;color:#F4EEE6;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"></path></svg></button>
+<div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><div style="font-size:15px;font-weight:600;">{{ curDay }}</div><div style="font-size:13px;color:#A79F94;">{{ curCamName }}</div></div>
+<div style="width:44px;"></div>
+</div>
+<div style="position:absolute;left:8px;right:8px;bottom:36px;display:flex;justify-content:space-around;">
+<sc-for list="{{ resultActions }}" as="a" hint-placeholder-count="5">
+<button onClick="{{ a.fn }}" aria-label="{{ a.label }}" style="width:64px;height:60px;border:none;background:transparent;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:{{ a.color }};cursor:pointer;">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.d }}"></path></svg>
+<span style="font-size:13px;">{{ a.label }}</span>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isEdit }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:#0E0D0C;">
+<div style="position:absolute;top:54px;left:12px;right:12px;height:44px;display:flex;align-items:center;justify-content:space-between;">
+<button onClick="{{ editCancel }}" style="height:44px;padding:0 12px;border:none;background:transparent;color:#A79F94;font-size:17px;cursor:pointer;">Cancel</button>
+<div style="font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Edit</div>
+<button onClick="{{ editDone }}" style="height:36px;padding:0 16px;border-radius:18px;border:none;background:#F2A33A;color:#1E1206;font:700 15px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;cursor:pointer;">Done</button>
+</div>
+<div onPointerDown="{{ compareOn }}" onPointerUp="{{ compareOff }}" onPointerLeave="{{ compareOff }}" style="position:absolute;top:116px;left:50%;transform:translateX(-50%);width:{{ editW }};aspect-ratio:{{ resAspect }};border-radius:6px;overflow:hidden;cursor:pointer;">
+<sc-if value="{{ hasCur }}" hint-placeholder-val="{{ true }}"><dc-import name="Photo" src="{{ cur.src }}" cam="{{ cur.cam }}" framed="{{ true }}" stamp="{{ true }}" intensity="{{ ev.intensity }}" grain="{{ ev.grain }}" exposure="{{ ev.exposure }}" contrast="{{ ev.contrast }}" warmth="{{ ev.warmth }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import></sc-if>
+<sc-if value="{{ compare }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;top:10px;left:10px;padding:4px 10px;border-radius:12px;background:rgba(14,13,12,.7);font-size:13px;">Original</div></sc-if>
+</div>
+<div style="position:absolute;top:540px;left:0;right:0;text-align:center;font-size:13px;color:#A79F94;">Hold the photo to compare</div>
+<div style="position:absolute;left:0;right:0;bottom:178px;display:flex;justify-content:center;gap:6px;">
+<sc-for list="{{ tools }}" as="t" hint-placeholder-count="5">
+<button onClick="{{ t.pick }}" aria-pressed="{{ t.sel }}" style="height:36px;padding:0 13px;border-radius:18px;border:none;background:{{ t.bg }};color:{{ t.color }};font:700 13px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;cursor:pointer;transition:all 180ms;">{{ t.label }}</button>
+</sc-for>
+</div>
+<div style="position:absolute;left:28px;right:28px;bottom:118px;display:flex;justify-content:space-between;font-size:15px;"><span style="font-weight:600;">{{ toolLabel }}</span><span style="color:#A79F94;font-variant-numeric:tabular-nums;">{{ toolVal }}</span></div>
+<input type="range" min="{{ toolMin }}" max="{{ toolMax }}" value="{{ toolRaw }}" onChange="{{ setTool }}" aria-label="{{ toolLabel }}" style="position:absolute;left:24px;right:24px;bottom:76px;width:342px;accent-color:#F2A33A;height:28px;">
+<button onClick="{{ editReset }}" style="position:absolute;left:50%;bottom:28px;transform:translateX(-50%);height:44px;padding:0 16px;border:none;background:transparent;color:#A79F94;font-size:15px;cursor:pointer;">Reset</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isCollage }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:#0E0D0C;">
+<div style="position:absolute;top:54px;left:16px;right:16px;height:44px;display:flex;align-items:center;justify-content:space-between;">
+<button onClick="{{ collageBack }}" aria-label="Back" style="width:44px;height:44px;border-radius:22px;border:none;background:#1B1916;color:#F4EEE6;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"></path></svg></button>
+<div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><div style="font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">{{ cTitle }}</div><div style="font-size:13px;color:#A79F94;">{{ cSub }}</div></div>
+<div style="width:44px;"></div>
+</div>
+<sc-if value="{{ cStep1 }}" hint-placeholder-val="{{ true }}">
+<div style="position:absolute;top:124px;left:20px;right:20px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 12px;">
+<sc-for list="{{ tplList }}" as="t" hint-placeholder-count="6">
+<button onClick="{{ t.pick }}" aria-pressed="{{ t.sel }}" style="border:none;background:transparent;padding:0;display:flex;flex-direction:column;align-items:center;gap:8px;color:{{ t.color }};cursor:pointer;">
+<span style="position:relative;display:block;width:100%;aspect-ratio:3/4;border-radius:16px;background:#1B1916;box-shadow:{{ t.ring }};transition:box-shadow 180ms;">
+<span style="position:absolute;inset:10px;">
+<sc-for list="{{ t.cells }}" as="c" hint-placeholder-count="2"><span style="position:absolute;left:{{ c.l }};top:{{ c.t }};width:{{ c.w }};height:{{ c.h }};border-radius:3px;background:{{ t.cell }};"></span></sc-for>
+</span>
+</span>
+<span style="font-size:13px;font-weight:600;">{{ t.label }}</span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+<sc-if value="{{ cStep2 }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;top:110px;left:0;right:0;bottom:120px;overflow-y:auto;scrollbar-width:none;">
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;padding:0 3px;">
+<sc-for list="{{ pickList }}" as="p" hint-placeholder-count="9">
+<button onClick="{{ p.toggle }}" aria-pressed="{{ p.sel }}" aria-label="{{ p.aria }}" style="position:relative;aspect-ratio:3/4;border:none;padding:0;border-radius:4px;overflow:hidden;background:#1B1916;cursor:pointer;">
+<dc-import name="Photo" src="{{ p.src }}" cam="{{ p.cam }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+<span style="position:absolute;inset:0;box-shadow:{{ p.ring }};border-radius:4px;"></span>
+<span style="position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;border:2px solid #F4EEE6;background:{{ p.badgeBg }};color:#1E1206;font:800 13px/20px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;text-align:center;box-sizing:border-box;">{{ p.num }}</span>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ cStep3 }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;top:118px;left:50%;transform:translateX(-50%);width:{{ cFrameW }};aspect-ratio:{{ cFrameAspect }};background:{{ cBorderBg }};border-radius:4px;box-shadow:0 20px 50px rgba(0,0,0,.5);">
+<div style="position:absolute;inset:{{ cInset }};">
+<sc-for list="{{ cCells }}" as="c" hint-placeholder-count="3">
+<button onClick="{{ c.tap }}" aria-label="{{ c.aria }}" style="position:absolute;left:{{ c.l }};top:{{ c.t }};width:{{ c.w }};height:{{ c.h }};border:none;padding:0;overflow:hidden;background:#26231F;cursor:pointer;">
+<dc-import name="Photo" src="{{ c.src }}" cam="{{ c.cam }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import>
+<span style="position:absolute;inset:0;box-shadow:{{ c.ring }};"></span>
+</button>
+</sc-for>
+</div>
+</div>
+<div style="position:absolute;left:0;right:0;bottom:196px;text-align:center;font-size:13px;color:#A79F94;">{{ cHint }}</div>
+<div style="position:absolute;left:0;right:0;bottom:136px;display:flex;justify-content:center;gap:8px;">
+<sc-for list="{{ borderOpts }}" as="b" hint-placeholder-count="3">
+<button onClick="{{ b.pick }}" aria-pressed="{{ b.sel }}" style="height:36px;padding:0 14px 0 8px;border-radius:18px;border:none;background:{{ b.bg }};color:{{ b.color }};display:flex;align-items:center;gap:8px;font:700 13px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;cursor:pointer;"><span style="width:20px;height:20px;border-radius:50%;background:{{ b.swatch }};box-shadow:inset 0 0 0 1.5px rgba(128,120,110,.6);"></span>{{ b.label }}</button>
+</sc-for>
+</div>
+</sc-if>
+<div style="position:absolute;left:24px;right:24px;bottom:44px;display:flex;gap:12px;">
+<sc-if value="{{ cStep3 }}" hint-placeholder-val="{{ false }}"><button onClick="{{ shareIt }}" aria-label="Share collage" style="width:56px;height:56px;flex:none;border-radius:28px;border:none;background:#26231F;color:#F4EEE6;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"></path></svg></button></sc-if>
+<button onClick="{{ cNext }}" style="flex:1;height:56px;border-radius:28px;border:none;background:#F2A33A;color:#1E1206;font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;cursor:pointer;opacity:{{ cNextOp }};" style-active="transform:scale(.97)">{{ cCta }}</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isPrint }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:#0E0D0C;">
+<div style="position:absolute;top:54px;left:12px;right:12px;height:44px;display:flex;align-items:center;justify-content:space-between;">
+<button onClick="{{ backPrev }}" style="height:44px;padding:0 12px;border:none;background:transparent;color:#A79F94;font-size:17px;cursor:pointer;">Cancel</button>
+<div style="font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Print</div>
+<div style="width:72px;"></div>
+</div>
+<div style="position:absolute;top:100px;left:0;right:0;bottom:116px;overflow-y:auto;scrollbar-width:none;">
+<div style="height:330px;display:flex;align-items:center;justify-content:center;">
+<div style="width:{{ paperW }};height:{{ paperH }};background:#FBF8F2;padding:{{ paperPad }};box-sizing:border-box;box-shadow:0 18px 40px rgba(0,0,0,.5);transition:all 260ms cubic-bezier(.3,1.2,.5,1);border-radius:2px;">
+<div style="position:relative;width:100%;height:100%;overflow:hidden;">
+<sc-if value="{{ hasCur }}" hint-placeholder-val="{{ true }}"><dc-import name="Photo" src="{{ cur.src }}" cam="{{ cur.cam }}" stamp="{{ true }}" intensity="{{ cur.intensity }}" grain="{{ cur.grain }}" exposure="{{ cur.exposure }}" contrast="{{ cur.contrast }}" warmth="{{ cur.warmth }}" style="position:absolute;inset:0" hint-size="100%,100%"></dc-import></sc-if>
+</div>
+</div>
+</div>
+<div style="margin:12px 16px 0;border-radius:20px;background:#1B1916;">
+<div style="display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 12px 0 16px;border-bottom:1px solid rgba(244,238,230,.07);">
+<span style="font-size:17px;">Size</span>
+<div style="display:flex;padding:3px;border-radius:18px;background:#0E0D0C;">
+<sc-for list="{{ sizes }}" as="s" hint-placeholder-count="3"><button onClick="{{ s.pick }}" aria-pressed="{{ s.sel }}" style="height:32px;padding:0 12px;border-radius:16px;border:none;background:{{ s.bg }};color:{{ s.color }};font:700 13px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;cursor:pointer;">{{ s.label }}</button></sc-for>
+</div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 12px 0 16px;border-bottom:1px solid rgba(244,238,230,.07);">
+<span style="font-size:17px;">Copies</span>
+<div style="display:flex;align-items:center;gap:4px;">
+<button onClick="{{ copiesDown }}" aria-label="Fewer copies" style="width:44px;height:36px;border-radius:18px;border:none;background:#26231F;color:#F4EEE6;font-size:20px;cursor:pointer;">−</button>
+<span style="width:32px;text-align:center;font-size:17px;font-variant-numeric:tabular-nums;">{{ copies }}</span>
+<button onClick="{{ copiesUp }}" aria-label="More copies" style="width:44px;height:36px;border-radius:18px;border:none;background:#26231F;color:#F4EEE6;font-size:20px;cursor:pointer;">+</button>
+</div>
+</div>
+<div style="display:flex;align-items:center;justify-content:space-between;height:60px;padding:0 16px;border-bottom:1px solid rgba(244,238,230,.07);">
+<span style="font-size:17px;">White border</span>
+<button onClick="{{ toggleBorder }}" role="switch" aria-checked="{{ pBorder }}" aria-label="White border" style="width:51px;height:31px;border-radius:16px;border:none;padding:2px;background:{{ pBorderBg }};cursor:pointer;transition:background 200ms;display:flex;"><span style="width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.3);transform:{{ pBorderKnob }};transition:transform 220ms cubic-bezier(.3,1.3,.5,1);"></span></button>
+</div>
+<button onClick="{{ toggleMore }}" style="width:100%;display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 16px;border:none;background:transparent;color:#A79F94;font-size:15px;cursor:pointer;"><span>More options</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="transform:{{ moreRot }};transition:transform 200ms;"><path d="m6 9 6 6 6-6"></path></svg></button>
+<sc-if value="{{ pMore }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;justify-content:space-between;align-items:center;height:52px;padding:0 16px;border-top:1px solid rgba(244,238,230,.07);font-size:15px;"><span>Printer</span><span style="color:#A79F94;">Living Room Printer</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;height:52px;padding:0 16px;border-top:1px solid rgba(244,238,230,.07);font-size:15px;"><span>Paper</span><span style="color:#A79F94;">Glossy photo</span></div>
+</sc-if>
+</div>
+</div>
+<button onClick="{{ doPrint }}" style="position:absolute;left:24px;right:24px;bottom:44px;height:56px;border-radius:28px;border:none;background:#F2A33A;color:#1E1206;font:700 17px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;cursor:pointer;" style-active="transform:scale(.97)">{{ printCta }}</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+<div style="position:absolute;inset:0;background:#0E0D0C;overflow-y:auto;scrollbar-width:none;">
+<div style="height:44px;margin-top:54px;display:flex;align-items:center;gap:8px;padding:0 16px;">
+<button onClick="{{ toGallery }}" aria-label="Back" style="width:44px;height:44px;border-radius:22px;border:none;background:#1B1916;color:#F4EEE6;display:flex;align-items:center;justify-content:center;cursor:pointer;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"></path></svg></button>
+</div>
+<div style="padding:12px 20px 8px;font:800 28px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;">Settings</div>
+<sc-for list="{{ setGroups }}" as="g" hint-placeholder-count="3">
+<div style="margin:16px 16px 0;border-radius:20px;background:#1B1916;overflow:hidden;">
+<sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="2">
+<button onClick="{{ r.fn }}" role="{{ r.role }}" aria-checked="{{ r.on }}" style="width:100%;min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 16px;border:none;border-top:{{ r.line }};background:transparent;color:#F4EEE6;font-size:17px;text-align:left;cursor:pointer;">
+<span>{{ r.label }}</span>
+<sc-if value="{{ r.isToggle }}" hint-placeholder-val="{{ false }}"><span style="width:51px;height:31px;border-radius:16px;padding:2px;box-sizing:border-box;background:{{ r.bg }};display:flex;transition:background 200ms;flex:none;"><span style="width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.3);transform:{{ r.knob }};transition:transform 220ms cubic-bezier(.3,1.3,.5,1);"></span></span></sc-if>
+<sc-if value="{{ r.isLink }}" hint-placeholder-val="{{ true }}"><span style="display:flex;align-items:center;gap:6px;color:#A79F94;font-size:15px;">{{ r.value }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg></span></sc-if>
+</button>
+</sc-for>
+</div>
+</sc-for>
+<div style="padding:24px 32px 60px;text-align:center;font-size:13px;line-height:1.5;color:#A79F94;">Free forever. No accounts, no ads.<br>Your photos never leave your phone.</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="position:absolute;top:110px;left:50%;transform:translateX(-50%);height:44px;padding:0 8px 0 18px;border-radius:22px;background:rgba(38,35,31,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:flex;align-items:center;gap:12px;white-space:nowrap;box-shadow:0 10px 30px rgba(0,0,0,.4);animation:rsToast 220ms cubic-bezier(.3,1.3,.5,1);z-index:40;">
+<span style="font-size:15px;font-weight:600;padding-right:{{ toastPadR }};">{{ toastText }}</span>
+<sc-if value="{{ toastHasAction }}" hint-placeholder-val="{{ false }}"><button onClick="{{ toastFn }}" style="height:32px;padding:0 12px;border-radius:16px;border:none;background:#F4EEE6;color:#1A1714;font:700 13px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif;cursor:pointer;">{{ toastAction }}</button></sc-if>
+</div>
+</sc-if>
+
+<div style="position:absolute;top:0;left:0;right:0;height:50px;display:flex;align-items:center;justify-content:space-between;padding:4px 30px 0 40px;box-sizing:border-box;pointer-events:none;z-index:50;color:#F4EEE6;">
+<span style="font-size:16px;font-weight:600;letter-spacing:-.01em;">9:41</span>
+<span style="display:flex;align-items:center;gap:6px;"><svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"></rect><rect x="5" y="5.5" width="3" height="6.5" rx="1"></rect><rect x="10" y="3" width="3" height="9" rx="1"></rect><rect x="15" y="0" width="3" height="12" rx="1"></rect></svg><svg width="26" height="12" viewBox="0 0 26 12"><rect x=".5" y=".5" width="22" height="11" rx="3.5" fill="none" stroke="currentColor" opacity=".4"></rect><rect x="2" y="2" width="17" height="8" rx="2" fill="currentColor"></rect><rect x="24" y="4" width="1.5" height="4" rx=".75" fill="currentColor" opacity=".4"></rect></svg></span>
+</div>
+<div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:124px;height:36px;border-radius:18px;background:#000;z-index:51;pointer-events:none;"></div>
+<div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(244,238,230,.75);z-index:51;pointer-events:none;"></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:414,&quot;height&quot;:868},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;welcome&quot;,&quot;how&quot;,&quot;permCam&quot;,&quot;permLib&quot;,&quot;camera&quot;,&quot;carousel&quot;,&quot;result&quot;,&quot;gallery&quot;,&quot;viewer&quot;,&quot;edit&quot;,&quot;collage&quot;,&quot;print&quot;,&quot;settings&quot;],&quot;default&quot;:&quot;welcome&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Start&quot;},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;&quot;,&quot;capture&quot;,&quot;saved&quot;,&quot;processing&quot;,&quot;recording&quot;,&quot;videoMode&quot;,&quot;video&quot;,&quot;denied&quot;,&quot;unavailable&quot;,&quot;libDenied&quot;,&quot;lowStorage&quot;,&quot;empty&quot;],&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Start&quot;},&quot;cam&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;film&quot;,&quot;disp&quot;,&quot;inst&quot;,&quot;digi&quot;,&quot;vhs&quot;],&quot;default&quot;:&quot;film&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Start&quot;},&quot;firstRun&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Start&quot;},&quot;sheet&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Start&quot;},&quot;collageStep&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;min&quot;:1,&quot;max&quot;:3,&quot;default&quot;:1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Start&quot;},&quot;tool&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;string&quot;},&quot;editPreset&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;object&quot;},&quot;selector&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;sheet&quot;,&quot;carousel&quot;],&quot;default&quot;:&quot;sheet&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Behavior&quot;},&quot;afterCapture&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;first&quot;,&quot;always&quot;,&quot;never&quot;],&quot;default&quot;:&quot;first&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Behavior&quot;},&quot;sound&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Behavior&quot;}}">
+const P = (id, w = 600, h = 800) => `https://picsum.photos/id/${id}/${w}/${h}`;
+const CAMS = [
+  { id: 'film', name: '35mm Film', badge: 'Golden', desc: 'Golden tones, fine grain and soft edges. The classic everyday look.', accent: '#F2A33A', sample: P(1015) },
+  { id: 'disp', name: 'Disposable', badge: 'Flash', desc: 'Bright on-camera flash, warm grain, a little overexposed. Made for nights out.', accent: '#F5C84B', sample: P(237) },
+  { id: 'inst', name: 'Instant', badge: 'Square', desc: 'Soft, faded square prints in a white frame, like they just slid out of the camera.', accent: '#F4A99B', sample: P(1027) },
+  { id: 'digi', name: 'Digicam', badge: 'Date stamp', desc: 'Crisp early-2000s digital with a cool cast and an orange date in the corner.', accent: '#6FA8FF', sample: P(1069) },
+  { id: 'vhs', name: 'Camcorder', badge: 'Home video', desc: 'Fuzzy home-video color with scanlines and an on-screen timestamp.', accent: '#FF5A4E', sample: P(1039) }
+];
+const CAM = Object.fromEntries(CAMS.map(c => [c.id, c]));
+const SCENES = { back: P(1011, 780, 1688), front: P(64, 780, 1688) };
+const SEED = [
+  ['s1', 1011, 'film', 'Today'], ['s2', 237, 'disp', 'Today'], ['s3', 1027, 'inst', 'Today'], ['s4', 1039, 'vhs', 'Today'],
+  ['s5', 1016, 'film', 'Yesterday'], ['s6', 1025, 'disp', 'Yesterday'], ['s7', 29, 'digi', 'Yesterday'], ['s8', 1043, 'inst', 'Yesterday'], ['s9', 1080, 'film', 'Yesterday'],
+  ['s10', 1074, 'vhs', 'October 4'], ['s11', 42, 'film', 'October 4'], ['s12', 1069, 'digi', 'October 4'], ['s13', 110, 'inst', 'October 4']
+].map(([id, n, cam, day]) => ({ id, src: P(n), cam, day }));
+const DAYS = ['Today', 'Yesterday', 'October 4'];
+const EDIT0 = { intensity: 100, grain: 50, exposure: 0, contrast: 0, warmth: 0 };
+const TOOLS = [
+  { k: 'intensity', label: 'Effect', min: 0, max: 100 }, { k: 'grain', label: 'Grain', min: 0, max: 100 },
+  { k: 'exposure', label: 'Light', min: -50, max: 50 }, { k: 'contrast', label: 'Contrast', min: -50, max: 50 }, { k: 'warmth', label: 'Warmth', min: -50, max: 50 }
+];
+const TPLS = {
+  three: { label: 'Feature', n: 3, cells: [[0, 0, 100, 60], [0, 60, 50, 40], [50, 60, 50, 40]] },
+  two: { label: 'Stacked', n: 2, cells: [[0, 0, 100, 50], [0, 50, 100, 50]] },
+  side: { label: 'Side by side', n: 2, cells: [[0, 0, 50, 100], [50, 0, 50, 100]] },
+  grid: { label: 'Grid', n: 4, cells: [[0, 0, 50, 50], [50, 0, 50, 50], [0, 50, 50, 50], [50, 50, 50, 50]] },
+  strip: { label: 'Photo strip', n: 4, cells: [[0, 0, 100, 25], [0, 25, 100, 25], [0, 50, 100, 25], [0, 75, 100, 25]] },
+  trio: { label: 'Trio', n: 3, cells: [[0, 0, 33.34, 100], [33.33, 0, 33.34, 100], [66.66, 0, 33.34, 100]] }
+};
+const ICON = {
+  share: 'M12 3v12M7.5 7.5 12 3l4.5 4.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7',
+  edit: 'M4 7h9M17 7h3M4 17h3M11 17h9M15 5v4M9 15v4',
+  print: 'M7 9V3h10v6M5 17H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-1M7 14h10v7H7z',
+  collage: 'M4 3h6a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM14 3h6a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM14 13h6a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-6a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1z',
+  trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v5M14 11v5'
+};
+const cell = ([x, y, w, h], g) => ({ l: `calc(${x}% + ${g}px)`, t: `calc(${y}% + ${g}px)`, w: `calc(${w}% - ${2 * g}px)`, h: `calc(${h}% - ${2 * g}px)` });
+const fmt = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+
+class Component extends DCLogic {
+  state = this.init();
+  init() {
+    const p = this.props, v = p.variant || '', s = p.screen || 'welcome';
+    const onboarding = ['welcome', 'how', 'permCam', 'permLib'].includes(s);
+    const photos = v === 'empty' ? [] : SEED.map(x => ({ ...x }));
+    if (v === 'video' && photos[0]) photos[0] = { ...photos[0], cam: 'vhs', src: P(1039), video: true, dur: '0:24' };
+    const cStep = p.collageStep || 1;
+    return {
+      screen: s, prev: 'gallery', cam: p.cam || 'film', mode: (v === 'recording' || v === 'videoMode') ? 'video' : 'photo',
+      flash: 'auto', facing: 'back', timer: false, count: 0,
+      sheet: !!p.sheet || !!p.firstRun, firstRun: p.firstRun ?? onboarding,
+      photos, idx: 0, shotKey: 0, camKey: 0, shotOnce: !onboarding,
+      recording: v === 'recording', rec: v === 'recording' ? 12 : 0,
+      developing: v === 'processing', devStatic: v === 'processing',
+      edit: { ...EDIT0, ...(p.editPreset || {}) }, tool: p.tool || 'intensity', compare: false,
+      cStep, tpl: 'three', picked: cStep > 1 ? ['s1', 's3', 's2'] : ['s1'], swapSel: null, cBorder: 'cream',
+      pSize: '4x6', copies: 1, pBorder: true, pMore: false,
+      set: { save: true, sound: true, haptics: true },
+      toast: v === 'saved' ? { text: 'Saved to Photos' } : null,
+      banner: v === 'libDenied' ? 'lib' : v === 'lowStorage' ? 'storage' : null,
+      block: v === 'denied' ? 'denied' : v === 'unavailable' ? 'unavailable' : null,
+      pose: v === 'capture'
+    };
+  }
+  componentWillUnmount() { clearInterval(this.iv); clearTimeout(this.tt); }
+  go = (screen, extra = {}) => this.setState({ screen, ...extra });
+  toast(text, action, fn) {
+    clearTimeout(this.tt);
+    this.setState({ toast: { text, action, fn } });
+    this.tt = setTimeout(() => this.setState({ toast: null }), 2800);
+  }
+  haptic(ms = 10) { if (this.state.set.haptics) try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
+  click() {
+    if (!this.state.set.sound || this.props.sound === false) return;
+    try {
+      const A = this.ac || (this.ac = new (window.AudioContext || window.webkitAudioContext)());
+      const len = Math.floor(A.sampleRate * 0.07), b = A.createBuffer(1, len, A.sampleRate), d = b.getChannelData(0);
+      for (let i = 0; i < len; i++) { const t = i / len; d[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 4) * (t < 0.35 || t > 0.5 ? 1 : 0.3); }
+      const s = A.createBufferSource(); s.buffer = b;
+      const f = A.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2200; f.Q.value = 0.8;
+      const g = A.createGain(); g.gain.value = 0.35;
+      s.connect(f); f.connect(g); g.connect(A.destination); s.start();
+    } catch (e) {}
+  }
+  reduced() { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } }
+  shoot = () => {
+    const st = this.state;
+    if (st.block || st.count) return;
+    if (st.mode === 'video') return this.toggleRec();
+    if (st.timer) return this.countdown(3);
+    this.capture();
+  };
+  countdown(n) {
+    if (n === 0) { this.setState({ count: 0 }); return this.capture(); }
+    this.haptic(5); this.setState({ count: n });
+    setTimeout(() => this.countdown(n - 1), 700);
+  }
+  capture() {
+    const st = this.state;
+    this.haptic(14); this.click();
+    const ph = { id: 'p' + Date.now(), src: SCENES[st.facing], cam: st.cam, day: 'Today', when: 'Just now' };
+    const rule = this.props.afterCapture || 'first';
+    const review = rule === 'always' || (rule === 'first' && !st.shotOnce);
+    this.setState(s => ({ photos: [ph, ...s.photos], shotKey: s.shotKey + 1, shotOnce: true, sheet: false, firstRun: false, pose: false }));
+    if (review) setTimeout(() => { this.setState({ screen: 'result', idx: 0, developing: true }); setTimeout(() => this.setState({ developing: false }), 900); }, 420);
+    else this.toast('Saved · ' + CAM[st.cam].name);
+  }
+  toggleRec() {
+    this.haptic(14);
+    if (!this.state.recording) {
+      this.setState({ recording: true, rec: 0, sheet: false });
+      this.iv = setInterval(() => this.setState(s => ({ rec: s.rec + 1 })), 1000);
+    } else {
+      clearInterval(this.iv);
+      const st = this.state, r = Math.max(1, st.rec);
+      const ph = { id: 'v' + Date.now(), src: SCENES[st.facing], cam: st.cam, day: 'Today', when: 'Just now', video: true, dur: `${Math.floor(r / 60)}:${String(r % 60).padStart(2, '0')}` };
+      this.setState(s => ({ recording: false, photos: [ph, ...s.photos], screen: 'result', idx: 0, developing: true, shotKey: s.shotKey + 1 }));
+      setTimeout(() => this.setState({ developing: false }), 900);
+    }
+  }
+  pickCam(id) {
+    const st = this.state;
+    this.haptic(6);
+    const back = st.screen === 'carousel' ? { screen: 'camera' } : {};
+    if (id === st.cam) return this.setState({ sheet: false, firstRun: false, ...back });
+    this.setState(s => ({ cam: id, sheet: false, firstRun: false, camKey: s.camKey + 1, ...back }));
+  }
+  stepCam(d) {
+    const i = CAMS.findIndex(c => c.id === this.state.cam);
+    this.pickCam(CAMS[(i + d + CAMS.length) % CAMS.length].id);
+  }
+  vfDown = e => { this.sx = e.clientX; };
+  vfUp = e => {
+    const dx = e.clientX - (this.sx ?? e.clientX);
+    if (Math.abs(dx) > 40 && !this.state.block) this.stepCam(dx < 0 ? 1 : -1);
+    else if (this.state.sheet && !this.state.firstRun) this.setState({ sheet: false });
+  };
+  vwDown = e => { this.vx = e.clientX; };
+  vwUp = e => {
+    const dx = e.clientX - (this.vx ?? e.clientX), n = this.state.photos.length;
+    if (Math.abs(dx) > 40 && n) this.setState(s => ({ idx: Math.min(n - 1, Math.max(0, s.idx + (dx < 0 ? 1 : -1))) }));
+  };
+  del = () => {
+    const st = this.state, ph = st.photos[st.idx], i = st.idx;
+    if (!ph) return;
+    const from = st.screen;
+    this.setState(s => ({ photos: s.photos.filter((_, j) => j !== i), idx: Math.max(0, Math.min(i, s.photos.length - 2)), screen: from === 'result' ? 'camera' : 'gallery' }));
+    this.toast('Photo deleted', 'Undo', () => this.setState(s => { const a = [...s.photos]; a.splice(i, 0, ph); return { photos: a, toast: null }; }));
+  };
+  openEdit = () => { const ph = this.state.photos[this.state.idx]; this.setState({ prev: this.state.screen, screen: 'edit', edit: { ...EDIT0, ...(ph && ph.adj) }, tool: 'intensity' }); };
+  openPrint = () => this.setState({ prev: this.state.screen, screen: 'print', pMore: false });
+  openCollage = () => { const ph = this.state.photos[this.state.idx]; this.setState({ prev: this.state.screen, screen: 'collage', cStep: 1, picked: ph ? [ph.id] : [], swapSel: null }); };
+
+  renderVals() {
+    const st = this.state, s = st.screen, cam = CAM[st.cam];
+    const isCamera = s === 'camera';
+    const cur0 = st.photos[st.idx];
+    const curCam = cur0 ? cur0.cam : 'film';
+    const adjOf = ph => ({ ...EDIT0, ...(ph && ph.adj) });
+    const flat = ph => ph ? { ...ph, ...adjOf(ph), video: !!ph.video, dur: ph.dur || '' } : null;
+    const cur = flat(cur0);
+    const inst = curCam === 'inst';
+    const reduced = this.reduced();
+    const last = st.photos[0];
+    const tool = TOOLS.find(t => t.k === st.tool);
+    const ev = st.compare ? { ...EDIT0, intensity: 0, grain: 0 } : st.edit;
+    const tpl = TPLS[st.tpl];
+    const pickedPh = st.picked.map(id => st.photos.find(p => p.id === id)).filter(Boolean);
+    const sizes = { '4x6': ['240px', '360px'], sq: ['290px', '290px'], strip: ['130px', '330px'] };
+    const R = this.props.selector || 'sheet';
+    const sheetOpen = isCamera && st.sheet && !st.block && !st.recording;
+    const firstRun = st.firstRun;
+    const camCards = CAMS.map(c => ({
+      ...c, sel: c.id === st.cam, pick: () => this.pickCam(c.id),
+      aria: `${c.name}. ${c.desc}${c.id === st.cam ? ' Selected.' : ''}`,
+      ring: c.id === st.cam ? '0 0 0 2.5px #F2A33A' : '0 0 0 0 rgba(0,0,0,0)',
+      nameColor: c.id === st.cam ? '#F4EEE6' : '#CFC6BA',
+      cardBg: `color-mix(in oklab, ${c.accent} 14%, #1B1916)`
+    }));
+    const actions = [
+      { label: 'Share', d: ICON.share, fn: () => this.toast('Share sheet opens here'), color: '#F4EEE6' },
+      { label: 'Edit', d: ICON.edit, fn: this.openEdit, color: '#F4EEE6' },
+      { label: 'Print', d: ICON.print, fn: this.openPrint, color: '#F4EEE6' },
+      { label: 'Collage', d: ICON.collage, fn: this.openCollage, color: '#F4EEE6' },
+      { label: 'Delete', d: ICON.trash, fn: this.del, color: '#FF8A7A' }
+    ];
+    const groups = DAYS.map(day => {
+      const items = st.photos.map((p, i) => ({ p, i })).filter(x => x.p.day === day).map(({ p, i }) => ({
+        ...flat(p), aria: `${CAM[p.cam].name} ${p.video ? 'video' : 'photo'}, ${day}`, open: () => this.setState({ idx: i, screen: 'viewer' })
+      }));
+      return { day, items, count: `${items.length}` };
+    }).filter(g => g.items.length);
+    const toggleRow = (label, k) => ({ label, isToggle: true, isLink: false, role: 'switch', on: st.set[k], bg: st.set[k] ? '#F2A33A' : '#3A3631', knob: st.set[k] ? 'translateX(20px)' : 'translateX(0)', fn: () => this.setState(x => ({ set: { ...x.set, [k]: !x.set[k] } })) });
+    const linkRow = (label, value = '') => ({ label, value, isToggle: false, isLink: true, role: 'button', on: undefined, fn: () => this.toast(label) });
+    const setGroups = [
+      [toggleRow('Save to Photos', 'save'), linkRow('Video quality', '1080p')],
+      [toggleRow('Shutter sound', 'sound'), toggleRow('Haptics', 'haptics')],
+      [linkRow('Storage', '1.2 GB')],
+      [linkRow('Privacy'), linkRow('Help'), linkRow('About', 'Version 1.0')]
+    ].map(rows => ({ rows: rows.map((r, i) => ({ ...r, line: i ? '1px solid rgba(244,238,230,.07)' : 'none' })) }));
+    const swatch = { cream: '#F4EEE6', black: '#0A0908', none: '#26231F' };
+    const cStepTitle = ['Choose a layout', `Choose ${tpl.n} photos`, 'Arrange'][st.cStep - 1];
+    const enough = st.picked.length === tpl.n;
+    const banners = {
+      lib: ['Saving inside RetroSnap only', 'Allow Photos access to also save to your library.', 'Allow'],
+      storage: ['Your phone is almost full', 'About 40 photos left. Free up space to keep shooting.', 'Manage']
+    };
+    const blocks = {
+      denied: ['Camera access is off', 'Turn on Camera for RetroSnap in Settings to start shooting.', 'Open Settings'],
+      unavailable: ['Camera is busy', 'Another app is using the camera. Close it, then try again.', 'Try again']
+    };
+    const b = banners[st.banner], bl = blocks[st.block];
+    const flashEl = st.shotKey && !reduced && st.mode === 'photo' ? React.createElement('div', { key: 'f' + st.shotKey, style: { position: 'absolute', inset: 0, background: '#fff', pointerEvents: 'none', animation: 'rsFlash 240ms ease-out forwards', opacity: 0, zIndex: 20 } }) : null;
+    const flyEl = st.shotKey && !reduced && last ? React.createElement('div', { key: 'y' + st.shotKey, style: { position: 'absolute', overflow: 'hidden', pointerEvents: 'none', animation: 'rsFly 460ms cubic-bezier(.4,0,.2,1) 60ms both', zIndex: 21, boxShadow: '0 10px 30px rgba(0,0,0,.5)' } },
+      React.createElement('img', { src: last.src, style: { width: '100%', height: '100%', objectFit: 'cover', filter: 'sepia(.3) saturate(1.2)' } })) : null;
+    const labelEl = st.camKey && isCamera ? React.createElement('div', { key: 'l' + st.camKey, style: { position: 'absolute', left: '50%', top: '120px', transform: 'translateX(-50%)', padding: '8px 16px', borderRadius: 20, background: 'rgba(20,18,16,.55)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', font: "700 15px ui-rounded,'SF Pro Rounded',Nunito,system-ui,sans-serif", whiteSpace: 'nowrap', pointerEvents: 'none', animation: 'rsLabel 1100ms ease forwards', zIndex: 22 } }, cam.name) : null;
+    const devEl = st.developing && !st.devStatic && !reduced ? React.createElement('div', { key: 'd' + st.shotKey, style: { position: 'absolute', inset: 0, background: 'linear-gradient(160deg,#4a3f33,#1f1b17)', animation: 'rsDev 900ms ease-out forwards', pointerEvents: 'none' } }) : null;
+    const isVideo = st.mode === 'video';
+    const toastObj = st.toast;
+    return {
+      isWelcome: s === 'welcome', isHow: s === 'how', isPerm: s === 'permCam' || s === 'permLib', isPermCam: s === 'permCam', isPermLib: s === 'permLib',
+      toHow: () => this.go('how'), toPermCam: () => this.go('permCam'),
+      permTitle: s === 'permCam' ? 'Allow camera access' : 'Save to your photos',
+      permBody: s === 'permCam' ? 'RetroSnap uses your camera to show the vintage look live and take your photos.' : 'Every shot is saved to your photo library automatically. Nothing is ever uploaded.',
+      permCta: s === 'permCam' ? 'Allow Camera' : 'Allow Photos',
+      permAllow: () => s === 'permCam' ? this.go('permLib') : this.go('camera', { sheet: true, firstRun: true }),
+      permSkip: () => this.go('camera', { sheet: true, firstRun: true, banner: 'lib' }),
+      permSkipVis: s === 'permLib' ? 'visible' : 'hidden',
+
+      isCamera, showVf: !st.block, isBlocked: !!st.block,
+      blockTitle: bl ? bl[0] : '', blockBody: bl ? bl[1] : '', blockCta: bl ? bl[2] : '',
+      unblock: () => { this.setState({ block: null }); this.toast(st.block === 'denied' ? 'Camera is on' : 'Camera ready'); },
+      vfLayers: CAMS.map(c => ({ cam: c.id, src: SCENES[st.facing], op: c.id === st.cam ? 1 : 0 })),
+      instOp: st.cam === 'inst' ? 1 : 0,
+      vfDown: this.vfDown, vfUp: this.vfUp,
+      flashEl, flyEl, labelEl,
+      showPoseFlash: st.pose, counting: st.count > 0, count: st.count,
+      cycleFlash: () => { this.haptic(5); this.setState(x => ({ flash: { auto: 'on', on: 'off', off: 'auto' }[x.flash] })); },
+      flashLabel: `Flash: ${st.flash}`, flashOff: st.flash === 'off', flashAuto: st.flash === 'auto', flashColor: st.flash === 'on' ? '#F2A33A' : '#F4EEE6',
+      notRecording: !st.recording, recordingNow: st.recording, recTime: fmt(st.rec),
+      setPhoto: () => this.setState({ mode: 'photo' }), setVideo: () => this.setState({ mode: 'video' }),
+      isPhotoMode: !isVideo, isVideoMode: isVideo,
+      photoTabBg: isVideo ? 'transparent' : '#F4EEE6', photoTabColor: isVideo ? '#F4EEE6' : '#1A1714',
+      videoTabBg: isVideo ? '#F4EEE6' : 'transparent', videoTabColor: isVideo ? '#1A1714' : '#F4EEE6',
+      toggleTimer: () => { this.haptic(5); this.setState(x => ({ timer: !x.timer })); }, timer: st.timer,
+      timerLabel: st.timer ? 'Self-timer on, 3 seconds' : 'Self-timer off', timerColor: st.timer ? '#F2A33A' : '#F4EEE6',
+      hasBanner: !!b && isCamera && !st.block, bannerTitle: b ? b[0] : '', bannerBody: b ? b[1] : '', bannerCta: b ? b[2] : '',
+      bannerAction: () => { this.setState({ banner: null }); this.toast(st.banner === 'lib' ? 'Saving to Photos' : 'Opening Storage'); },
+      openSel: () => { this.haptic(5); if (R === 'carousel') this.go('carousel'); else this.setState(x => ({ sheet: !x.sheet })); },
+      chipLabel: `Camera: ${cam.name}. Change camera`, camName: cam.name, camAccent: cam.accent, camSample: cam.sample, cam: st.cam,
+      chipOp: sheetOpen || st.recording ? 0 : 1, chipTf: sheetOpen ? 'translateY(12px)' : 'translateY(0)', chipPe: sheetOpen || st.recording ? 'none' : 'auto',
+      sheetOp: sheetOpen ? 1 : 0, sheetTf: sheetOpen ? 'translateY(0)' : 'translateY(28px)', sheetPe: sheetOpen ? 'auto' : 'none',
+      sheetRing: firstRun ? '0 0 0 1.5px rgba(242,163,58,.55), 0 0 40px rgba(242,163,58,.18)' : 'none',
+      sheetTitle: firstRun ? 'Choose a camera' : cam.name,
+      sheetSub: firstRun ? `${cam.name} is on. You can shoot right away.` : cam.desc.split('.')[0] + '.',
+      closeSheet: () => this.setState({ sheet: false, firstRun: false }),
+      camCards,
+      hasLast: !!last, last: last || { src: '', cam: 'film' },
+      openGallery: () => this.go('gallery'), flip: () => { this.haptic(6); this.setState(x => ({ facing: x.facing === 'back' ? 'front' : 'back' })); },
+      shoot: this.shoot,
+      shutterLabel: isVideo ? (st.recording ? 'Stop recording' : 'Start recording') : 'Take photo',
+      shutterOp: st.block ? 0.35 : 1,
+      innerSize: st.recording ? '30px' : isVideo ? '62px' : '66px',
+      innerRadius: st.recording ? '8px' : '50%',
+      innerBg: isVideo ? '#E5483B' : 'radial-gradient(circle at 38% 30%, #FFFDF8, #EEE6D9 55%, #CDBFAa)',
+      innerTf: st.pose ? 'scale(.9)' : 'scale(1)',
+
+      isCarousel: s === 'carousel', toCamera: () => this.go('camera', { sheet: false }),
+
+      isResult: s === 'result', hasCur: !!cur, cur: cur || {},
+      developing: st.developing, developed: !st.developing, devEl, devStatic: st.devStatic,
+      resW: inst ? '296px' : '312px', resAspect: inst ? '88/107' : '3/4', resTilt: inst ? 'rotate(-1.5deg)' : 'none',
+      curMeta: cur ? `${CAM[cur.cam].name} · ${cur.when || cur.day}` : '',
+      resultActions: actions,
+
+      isGallery: s === 'gallery', groups, galleryEmpty: !st.photos.length,
+      galleryCta: st.photos.length ? 'Camera' : 'Take a photo',
+      galleryCtaBg: st.photos.length ? 'rgba(38,35,31,.92)' : '#F2A33A', galleryCtaColor: st.photos.length ? '#F4EEE6' : '#1E1206',
+      toSettings: () => this.go('settings'), toGallery: () => this.go('gallery'),
+
+      isViewer: s === 'viewer', viewW: inst ? '340px' : '390px', vwDown: this.vwDown, vwUp: this.vwUp,
+      curDay: cur ? cur.day : '', curCamName: cur ? CAM[cur.cam].name + (cur.video ? ' · Video' : '') : '',
+
+      isEdit: s === 'edit', ev, editW: inst ? '300px' : '312px', compare: st.compare,
+      compareOn: () => this.setState({ compare: true }), compareOff: () => st.compare && this.setState({ compare: false }),
+      editCancel: () => this.go(st.prev), editReset: () => this.setState({ edit: { ...EDIT0 } }),
+      editDone: () => { this.setState(x => ({ photos: x.photos.map((p, i) => i === x.idx ? { ...p, adj: { ...x.edit } } : p), screen: x.prev })); this.toast('Edits saved'); },
+      tools: TOOLS.map(t => ({ ...t, sel: t.k === st.tool, bg: t.k === st.tool ? '#F4EEE6' : '#26231F', color: t.k === st.tool ? '#1A1714' : '#F4EEE6', pick: () => this.setState({ tool: t.k }) })),
+      toolLabel: tool.label, toolMin: tool.min, toolMax: tool.max, toolRaw: st.edit[tool.k],
+      toolVal: (tool.min < 0 && st.edit[tool.k] > 0 ? '+' : '') + st.edit[tool.k],
+      setTool: e => { const v = Number(e.target.value); this.setState(x => ({ edit: { ...x.edit, [x.tool]: v } })); },
+
+      isCollage: s === 'collage', cStep1: st.cStep === 1, cStep2: st.cStep === 2, cStep3: st.cStep === 3,
+      cTitle: cStepTitle, cSub: `Step ${st.cStep} of 3`,
+      collageBack: () => st.cStep > 1 ? this.setState({ cStep: st.cStep - 1, swapSel: null }) : this.go(st.prev === 'collage' ? 'gallery' : st.prev),
+      tplList: Object.entries(TPLS).map(([k, t]) => ({ label: t.label, sel: k === st.tpl, ring: k === st.tpl ? '0 0 0 2.5px #F2A33A' : 'none', color: k === st.tpl ? '#F4EEE6' : '#A79F94', cell: k === st.tpl ? '#F4EEE6' : '#3A3631', cells: t.cells.map(c => cell(c, 2)), pick: () => this.setState({ tpl: k, picked: st.picked.slice(0, t.n) }) })),
+      pickList: st.photos.filter(p => !p.video).map(p => {
+        const n = st.picked.indexOf(p.id);
+        return { src: p.src, cam: p.cam, sel: n >= 0, num: n >= 0 ? n + 1 : '', badgeBg: n >= 0 ? '#F2A33A' : 'rgba(14,13,12,.3)', ring: n >= 0 ? 'inset 0 0 0 3px #F2A33A' : 'none', aria: `${CAM[p.cam].name} photo${n >= 0 ? ', selected' : ''}`,
+          toggle: () => this.setState(x => x.picked.includes(p.id) ? { picked: x.picked.filter(i => i !== p.id) } : x.picked.length < tpl.n ? { picked: [...x.picked, p.id] } : null) };
+      }),
+      cFrameW: st.tpl === 'strip' ? '170px' : '300px', cFrameAspect: st.tpl === 'strip' ? '1/2.7' : '3/4',
+      cBorderBg: swatch[st.cBorder] === '#26231F' ? '#26231F' : swatch[st.cBorder], cInset: st.cBorder === 'none' ? '0px' : '10px',
+      cCells: tpl.cells.map((c, i) => { const ph = pickedPh[i] || pickedPh[0] || { src: '', cam: 'film' }; return { ...cell(c, st.cBorder === 'none' ? 0 : 4), src: ph.src, cam: ph.cam, aria: `Photo ${i + 1}`, ring: st.swapSel === i ? 'inset 0 0 0 3px #F2A33A' : 'none',
+        tap: () => { if (st.swapSel === null) return this.setState({ swapSel: i }); const a = [...st.picked]; [a[i], a[st.swapSel]] = [a[st.swapSel], a[i]]; this.haptic(6); this.setState({ picked: a, swapSel: null }); } }; }),
+      cHint: st.swapSel === null ? 'Tap two photos to swap them' : 'Now tap where it should go',
+      borderOpts: [['cream', 'Cream'], ['black', 'Black'], ['none', 'No border']].map(([k, label]) => ({ label, swatch: swatch[k], sel: k === st.cBorder, bg: k === st.cBorder ? '#F4EEE6' : '#26231F', color: k === st.cBorder ? '#1A1714' : '#F4EEE6', pick: () => this.setState({ cBorder: k }) })),
+      cCta: st.cStep === 1 ? `Choose ${tpl.n} photos` : st.cStep === 2 ? (enough ? 'Next' : `${st.picked.length} of ${tpl.n} selected`) : 'Save collage',
+      cNextOp: st.cStep === 2 && !enough ? 0.45 : 1,
+      cNext: () => {
+        if (st.cStep === 1) return this.setState({ cStep: 2 });
+        if (st.cStep === 2) return enough && this.setState({ cStep: 3, swapSel: null });
+        this.haptic(14); this.go('gallery'); this.toast('Collage saved to Photos');
+      },
+      shareIt: () => this.toast('Share sheet opens here'),
+
+      isPrint: s === 'print', backPrev: () => this.go(st.prev),
+      paperW: sizes[st.pSize][0], paperH: sizes[st.pSize][1], paperPad: st.pBorder ? (st.pSize === 'strip' ? '8px' : '14px') : '0px',
+      sizes: [['4x6', '4×6'], ['sq', 'Square'], ['strip', 'Strip']].map(([k, label]) => ({ label, sel: k === st.pSize, bg: k === st.pSize ? '#F4EEE6' : 'transparent', color: k === st.pSize ? '#1A1714' : '#F4EEE6', pick: () => this.setState({ pSize: k }) })),
+      copies: st.copies, copiesDown: () => this.setState(x => ({ copies: Math.max(1, x.copies - 1) })), copiesUp: () => this.setState(x => ({ copies: Math.min(20, x.copies + 1) })),
+      pBorder: st.pBorder, pBorderBg: st.pBorder ? '#F2A33A' : '#3A3631', pBorderKnob: st.pBorder ? 'translateX(20px)' : 'translateX(0)',
+      toggleBorder: () => this.setState(x => ({ pBorder: !x.pBorder })),
+      pMore: st.pMore, toggleMore: () => this.setState(x => ({ pMore: !x.pMore })), moreRot: st.pMore ? 'rotate(180deg)' : 'none',
+      printCta: st.copies > 1 ? `Print ${st.copies} copies` : 'Print',
+      doPrint: () => { this.haptic(14); this.go(st.prev); this.toast('Sent to Living Room Printer'); },
+
+      isSettings: s === 'settings', setGroups,
+
+      hasToast: !!toastObj, toastText: toastObj ? toastObj.text : '', toastHasAction: !!(toastObj && toastObj.action),
+      toastAction: toastObj ? toastObj.action : '', toastFn: toastObj && toastObj.fn ? toastObj.fn : () => {}, toastPadR: toastObj && toastObj.action ? '0px' : '10px'
+    };
+  }
+}
+</script>
+</body>
+</html>
