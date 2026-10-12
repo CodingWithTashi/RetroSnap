@@ -1,0 +1,71 @@
+import CoreGraphics
+
+/// How a photo is laid out when its look is baked into a file: which part of the original is used,
+/// how big the finished picture is, and how many pixels make one of the look's points.
+nonisolated struct BakeLayout: Hashable, Sendable {
+    /// The width the Viewer gives a photo on the design's 390pt screen. Grain, scanlines and stamps are
+    /// sized in points, so the file is drawn as that screen shows it.
+    static let photoWidth = DesignLayout.referenceSize.width
+    /// The width the Viewer gives an Instant print.
+    static let printWidth = InstantPrint.viewerWidth
+
+    /// The part of the original that ends up in the picture, in pixels.
+    let crop: CGRect
+    /// The finished picture, in pixels.
+    let canvas: CGSize
+    /// Where the photo sits in the picture, measured from its bottom-left corner as Core Image does.
+    let photoOrigin: CGPoint
+    /// Pixels per point.
+    let scale: CGFloat
+
+    /// The photo's own box in points, as the look measures it.
+    var pointSize: CGSize {
+        CGSize(width: crop.width / scale, height: crop.height / scale)
+    }
+
+    /// A print: the photo filling the paper from its centre, inside a border when there is one.
+    /// - Parameters:
+    ///   - paper: The paper as the Print screen draws it, in points.
+    ///   - border: The border's width on that drawing.
+    init(source: CGSize, paper: CGSize, border: CGFloat) {
+        let window = CGSize(width: paper.width - border * 2, height: paper.height - border * 2)
+        crop = Self.centredCrop(of: source, aspect: window.width / window.height)
+        let size = crop.size
+        scale = size.width / window.width
+        let edge = (border * scale).rounded()
+        canvas = CGSize(width: size.width + edge * 2, height: size.height + edge * 2)
+        photoOrigin = CGPoint(x: edge, y: edge)
+    }
+
+    init(source: CGSize, isFramed: Bool) {
+        guard isFramed else {
+            crop = CGRect(origin: .zero, size: source)
+            canvas = source
+            photoOrigin = .zero
+            scale = source.width / Self.photoWidth
+            return
+        }
+        // The photo fills the print's window from its centre, as `scaledToFill` does on screen.
+        let windowWidth = 1 - InstantPrint.side * 2
+        let windowHeight = InstantPrint.size.height / InstantPrint.size.width - InstantPrint.side - InstantPrint.bottom
+        crop = Self.centredCrop(of: source, aspect: windowWidth / windowHeight)
+        let size = crop.size
+        let printWidth = size.width / windowWidth
+        let side = (printWidth * InstantPrint.side).rounded()
+        let bottom = (printWidth * InstantPrint.bottom).rounded()
+        canvas = CGSize(width: size.width + side * 2, height: bottom + size.height + side)
+        photoOrigin = CGPoint(x: side, y: bottom)
+        scale = canvas.width / Self.printWidth
+    }
+
+    /// The largest part of the picture with this aspect, taken from its centre, on whole pixels.
+    private static func centredCrop(of source: CGSize, aspect: CGFloat) -> CGRect {
+        let size = source.width / source.height <= aspect
+            ? CGSize(width: source.width, height: (source.width / aspect).rounded())
+            : CGSize(width: (source.height * aspect).rounded(), height: source.height)
+        return CGRect(
+            x: ((source.width - size.width) / 2).rounded(), y: ((source.height - size.height) / 2).rounded(),
+            width: size.width, height: size.height
+        )
+    }
+}
