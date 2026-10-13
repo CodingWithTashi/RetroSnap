@@ -29,7 +29,9 @@ extension AppDependencies {
 
         guard scenario.runsLive(onSimulator: Self.isSimulator) else {
             let services = Services.mock(scenario, toasts: toasts)
-            let navigation = scenario.navigation(firstPhotoID: services.photos.photos.first?.id)
+            let navigation = scenario.navigation(
+                firstPhotoID: services.photos.photos.first?.id, importDraft: scenario.importDraft(clock: services.clock)
+            )
             self.init(
                 services: services, scheduler: scheduler, toasts: toasts,
                 router: AppRouter(root: navigation.root, path: navigation.path), config: scenario.config, boards: boards
@@ -107,12 +109,20 @@ extension AppDependencies.Services {
             location: MockLocationService(),
             exporter: MockPhotoExporter(),
             clipPlayer: MockClipPlayer(),
+            importer: MockPhotoImporter(draft: scenario.importDraft(clock: clock)),
             sharing: MockPhotoSharer(toasts: toasts),
             printing: MockPhotoPrinter(),
             imageLoader: nil,
             viewfinder: nil,
             shotPreview: nil
         )
+    }
+}
+
+extension LaunchScenario {
+    /// The pick the mock picker brings in, posed as taken with the scenario's camera.
+    fileprivate func importDraft(clock: any DateProviding) -> Photo {
+        SeedData.importDraft(clock: clock, camera: camera ?? .film, isVideo: variant == .video)
     }
 }
 #endif

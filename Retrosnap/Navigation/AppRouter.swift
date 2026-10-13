@@ -75,4 +75,37 @@ final class AppRouter {
         path = [.result(id)]
         return true
     }
+
+    // MARK: Developing a pick from the library
+
+    /// A result sits on the gallery when its photo was brought in from the library, and on the camera alone
+    /// when it was just taken.
+    var isResultOverGallery: Bool {
+        path.contains(.gallery)
+    }
+
+    /// Leaves a result for where it came from: the gallery, or the camera.
+    func closeResult() {
+        if isResultOverGallery {
+            returnToGallery()
+        } else {
+            returnToCamera()
+        }
+    }
+
+    /// Opens the result for a pick just developed, in place of its develop screen. Dropped if that screen is gone.
+    @discardableResult
+    func showDevelopedResult(_ id: Photo.ID) -> Bool {
+        guard case .develop = path.last else { return false }
+        path[path.count - 1] = .result(id)
+        return true
+    }
+
+    /// Opens the develop screen for the next pick, in place of the result it was asked for from.
+    @discardableResult
+    func showNextDevelop(_ draft: Photo) -> Bool {
+        guard case .result = path.last else { return false }
+        path[path.count - 1] = .develop(draft)
+        return true
+    }
 }

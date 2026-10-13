@@ -235,6 +235,42 @@ final class RetrosnapUITests: XCTestCase {
         expectButton("Take photo")
     }
 
+    // MARK: From the library
+
+    @MainActor
+    func testAPictureFromTheLibraryGetsItsLookAndIsDeveloped() throws {
+        app.launchArguments = ["-rsScenario", "returning"]
+        app.launch()
+
+        // The gallery's add button opens the picker; the mock hands a pick over at once.
+        tap("Open photos")
+        tap("Add from your library")
+        expectButton("Develop photo")
+        expectButton("Camera: 35mm Film. Change camera")
+
+        // The same strip as the camera's; a card changes the look.
+        tap("Camera: 35mm Film. Change camera")
+        let digicam = buttonStarting(with: "Digicam.")
+        XCTAssertTrue(digicam.waitForExistence(timeout: 5))
+        digicam.tap()
+        expectButton("Camera: Digicam. Change camera")
+
+        // The shutter develops it: the result shows it as just taken, and offers another pick.
+        tap("Develop photo")
+        expectButton("Develop another")
+        expectText("Digicam · Just now")
+        expectText("Saved to Photos")
+        tap("Back to photos")
+        expectText("Photos")
+        expectButton("Digicam photo, Today")
+
+        // Cancelling a pick throws it away.
+        tap("Add from your library")
+        tap("Cancel")
+        expectText("Photos")
+        XCTAssertFalse(button("Develop photo").exists)
+    }
+
     @MainActor
     func testZoomButtonAndPinchZoomTheViewfinder() throws {
         app.launchArguments = ["-rsScenario", "returning"]

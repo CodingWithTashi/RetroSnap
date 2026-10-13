@@ -41,6 +41,11 @@ final class EditViewModel {
         photo?.camera == .instant
     }
 
+    /// The preview's box: width over height.
+    var displayAspect: CGFloat {
+        photo?.displayAspect ?? 3.0 / 4.0
+    }
+
     var stamp: PhotoStampText? {
         photo.map { dayLabeler.stamp(for: $0.capturedAt) }
     }

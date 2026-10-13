@@ -144,6 +144,15 @@ struct LaunchScenarioTests {
         #expect(navigation.path == [.gallery, .viewer("s3")])
     }
 
+    @Test func theDevelopScreenOpensOnThePickOverTheGallery() {
+        let draft = SeedData.importDraft(clock: FixedClock.design, camera: .digicam, isVideo: true)
+        #expect(draft.camera == .digicam)
+        #expect(draft.videoSeconds == 24)
+        let navigation = scenario("-rsScreen", "develop").navigation(firstPhotoID: "s1", importDraft: draft)
+        #expect(navigation.path == [.gallery, .develop(draft)])
+        #expect(scenario("-rsScreen", "develop").navigation(firstPhotoID: "s1").path == [.gallery])
+    }
+
     @Test func photoScreensFallBackToTheGalleryWhenThereAreNoPhotos() {
         let navigation = scenario("-rsScreen", "viewer").navigation(firstPhotoID: nil)
         #expect(navigation.path == [.gallery])

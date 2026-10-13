@@ -128,6 +128,25 @@ final class MockCameraService: CameraServicing {
     }
 }
 
+/// A picker that brings in the same picture every time, and at once.
+final class MockPhotoImporter: PhotoImporting {
+    let isImporting = false
+    private let draft: Photo
+
+    init(draft: Photo) {
+        self.draft = draft
+    }
+
+    func pick(completion: @escaping @MainActor (ImportOutcome) -> Void) {
+        completion(.imported(Photo(
+            id: UUID().uuidString, image: draft.image, camera: draft.camera, capturedAt: draft.capturedAt,
+            isJustCaptured: true, videoSeconds: draft.videoSeconds, videoFile: draft.videoFile, pixelSize: draft.pixelSize
+        )))
+    }
+
+    func discard(_ draft: Photo) {}
+}
+
 /// A player with nothing to play: the mock library's clips are stills.
 final class MockClipPlayer: ClipPlaying {
     let frames = FrameFeed()

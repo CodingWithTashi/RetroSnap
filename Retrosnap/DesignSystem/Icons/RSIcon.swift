@@ -4,7 +4,7 @@ import SwiftUI
 nonisolated enum RSIcon: CaseIterable, Sendable {
     case bolt, boltSlash, timer
     case chevronUp, chevronDown, chevronLeft, chevronRight
-    case check, close, flip
+    case check, close, flip, plus
     case camera, cameraSlash, photos, gear
     case share, sliders, printer, collage, trash
     case play
@@ -39,6 +39,8 @@ nonisolated enum RSIcon: CaseIterable, Sendable {
             [.path("M6 6l12 12M18 6 6 18")]
         case .flip:
             [.path("M4.5 10a8 8 0 0 1 14-3.5L20 8M19.5 14a8 8 0 0 1-14 3.5L4 16"), .path("M20 3.5V8h-4.5M4 20.5V16h4.5")]
+        case .plus:
+            [.path("M12 5v14M5 12h14")]
         case .camera:
             [.path(Self.cameraBody), .circle(cx: 12, cy: 13.5, r: 3.6)]
         case .cameraSlash:

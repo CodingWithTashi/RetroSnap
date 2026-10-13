@@ -49,6 +49,11 @@ final class ViewerViewModel {
         photo?.camera == .instant
     }
 
+    /// The photo's box: width over height.
+    var displayAspect: CGFloat {
+        photo?.displayAspect ?? 3.0 / 4.0
+    }
+
     var stamp: PhotoStampText? {
         photo.map { dayLabeler.stamp(for: $0.capturedAt) }
     }

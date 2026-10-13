@@ -15,7 +15,7 @@ struct PhotoLookView: View {
     /// Stamp insets as a fraction of the photo's height.
     var stampBottom: CGFloat = 0.05
     var stampTop: CGFloat = 0.05
-    /// Shows the play badge and this duration.
+    /// Shows the play badge, with this duration in the corner unless it is empty.
     var videoDuration: String?
     var usesThumbnail = false
     /// Enlarges the picture inside its box, under the look: a still scene standing in for a zoomed lens.
@@ -126,15 +126,17 @@ struct PhotoLookView: View {
             RSIconView(.play, size: diameter * 0.45, filled: true)
                 .foregroundStyle(RSColor.paper)
                 .offset(x: diameter * 0.03)
-            Text(duration)
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundStyle(RSColor.paper)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 2)
-                .background(RSColor.ink(0.6), in: RoundedRectangle(cornerRadius: 9))
-                .padding(.trailing, size.width * 0.05)
-                .padding(.top, size.height * 0.05)
-                .frame(width: size.width, height: size.height, alignment: .topTrailing)
+            if !duration.isEmpty {
+                Text(duration)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(RSColor.paper)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(RSColor.ink(0.6), in: RoundedRectangle(cornerRadius: 9))
+                    .padding(.trailing, size.width * 0.05)
+                    .padding(.top, size.height * 0.05)
+                    .frame(width: size.width, height: size.height, alignment: .topTrailing)
+            }
         }
         .accessibilityHidden(true)
     }

@@ -43,6 +43,7 @@ struct TestWorld {
     let location = MockLocationService()
     let clipPlayer = ClipPlayerSpy()
     let printing = MockPhotoPrinter()
+    let importer = ImporterSpy()
     let saver: PhotosSaver
     let router: AppRouter
     let toasts: ToastCenter
@@ -61,5 +62,13 @@ struct TestWorld {
 
     func photo(_ id: String, camera: CameraStyle = .film, video seconds: Int? = nil) -> Photo {
         Photo(id: id, image: .photo(1011), camera: camera, capturedAt: clock.now, videoSeconds: seconds)
+    }
+
+    /// A pick from the library as the importer hands it over: filed, not yet in the library, on no camera in particular.
+    func draft(_ id: String, camera: CameraStyle = .film, video seconds: Int? = nil) -> Photo {
+        Photo(
+            id: id, image: .photo(1015), camera: camera, capturedAt: clock.now, isJustCaptured: true,
+            videoSeconds: seconds, videoFile: seconds == nil ? nil : "\(id).mov"
+        )
     }
 }

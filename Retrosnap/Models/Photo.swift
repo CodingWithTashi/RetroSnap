@@ -19,9 +19,22 @@ nonisolated struct Photo: Identifiable, Hashable, Sendable {
     var location: PhotoLocation?
     /// A saved collage: already a finished picture, so it is shown as it is and named as a collage.
     var isCollage = false
+    /// The picture's size, when the shot did not come from the camera, whose pictures are all 3:4.
+    var pixelSize: PixelSize?
 
     var isVideo: Bool {
         videoSeconds != nil
+    }
+
+    /// The picture's width over its height: the camera's 3:4, or the picture's own shape when it was brought in.
+    var aspectRatio: CGFloat {
+        pixelSize?.aspectRatio ?? 3.0 / 4.0
+    }
+
+    /// The width over the height of the box a screen gives this photo: the Instant print's paper, or the
+    /// picture's own shape, which a film camera's canvas takes as well.
+    var displayAspect: CGFloat {
+        camera == .instant ? InstantPrint.size.width / InstantPrint.size.height : aspectRatio
     }
 
     /// The library files this shot owns.
@@ -38,7 +51,7 @@ nonisolated struct Photo: Identifiable, Hashable, Sendable {
 extension Photo: Codable {
     /// Everything the library keeps. "Just now" belongs to the session and is left out.
     private enum CodingKeys: String, CodingKey {
-        case id, image, camera, capturedAt, videoSeconds, videoFile, adjustments, location, isCollage
+        case id, image, camera, capturedAt, videoSeconds, videoFile, adjustments, location, isCollage, pixelSize
     }
 
     /// Fields added after the first saved libraries are optional when reading one back.
@@ -53,5 +66,6 @@ extension Photo: Codable {
         adjustments = try values.decode(PhotoAdjustments.self, forKey: .adjustments)
         location = try values.decodeIfPresent(PhotoLocation.self, forKey: .location)
         isCollage = try values.decodeIfPresent(Bool.self, forKey: .isCollage) ?? false
+        pixelSize = try values.decodeIfPresent(PixelSize.self, forKey: .pixelSize)
     }
 }

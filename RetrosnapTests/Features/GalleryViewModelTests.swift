@@ -5,7 +5,10 @@ import Testing
 struct GalleryViewModelTests {
 
     private func make(_ world: TestWorld) -> GalleryViewModel {
-        GalleryViewModel(photos: world.photos, router: world.router, dayLabeler: DayLabeler(clock: world.clock))
+        GalleryViewModel(
+            photos: world.photos, settings: world.settings, importer: world.importer, router: world.router,
+            toasts: world.toasts, dayLabeler: DayLabeler(clock: world.clock)
+        )
     }
 
     @Test func groupsPhotosByDayNewestFirst() {
@@ -80,5 +83,52 @@ struct GalleryViewModelTests {
         var collage = world.photo("collage")
         collage.isCollage = true
         #expect(vm.accessibilityLabel(for: collage) == "Collage, Today")
+    }
+
+    // MARK: Bringing in a picture from the library
+
+    @Test func addOpensThePickerAndThePickGoesToDevelopOnTheCurrentCamera() {
+        let world = TestWorld(path: [.gallery])
+        world.settings.lastCamera = .digicam
+        let vm = make(world)
+        vm.addTapped()
+        #expect(world.importer.pickCount == 1)
+        #expect(world.router.path == [.gallery])
+
+        world.importer.deliver(.imported(world.draft("d1")))
+        var expected = world.draft("d1")
+        expected.camera = .digicam
+        #expect(world.router.path == [.gallery, .develop(expected)])
+        #expect(world.importer.discarded.isEmpty)
+    }
+
+    @Test func aPickThatIsCalledOffChangesNothing() {
+        let world = TestWorld(path: [.gallery])
+        let vm = make(world)
+        vm.addTapped()
+        world.importer.deliver(.cancelled)
+        #expect(world.router.path == [.gallery])
+        #expect(world.toasts.current == nil)
+    }
+
+    @Test func aPickThatCannotBeOpenedSaysSo() {
+        let world = TestWorld(path: [.gallery])
+        let vm = make(world)
+        vm.addTapped()
+        world.importer.deliver(.failed)
+        #expect(world.router.path == [.gallery])
+        #expect(world.toasts.current?.text == "Couldn’t open that photo or video")
+    }
+
+    @Test func thePickIsNotAskedForTwiceWhileOneIsOnItsWayIn() {
+        let world = TestWorld(path: [.gallery])
+        let vm = make(world)
+        #expect(!vm.isImporting)
+        #expect(vm.addLabel == "Add from your library")
+        world.importer.isImporting = true
+        #expect(vm.isImporting)
+        #expect(vm.addLabel == "Opening your pick")
+        vm.addTapped()
+        #expect(world.importer.pickCount == 0)
     }
 }

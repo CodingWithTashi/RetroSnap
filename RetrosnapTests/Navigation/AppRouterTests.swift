@@ -128,6 +128,49 @@ struct AppRouterTests {
         #expect(router.path == [.gallery])
     }
 
+    // MARK: Developing a pick from the library
+
+    private var draft: Photo {
+        Photo(id: "d1", image: .photo(1015), camera: .film, capturedAt: FixedClock.design.now)
+    }
+
+    @Test func aResultSitsOnTheGalleryOnlyWhenItsPhotoCameFromTheLibrary() {
+        #expect(cameraRouter([.gallery, .result("p1")]).isResultOverGallery)
+        #expect(!cameraRouter([.result("p1")]).isResultOverGallery)
+    }
+
+    @Test func closeResultGoesBackToTheGalleryOrTheCamera() {
+        let fromLibrary = cameraRouter([.gallery, .result("p1")])
+        fromLibrary.closeResult()
+        #expect(fromLibrary.path == [.gallery])
+
+        let fromShot = cameraRouter([.result("p1")])
+        fromShot.closeResult()
+        #expect(fromShot.path.isEmpty)
+    }
+
+    @Test func aDevelopedPickOpensItsResultInPlaceOfTheDevelopScreen() {
+        let router = cameraRouter([.gallery, .develop(draft)])
+        #expect(router.showDevelopedResult("d1"))
+        #expect(router.path == [.gallery, .result("d1")])
+    }
+
+    @Test func aDevelopedResultIsDroppedOnceTheDevelopScreenIsGone() {
+        let router = cameraRouter([.gallery])
+        #expect(router.showDevelopedResult("d1") == false)
+        #expect(router.path == [.gallery])
+    }
+
+    @Test func theNextPickTakesTheResultsPlace() {
+        let router = cameraRouter([.gallery, .result("d1")])
+        #expect(router.showNextDevelop(draft))
+        #expect(router.path == [.gallery, .develop(draft)])
+
+        let elsewhere = cameraRouter([.gallery])
+        #expect(elsewhere.showNextDevelop(draft) == false)
+        #expect(elsewhere.path == [.gallery])
+    }
+
     @Test func topRouteTracksTheStack() {
         let router = cameraRouter()
         #expect(router.topRoute == nil)

@@ -23,6 +23,14 @@ enum SeedData {
     /// The photos already picked on the "Arrange" board, in cell order.
     static let arrangeBoardPicks: [Photo.ID] = ["s1", "s3", "s2"]
 
+    /// What the mock picker brings in from the library: a picture the library does not have yet.
+    static func importDraft(clock: any DateProviding, camera: CameraStyle, isVideo: Bool) -> Photo {
+        Photo(
+            id: "import", image: .photo(1015), camera: camera, capturedAt: clock.now, isJustCaptured: true,
+            videoSeconds: isVideo ? 24 : nil
+        )
+    }
+
     /// The clip shown on the "Video result" board.
     static func sampleVideo(clock: any DateProviding) -> Photo {
         Photo(id: "s1", image: .photo(1039), camera: .camcorder, capturedAt: clock.now, videoSeconds: 24)

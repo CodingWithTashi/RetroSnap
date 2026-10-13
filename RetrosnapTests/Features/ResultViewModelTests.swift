@@ -19,7 +19,7 @@ struct ResultViewModelTests {
     ) -> ResultViewModel {
         ResultViewModel(
             photoID: id ?? fresh.id, photos: world.photos, saver: saver ?? world.saver,
-            sharing: sharing ?? world.sharing, router: world.router,
+            sharing: sharing ?? world.sharing, importer: world.importer, router: world.router,
             toasts: world.toasts, scheduler: world.scheduler, dayLabeler: DayLabeler(clock: world.clock),
             isProcessing: isProcessing
         )
@@ -99,7 +99,11 @@ struct ResultViewModelTests {
 
     @Test func takeAnotherReturnsToTheCameraAndConfirmsTheSave() {
         let vm = make()
-        vm.takeAnotherTapped()
+        #expect(vm.primaryTitle == "Take another")
+        #expect(vm.primaryIcon == .camera)
+        #expect(vm.closeLabel == "Back to camera")
+        #expect(!vm.isFromLibrary)
+        vm.primaryTapped()
         #expect(world.router.path.isEmpty)
         #expect(world.toasts.current?.text == "Saved to Photos")
     }
@@ -121,7 +125,7 @@ struct ResultViewModelTests {
         world.scheduler.advance(by: ResultViewModel.developTime)
         #expect(vm.statusText == "Saved in RetroSnap")
 
-        vm.takeAnotherTapped()
+        vm.primaryTapped()
         #expect(world.toasts.current?.text == "Saved in RetroSnap")
     }
 
@@ -167,5 +171,71 @@ struct ResultViewModelTests {
     @Test func actionsAreListedInTheDesignOrderWithDeleteMarkedDestructive() {
         #expect(PhotoAction.allCases.map(\.label) == ["Share", "Edit", "Print", "Collage", "Delete"])
         #expect(PhotoAction.allCases.filter(\.isDestructive) == [.delete])
+    }
+
+    // MARK: A photo brought in from the library
+
+    /// The same photo, developed from a pick: its result sits on the gallery.
+    private func fromLibrary() -> (world: TestWorld, vm: ResultViewModel) {
+        let world = TestWorld(path: [.gallery, .result(fresh.id)])
+        world.photos.add(fresh)
+        let vm = ResultViewModel(
+            photoID: fresh.id, photos: world.photos, saver: world.saver, sharing: world.sharing,
+            importer: world.importer, router: world.router, toasts: world.toasts, scheduler: world.scheduler,
+            dayLabeler: DayLabeler(clock: world.clock)
+        )
+        return (world, vm)
+    }
+
+    @Test func aDevelopedPickOffersAnotherAndClosesToThePhotos() {
+        let (world, vm) = fromLibrary()
+        #expect(vm.isFromLibrary)
+        #expect(vm.primaryTitle == "Develop another")
+        #expect(vm.primaryIcon == .photos)
+        #expect(vm.closeLabel == "Back to photos")
+
+        vm.closeTapped()
+        #expect(world.router.path == [.gallery])
+        #expect(world.toasts.current?.text == "Saved to Photos")
+    }
+
+    @Test func developAnotherOpensThePickerAndTheNextPickTakesTheResultsPlace() {
+        let (world, vm) = fromLibrary()
+        vm.primaryTapped()
+        #expect(world.importer.pickCount == 1)
+        #expect(world.router.path == [.gallery, .result(fresh.id)])
+
+        world.importer.deliver(.imported(world.draft("d2", camera: .camcorder)))
+        var expected = world.draft("d2")
+        expected.camera = fresh.camera
+        #expect(world.router.path == [.gallery, .develop(expected)])
+    }
+
+    @Test func developAnotherKeepsTheResultWhenThePickIsCalledOffOrFails() {
+        let (world, vm) = fromLibrary()
+        vm.primaryTapped()
+        world.importer.deliver(.cancelled)
+        #expect(world.router.path == [.gallery, .result(fresh.id)])
+
+        vm.primaryTapped()
+        world.importer.deliver(.failed)
+        #expect(world.router.path == [.gallery, .result(fresh.id)])
+        #expect(world.toasts.current?.text == "Couldn’t open that photo or video")
+    }
+
+    @Test func developAnotherWaitsWhileAPickIsOnItsWayIn() {
+        let (world, vm) = fromLibrary()
+        world.importer.isImporting = true
+        #expect(vm.isPrimaryDimmed)
+        vm.primaryTapped()
+        #expect(world.importer.pickCount == 0)
+    }
+
+    @Test func deletingADevelopedPickReturnsToThePhotos() {
+        let (world, vm) = fromLibrary()
+        vm.perform(.delete)
+        #expect(world.photos.photo(id: fresh.id) == nil)
+        #expect(world.router.path == [.gallery])
+        #expect(world.toasts.current?.text == "Photo deleted")
     }
 }

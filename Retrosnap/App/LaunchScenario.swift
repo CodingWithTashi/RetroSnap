@@ -8,12 +8,15 @@ import Foundation
 ///     -rsScreen gallery -rsVariant empty
 ///     -rsScreen camera -rsCamera inst -rsSheet 1
 ///     -rsScreen result -rsCamera slide
+///     -rsScreen develop -rsVariant video
 ///     -rsScenario returning
 ///     -rsLive fresh
 nonisolated struct LaunchScenario: Equatable, Sendable {
     enum Screen: String, Sendable {
         case welcome, how, permCam, permLib
         case camera, carousel, result, gallery, viewer, edit, collage, print, settings
+        /// A pick from the library getting its look.
+        case develop
         /// Debug-only design system pages.
         case catalog, look
     }
@@ -89,7 +92,8 @@ nonisolated struct LaunchScenario: Equatable, Sendable {
     }
 
     /// Where the app opens: the root and what is stacked on the camera.
-    func navigation(firstPhotoID: Photo.ID?) -> (root: AppRouter.Root, path: [Route]) {
+    /// - Parameter importDraft: The pick the develop screen opens on; without one, that screen falls back to the gallery.
+    func navigation(firstPhotoID: Photo.ID?, importDraft: Photo? = nil) -> (root: AppRouter.Root, path: [Route]) {
         let photo = photoID ?? firstPhotoID
         switch screen {
         case nil:
@@ -110,6 +114,8 @@ nonisolated struct LaunchScenario: Equatable, Sendable {
             return (.camera, [.gallery])
         case .settings:
             return (.camera, [.gallery, .settings])
+        case .develop:
+            return (.camera, [.gallery] + (importDraft.map { [.develop($0)] } ?? []))
         case .result:
             return (.camera, photo.map { [.result($0)] } ?? [])
         case .viewer:

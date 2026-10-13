@@ -18,7 +18,7 @@ It is a port of the HTML/CSS prototype in `docs/retrosnap-mobile-app-design/proj
 
 The goal is to match the prototype pixel for pixel. Read the HTML and CSS source for dimensions, colours and layout rules; do not render the design files in a browser or screenshot them unless asked.
 
-Current state: on a device everything is real: the camera (photo and video, zoom, flash), permissions, location, the photo library on disk, saving to Photos, the share sheet and AirPrint. The simulator has no camera, so `MockCameraService` stands in for it there and serves one still scene per lens. The Privacy and Help rows of Settings open the addresses in `AppLinks.released` (`App/AppConfig.swift`) and are hidden while those are nil.
+Current state: on a device everything is real: the camera (photo and video, zoom, flash), permissions, location, the photo library on disk, saving to Photos, the share sheet, AirPrint, and bringing pictures and clips in from the Photos library. The simulator has no camera, so `MockCameraService` stands in for it there and serves one still scene per lens. The Privacy and Help rows of Settings open the addresses in `AppLinks.released` (`App/AppConfig.swift`) and are hidden while those are nil.
 
 ## Commands
 
@@ -68,8 +68,8 @@ xcrun simctl io booted screenshot out.png
 
 | Argument | Values |
 | --- | --- |
-| `-rsScreen` | `welcome` `how` `permCam` `permLib` `camera` `carousel` `result` `gallery` `viewer` `edit` `collage` `print` `settings`, plus `catalog` (the design system on one page) and `look` (one camera look full screen) |
-| `-rsVariant` | `capture` `saved` `processing` `recording` `videoMode` `video` `denied` `unavailable` `libDenied` `lowStorage` `empty` |
+| `-rsScreen` | `welcome` `how` `permCam` `permLib` `camera` `carousel` `result` `gallery` `viewer` `edit` `collage` `print` `settings` `develop`, plus `catalog` (the design system on one page) and `look` (one camera look full screen) |
+| `-rsVariant` | `capture` `saved` `processing` `recording` `videoMode` `video` `denied` `unavailable` `libDenied` `lowStorage` `empty` (`video` also makes the `develop` screen's pick a clip) |
 | `-rsCamera` | any `CameraStyle` id: `film` `disp` `inst` `digi` `vhs` `negative` `plastic35` `slide` `mediumFormat` `tlr`. On a photo screen (`result`, `viewer`, `edit`, `print`, `collage`) it also poses the photo shown as taken with that camera |
 | `-rsScenario returning` | skips onboarding and opens on the camera |
 | `-rsLive` | `1` runs the live services on what earlier launches saved; `fresh` wipes that first |
@@ -95,7 +95,7 @@ Take each screenshot at least 4 seconds after launch. Before that the home indic
 
 `LaunchScenario.runsLive(onSimulator:)` decides which services run:
 
-- A device launched with no `-rs` arguments runs the live ones (`Services/Live`): `LiveCameraService`, `DiskPhotoStore`, `UserDefaultsSettingsStore`, `LivePermissionService`, `LiveLocationService`, `LiveStorageMonitor`, `PhotoExporter`, `PhotoShareSheet`, `AirPrinter`, `ClipPlayer` and `PhotoImageLoader`.
+- A device launched with no `-rs` arguments runs the live ones (`Services/Live`): `LiveCameraService`, `DiskPhotoStore`, `UserDefaultsSettingsStore`, `LivePermissionService`, `LiveLocationService`, `LiveStorageMonitor`, `PhotoExporter`, `PhotoShareSheet`, `AirPrinter`, `ClipPlayer`, `PhotoImporter` and `PhotoImageLoader`.
 - The simulator, and any launch with a `-rs` argument, runs in-memory mocks on `FixedClock.design` (11 October 2026, 4:12 PM) with the 13 `SeedData` photos, unless `-rsLive` is passed.
 
 So running in the simulator from Xcode shows seeded mock data and saves nothing.
@@ -106,7 +106,8 @@ The mocks, `SeedData`, `LaunchScenario`, the design catalog and `MockSamples.xca
 
 `AppRouter` is the single source of navigation state: `root` (an onboarding step, or the camera) and `path: [Route]`, bound to the one `NavigationStack` in `RootView`. The camera is the permanent root and every other screen is a `Route` stacked on it.
 
-- View models call router methods (`push`, `back`, `returnToCamera`, `returnToGallery`, `showResult`); views never navigate themselves.
+- View models call router methods (`push`, `back`, `returnToCamera`, `returnToGallery`, `showResult`, `closeResult`, `showDevelopedResult`, `showNextDevelop`); views never navigate themselves.
+- `Route.develop(Photo)` is the one route that carries a whole photo: a pick from the Photos library that is not in the library yet. The result that follows replaces it in the path, and a result sitting on the gallery (`isResultOverGallery`) closes back to the gallery instead of the camera.
 - Steps inside a screen (the three collage steps, viewer paging) are view-model state, not routes.
 - The navigation bar is hidden and swipe-back is disabled (`PopGestureDisabler`); each screen draws its own header.
 - `ToastCenter` is drawn above the stack, so a toast such as "Photo deleted · Undo" survives the screen change that caused it.
@@ -125,6 +126,14 @@ The mocks, `SeedData`, `LaunchScenario`, the design catalog and `MockSamples.xca
 - The viewfinder is not a preview layer. Each camera frame becomes a `CGImage` in a `FrameFeed`, and `PhotoPicture` draws a `.live` image from the feed in the `liveFrames` environment value, so the look's shaders apply to it like to any photo.
 - Zoom is in the numbers a camera shows (`CameraZoom`: 1 is the main lens, 0.5 the ultra-wide). The back camera is the phone's multi-lens device, and `LensZoom` maps its own zoom numbers onto those.
 - The shutter's flash and fly-to-gallery start at the tap, from the viewfinder frame frozen in `LiveCameraService.shotFeed`. The photo lands later (over a second with flash), and until then `CameraViewModel.pendingShot` makes the gallery button show that frozen frame.
+- The camera chip, the camera strip, the viewfinder picture and the glass buttons are shared views in `CameraChooserViews.swift`, because the develop screen is the camera pointed at a pick from the library.
+
+### Bringing in a picture from the library
+
+- The gallery's add button asks `PhotoImporting` for a pick. `PhotoImporter` shows the system picker (no permission needed) and copies the pick into the library folder the way a shot is filed, as a draft `Photo` that is not in the library yet; `MockPhotoImporter` hands over the same sample at once.
+- `DevelopViewModel` shows the draft under a look with the same chip and strip as the camera; its shutter adds the draft to the library, saves it to Photos and replaces the screen with the result. Cancel, or picking another, discards the draft's files. Files no photo owns are also removed at the next launch, so a crash leaves nothing behind.
+- A pick keeps its own shape: `Photo.pixelSize` is set for imports and nil for the camera's 3:4 shots, and `Photo.displayAspect` is the box the result, viewer and edit screens give a photo. `BakeLayout` already bakes a frameless original whole, so the screen and the file agree.
+- An import is dated when it was brought in, not when it was taken, so it lands in Today and its stamp shows today; the baked file keeps the original's EXIF date.
 - Nothing audio or file related may run on the main actor at the shutter: on a phone the click's `AVAudioPlayer` cost 70 ms to build and 90 ms to start, and opening a HEIC cost 30 ms. `ClickSound` has its own queue, and files are opened in `@concurrent` functions.
 
 ### Photos and persistence
@@ -134,7 +143,7 @@ The mocks, `SeedData`, `LaunchScenario`, the design catalog and `MockSamples.xca
 - `MockPhotoStore` and `DiskPhotoStore` both delegate ordering to the `PhotoList` value type: newest first, and Undo puts a photo back next to its older neighbour.
 - `DiskPhotoStore` keeps a versioned `library.json` index beside the photo files in `Application Support/Library`. A deleted photo's files stay on disk for the undo window (the toast duration plus one second), and files no photo owns are removed at the next launch.
 - `Photo` is `Codable` and written to that index, and `CameraStyle` and `FlashMode` raw values are written to the user defaults. Those raw values are the prototype's ids and are on disk, so do not rename them.
-- `Photo` has a hand-written `CodingKeys` and `init(from:)`. A new stored property is saved only once it is in both, and it must be read with `decodeIfPresent`: an index that fails to decode is set aside as `library-unreadable.json` and the library opens empty.
+- `Photo` has a hand-written `CodingKeys` and `init(from:)`. A new stored property is saved only once it is in both, and it must be read with `decodeIfPresent` (as `pixelSize` is): an index that fails to decode is set aside as `library-unreadable.json` and the library opens empty.
 
 ### The look pipeline
 
@@ -177,6 +186,7 @@ The app target builds in Swift 5 mode with `SWIFT_DEFAULT_ACTOR_ISOLATION = Main
 - `RetrosnapTests/Support` has `TestWorld` (a fully mocked app for view-model tests), `ManualScheduler` (virtual time, moved with `advance(by:)`) and the spies. A mock answers at once; a spy such as `CameraSpy` holds the completion until the test calls `deliver`, `fail` or `comeBack`, which is how the time while a capture is under way gets tested.
 - The unit tests run on the app target's debug-only mocks, `SeedData` and `FixedClock.design`, and assert on what those contain (photo ids `s1` to `s13`, the day title "October 4"). So the tests build only in the Debug configuration, and a change to the seed data changes test expectations.
 - UI tests are XCTest and find elements by accessibility label and visible text. Changing copy or a VoiceOver label can break them, and the same strings are asserted in the view-model unit tests.
+- The UI tests run the import flow on the mock importer; the real picker was checked by hand in the simulator (`-rsLive 1`, with media added through `xcrun simctl addmedia`).
 - The UI test `testGalleryViewerEditPrintCollageDeleteAndSettings` taps Undo on a toast that lasts 2.8 seconds, and a slow run can miss it. A lone failure at `Expected button “Disposable photo, Today”` is that race: rerun the test by itself before suspecting the code.
 
 ## The rules in `.claude/rules/ecc/swift/`

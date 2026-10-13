@@ -44,7 +44,7 @@ struct ViewerView: View {
                 stamp: viewModel.stamp, videoDuration: viewModel.badgeText
             )
                 .environment(\.liveFrames, viewModel.movieFrames)
-                .aspectRatio(viewModel.isInstant ? InstantPrint.size.width / InstantPrint.size.height : 3.0 / 4.0, contentMode: .fit)
+                .aspectRatio(viewModel.displayAspect, contentMode: .fit)
                 .frame(maxWidth: viewModel.isInstant ? InstantPrint.viewerWidth : .infinity)
                 .id(photo.id)
                 .onTapGesture(perform: viewModel.photoTapped)

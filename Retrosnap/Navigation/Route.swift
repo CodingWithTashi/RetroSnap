@@ -21,4 +21,7 @@ nonisolated enum Route: Hashable, Sendable {
     /// The three collage steps are state inside the screen, not routes.
     case collage(seed: Photo.ID?)
     case settings
+    /// A pick from the Photos library getting its look. The photo is a draft that is not in the library yet,
+    /// so the screen carries it whole.
+    case develop(Photo)
 }

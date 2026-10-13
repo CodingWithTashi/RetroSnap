@@ -102,6 +102,22 @@ final class DiskPhotoStoreTests {
         #expect(photo.camera == .camcorder)
         #expect(!photo.isCollage)
         #expect(!photo.isVideo)
+        #expect(photo.pixelSize == nil)
+        #expect(photo.aspectRatio == 3.0 / 4.0)
+    }
+
+    @Test func aPictureBroughtInKeepsItsOwnShape() {
+        let store = relaunched()
+        var wide = photo("w")
+        wide.pixelSize = PixelSize(width: 4032, height: 3024)
+        store.add(wide)
+        let saved = relaunched().photo(id: "w")
+        #expect(saved?.pixelSize == PixelSize(width: 4032, height: 3024))
+        #expect(saved?.aspectRatio == 4032.0 / 3024.0)
+        #expect(saved?.displayAspect == 4032.0 / 3024.0)
+        var instant = wide
+        instant.camera = .instant
+        #expect(instant.displayAspect == InstantPrint.size.width / InstantPrint.size.height)
     }
 
     @Test func justNowDoesNotOutliveTheSession() {

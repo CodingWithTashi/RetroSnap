@@ -99,38 +99,13 @@ struct CameraView: View {
     }
 
     private var viewfinder: some View {
-        ZStack {
-            PhotoLookView(
-                image: viewModel.scene, camera: viewModel.style, stamp: stamp, stampBottom: 0.27, stampTop: 0.17,
-                magnification: viewModel.sceneMagnification
-            )
-            .id(viewModel.style)
-            .transition(.opacity)
-
-            // A camera whose picture is not the whole frame (Instant shoots square, a film strip 2:3): the rest is dimmed.
-            GeometryReader { proxy in
-                let ratio = viewModel.style.pictureRatio ?? 1
-                let bar = max(0, (proxy.size.height - proxy.size.width / ratio) / 2)
-                VStack(spacing: 0) {
-                    Color(hex: 0x0A0908, opacity: 0.72).frame(height: bar)
-                    Spacer(minLength: 0)
-                    Color(hex: 0x0A0908, opacity: 0.72).frame(height: bar)
-                }
-            }
-            .opacity(viewModel.style.pictureRatio != nil ? 1 : 0)
-        }
-        .animation(RSMotion.crossFade, value: viewModel.style)
+        ViewfinderPicture(
+            image: viewModel.scene, camera: viewModel.style, stamp: stamp, magnification: viewModel.sceneMagnification
+        )
     }
 
     private var scrims: some View {
-        VStack(spacing: 0) {
-            LinearGradient(colors: [.black.opacity(0.55), .black.opacity(0)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 150)
-            Spacer(minLength: 0)
-            LinearGradient(colors: [.black.opacity(0), .black.opacity(0.72)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 330)
-        }
-        .allowsHitTesting(false)
+        ViewfinderScrims()
     }
 
     // MARK: Controls
@@ -168,7 +143,10 @@ struct CameraView: View {
                 .transition(.opacity)
             }
 
-            CameraChip(viewModel: viewModel)
+            CameraChip(
+                style: viewModel.style, isVisible: viewModel.isChipVisible, isStripOpen: viewModel.isStripVisible,
+                label: viewModel.chipLabel, action: viewModel.chipTapped
+            )
                 .padding(.bottom, layout.bottom(146))
                 .frame(maxHeight: .infinity, alignment: .bottom)
 
@@ -178,7 +156,11 @@ struct CameraView: View {
                 .padding(.bottom, layout.bottom(146))
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
 
-            CameraStrip(viewModel: viewModel)
+            CameraStrip(
+                style: viewModel.style, isVisible: viewModel.isStripVisible, isFirstRun: viewModel.isFirstRun,
+                title: viewModel.stripTitle, subtitle: viewModel.stripSubtitle,
+                onClose: viewModel.closeStripTapped, onPick: viewModel.pick
+            )
                 .padding(.horizontal, 8)
                 .padding(.bottom, layout.bottom(136))
                 .frame(maxHeight: .infinity, alignment: .bottom)
@@ -323,42 +305,6 @@ private struct CameraTopBar: View {
     }
 }
 
-// MARK: - Camera chip and strip
-
-/// The pill above the shutter naming the current camera. It unfolds into the strip.
-private struct CameraChip: View {
-    let viewModel: CameraViewModel
-
-    var body: some View {
-        let visible = viewModel.isChipVisible
-        Button(action: viewModel.chipTapped) {
-            HStack(spacing: 8) {
-                PhotoLookView(image: .sample(viewModel.style.sample), camera: viewModel.style, usesThumbnail: true)
-                    .frame(width: 32, height: 32)
-                    .clipShape(Circle())
-                    .overlay { Circle().strokeBorder(Color(hex: viewModel.style.accentHex), lineWidth: 2).padding(-2) }
-                Text(viewModel.style.name)
-                    .rsText(.labelSmall)
-                RSIconView(.chevronUp, size: 14, lineWidth: 2.4)
-            }
-            .foregroundStyle(RSColor.paper)
-            .padding(.leading, 6)
-            .padding(.trailing, 14)
-            .frame(height: 44)
-            .glass(cornerRadius: 22, tint: RSColor.glass(0.5), visibility: visible ? 1 : 0)
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .opacity(visible ? 1 : 0)
-        .offset(y: viewModel.isStripVisible ? 12 : 0)
-        .allowsHitTesting(visible)
-        .animation(RSMotion.fade, value: visible)
-        .animation(RSMotion.chip, value: viewModel.isStripVisible)
-        .accessibilityLabel(viewModel.chipLabel)
-        .accessibilityHidden(!visible)
-    }
-}
-
 /// The round button beside the chip: the zoom as a number. A tap steps through the lenses; a pinch on the
 /// viewfinder moves it freely.
 private struct ZoomButton: View {
@@ -380,139 +326,6 @@ private struct ZoomButton: View {
         .animation(RSMotion.fade, value: visible)
         .accessibilityLabel(viewModel.zoomLabel)
         .accessibilityHidden(!visible)
-    }
-}
-
-/// Five camera cards over the live preview. One tap switches the look and folds the strip away.
-private struct CameraStrip: View {
-    let viewModel: CameraViewModel
-
-    var body: some View {
-        let visible = viewModel.isStripVisible
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(viewModel.stripTitle)
-                        .rsText(.labelSmall)
-                        .foregroundStyle(RSColor.paper)
-                    Text(viewModel.stripSubtitle)
-                        .rsText(.caption)
-                        .foregroundStyle(RSColor.secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                CircleIconButton(
-                    icon: .chevronDown, label: "Hide cameras", iconSize: 16, lineWidth: 2.4, diameter: 36,
-                    fill: RSColor.raised, action: viewModel.closeStripTapped
-                )
-            }
-            .padding(.leading, 18)
-            .padding(.trailing, 12)
-
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal) {
-                    HStack(spacing: 10) {
-                        ForEach(CameraStyle.allCases) { camera in
-                            CameraCard(camera: camera, isSelected: camera == viewModel.style) {
-                                viewModel.pick(camera)
-                            }
-                        }
-                    }
-                    .padding(.top, 14)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 2)
-                }
-                .scrollIndicators(.hidden)
-                // The strip is longer than the screen: the selected card is brought into view, moving no
-                // further than it has to, so a card that is already in view leaves the strip where it is.
-                .onAppear { proxy.scrollTo(viewModel.style.id, anchor: nil) }
-                .onChange(of: visible) { _, isVisible in
-                    if isVisible { proxy.scrollTo(viewModel.style.id, anchor: nil) }
-                }
-                .onChange(of: viewModel.style) { proxy.scrollTo(viewModel.style.id, anchor: nil) }
-            }
-        }
-        .padding(.top, 16)
-        .padding(.bottom, 14)
-        .glass(cornerRadius: 28, tint: RSColor.ink(0.74), visibility: visible ? 1 : 0)
-        .clipShape(RoundedRectangle(cornerRadius: 28))
-        .background {
-            if viewModel.isFirstRun {
-                FirstRunGlow()
-            }
-        }
-        .opacity(visible ? 1 : 0)
-        .offset(y: visible ? 0 : 28)
-        .allowsHitTesting(visible)
-        .animation(RSMotion.fade, value: visible)
-        .animation(RSMotion.strip, value: visible)
-        .accessibilityHidden(!visible)
-    }
-}
-
-/// The soft amber outline on first launch: box-shadow 0 0 0 1.5px amber 55%, 0 0 40px amber 18%.
-private struct FirstRunGlow: View {
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 28)
-                .fill(RSColor.amber.opacity(0.18))
-                .blur(radius: 20)
-            RoundedRectangle(cornerRadius: 29.5)
-                .strokeBorder(RSColor.amber.opacity(0.55), lineWidth: 1.5)
-                .padding(-1.5)
-        }
-        // A box-shadow is never drawn under its own box.
-        .mask {
-            Rectangle()
-                .padding(-80)
-                .overlay { RoundedRectangle(cornerRadius: 28).blendMode(.destinationOut) }
-                .compositingGroup()
-        }
-        .allowsHitTesting(false)
-    }
-}
-
-struct CameraCard: View {
-    let camera: CameraStyle
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                PhotoLookView(image: .sample(camera.sample), camera: camera, usesThumbnail: true)
-                    .frame(width: 88, height: 110)
-                    .overlay(alignment: .bottom) {
-                        Color(hex: camera.accentHex).frame(height: 4)
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .overlay(alignment: .topTrailing) {
-                        if isSelected {
-                            RSIconView(.check, size: 13, lineWidth: 3.2)
-                                .foregroundStyle(RSColor.onAmber)
-                                .frame(width: 22, height: 22)
-                                .background(RSColor.amber, in: Circle())
-                                .padding(6)
-                        }
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 18.5)
-                            .strokeBorder(RSColor.amber, lineWidth: 2.5)
-                            .padding(-2.5)
-                            .opacity(isSelected ? 1 : 0)
-                    }
-                Text(camera.name)
-                    .rsText(.chip)
-                    .foregroundStyle(isSelected ? RSColor.paper : RSColor.tertiaryText)
-                    .fixedSize()
-            }
-            .frame(width: 88)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PressScaleStyle(scale: 0.95))
-        .animation(RSMotion.selection, value: isSelected)
-        .accessibilityLabel("\(camera.name). \(camera.summary)\(isSelected ? " Selected." : "")")
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
@@ -566,51 +379,6 @@ private struct BlockedMessage: View {
 }
 
 // MARK: - Motion
-
-/// The camera's name, shown for about a second after the look changes.
-private struct CameraNameLabel: View {
-    let name: String
-    let trigger: Int
-
-    private struct Values {
-        var opacity = 0.0
-        var offset = 8.0
-        var scale = 0.96
-    }
-
-    var body: some View {
-        Color.clear
-            .frame(height: 1)
-            .keyframeAnimator(initialValue: Values(), trigger: trigger) { _, value in
-                Text(name)
-                    .rsText(.labelSmall)
-                    .foregroundStyle(RSColor.paper)
-                    .fixedSize()
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .glass(cornerRadius: 20, tint: RSColor.glass(0.55), visibility: value.opacity)
-                    .opacity(value.opacity)
-                    .scaleEffect(value.scale)
-                    .offset(y: value.offset)
-            } keyframes: { _ in
-                KeyframeTrack(\.opacity) {
-                    MoveKeyframe(0)
-                    CubicKeyframe(1, duration: RSMotion.nameLabelDuration * 0.15)
-                    CubicKeyframe(1, duration: RSMotion.nameLabelDuration * 0.60)
-                    CubicKeyframe(0, duration: RSMotion.nameLabelDuration * 0.25)
-                }
-                KeyframeTrack(\.offset) {
-                    MoveKeyframe(8)
-                    CubicKeyframe(0, duration: RSMotion.nameLabelDuration * 0.15)
-                }
-                KeyframeTrack(\.scale) {
-                    MoveKeyframe(0.96)
-                    CubicKeyframe(1, duration: RSMotion.nameLabelDuration * 0.15)
-                }
-            }
-            .accessibilityHidden(true)
-    }
-}
 
 /// What the shutter sets off: the 240ms white flash, and over it the picture the lens saw shrinking into the
 /// gallery button. Both start as the shutter fires; the photo itself lands in the library when the camera is done.

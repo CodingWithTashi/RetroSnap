@@ -64,6 +64,8 @@ struct RootView: View {
             CollageView(viewModel: app.makeCollageViewModel(seedID: seed))
         case .settings:
             SettingsView(viewModel: app.makeSettingsViewModel())
+        case .develop(let draft):
+            DevelopView(viewModel: app.makeDevelopViewModel(draft: draft))
         case .cameraCarousel:
             CameraCarouselView(
                 viewModel: app.cameraViewModel, stamp: app.dayLabeler.stamp(for: app.services.clock.now),

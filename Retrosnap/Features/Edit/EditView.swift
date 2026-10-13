@@ -102,7 +102,7 @@ struct EditView: View {
                     .padding(10)
             }
         }
-        .frame(width: width, height: width * (viewModel.isInstant ? InstantPrint.size.height / InstantPrint.size.width : 4.0 / 3.0))
+        .frame(width: width, height: width / viewModel.displayAspect)
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .contentShape(Rectangle())
         .gesture(

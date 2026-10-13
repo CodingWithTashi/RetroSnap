@@ -67,16 +67,18 @@ struct GalleryView: View {
     }
 
     private var topBar: some View {
-        HStack {
-            CircleIconButton(icon: .chevronDown, label: "Close photos", action: viewModel.closeTapped)
-            Spacer(minLength: 0)
+        ZStack {
             Text("Photos")
                 .rsText(.label)
                 .foregroundStyle(RSColor.paper)
                 .frame(height: 44)
                 .accessibilityAddTraits(.isHeader)
-            Spacer(minLength: 0)
-            CircleIconButton(icon: .gear, label: "Settings", iconSize: 20, lineWidth: 1.8, action: viewModel.settingsTapped)
+            HStack(spacing: 8) {
+                CircleIconButton(icon: .chevronDown, label: "Close photos", action: viewModel.closeTapped)
+                Spacer(minLength: 0)
+                addButton
+                CircleIconButton(icon: .gear, label: "Settings", iconSize: 20, lineWidth: 1.8, action: viewModel.settingsTapped)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 4)
@@ -85,6 +87,27 @@ struct GalleryView: View {
             Rectangle().fill(.ultraThinMaterial)
             RSColor.ink(0.86)
         }
+    }
+
+    /// Brings a picture or a clip in from the Photos library. It shows the pick on its way in.
+    private var addButton: some View {
+        Button(action: viewModel.addTapped) {
+            ZStack {
+                if viewModel.isImporting {
+                    ProgressView()
+                        .tint(RSColor.paper)
+                } else {
+                    RSIconView(.plus, size: 20, lineWidth: 2.2)
+                }
+            }
+            .foregroundStyle(RSColor.paper)
+            .frame(width: 44, height: 44)
+            .background(RSColor.surface, in: Circle())
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(viewModel.isImporting)
+        .accessibilityLabel(viewModel.addLabel)
     }
 
     private var cameraButton: some View {

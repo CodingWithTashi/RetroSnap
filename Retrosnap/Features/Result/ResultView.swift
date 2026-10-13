@@ -29,7 +29,10 @@ struct ResultView: View {
                 .padding(.bottom, layout.bottom(122))
                 .frame(maxHeight: .infinity, alignment: .bottom)
 
-            PrimaryButton(title: "Take another", icon: .camera, action: viewModel.takeAnotherTapped)
+            PrimaryButton(
+                title: viewModel.primaryTitle, icon: viewModel.primaryIcon, isDimmed: viewModel.isPrimaryDimmed,
+                action: viewModel.primaryTapped
+            )
                 .padding(.horizontal, 24)
                 .padding(.bottom, layout.bottom(44))
                 .frame(maxHeight: .infinity, alignment: .bottom)
@@ -45,7 +48,7 @@ struct ResultView: View {
 
     private var header: some View {
         HStack {
-            CircleIconButton(icon: .close, label: "Back to camera", action: viewModel.closeTapped)
+            CircleIconButton(icon: .close, label: viewModel.closeLabel, action: viewModel.closeTapped)
             Spacer(minLength: 0)
             HStack(spacing: 6) {
                 if !viewModel.isDeveloping {
@@ -80,7 +83,7 @@ struct ResultView: View {
                     .allowsHitTesting(false)
             }
         }
-        .frame(width: width, height: width * (isInstant ? InstantPrint.size.height / InstantPrint.size.width : 4.0 / 3.0))
+        .frame(width: width, height: width / viewModel.displayAspect)
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .compositingGroup()
         .shadow(color: .black.opacity(0.55), radius: 25, y: 24)

@@ -17,6 +17,7 @@ final class ResultViewModel {
     @ObservationIgnored private let photos: any PhotoStoring
     @ObservationIgnored private let saver: PhotosSaver
     @ObservationIgnored private let sharing: any PhotoSharing
+    @ObservationIgnored private let importer: any PhotoImporting
     @ObservationIgnored private let router: AppRouter
     @ObservationIgnored private let toasts: ToastCenter
     @ObservationIgnored private let scheduler: any Scheduling
@@ -28,6 +29,7 @@ final class ResultViewModel {
         photos: any PhotoStoring,
         saver: PhotosSaver,
         sharing: any PhotoSharing,
+        importer: any PhotoImporting,
         router: AppRouter,
         toasts: ToastCenter,
         scheduler: any Scheduling,
@@ -38,6 +40,7 @@ final class ResultViewModel {
         self.photos = photos
         self.saver = saver
         self.sharing = sharing
+        self.importer = importer
         self.router = router
         self.toasts = toasts
         self.scheduler = scheduler
@@ -78,8 +81,35 @@ final class ResultViewModel {
         photo?.camera == .instant
     }
 
+    /// The print's width over its height.
+    var displayAspect: CGFloat {
+        photo?.displayAspect ?? 3.0 / 4.0
+    }
+
     var stamp: PhotoStampText? {
         photo.map { dayLabeler.stamp(for: $0.capturedAt) }
+    }
+
+    /// The photo was brought in from the library: the result sits on the gallery, and the way on is another pick.
+    var isFromLibrary: Bool {
+        router.isResultOverGallery
+    }
+
+    var closeLabel: String {
+        isFromLibrary ? "Back to photos" : "Back to camera"
+    }
+
+    /// The one amber button: back to the camera after a shot, the picker again after a pick.
+    var primaryTitle: String {
+        isFromLibrary ? "Develop another" : "Take another"
+    }
+
+    var primaryIcon: RSIcon {
+        isFromLibrary ? .photos : .camera
+    }
+
+    var isPrimaryDimmed: Bool {
+        isFromLibrary && importer.isImporting
     }
 
     func appeared() {
@@ -91,16 +121,40 @@ final class ResultViewModel {
     }
 
     func closeTapped() {
-        returnToCamera()
+        leave()
     }
 
-    func takeAnotherTapped() {
-        returnToCamera()
+    func primaryTapped() {
+        if isFromLibrary {
+            developAnother()
+        } else {
+            leave()
+        }
     }
 
-    private func returnToCamera() {
-        router.returnToCamera()
+    /// Back to where the photo came from, with where it went said once more.
+    private func leave() {
+        router.closeResult()
         toasts.show(saver.savedText)
+    }
+
+    /// Another trip to the library. The next pick starts on this photo's camera and takes the result's place.
+    private func developAnother() {
+        guard let photo, !importer.isImporting else { return }
+        importer.pick { [weak self, importer] outcome in
+            switch outcome {
+            case .imported(var draft):
+                draft.camera = photo.camera
+                guard let self, router.showNextDevelop(draft) else {
+                    importer.discard(draft)
+                    return
+                }
+            case .failed:
+                self?.toasts.show(DevelopViewModel.importFailedText)
+            case .cancelled:
+                break
+            }
+        }
     }
 
     func perform(_ action: PhotoAction) {
@@ -115,7 +169,7 @@ final class ResultViewModel {
             router.push(.collage(seed: photoID))
         case .delete:
             guard let deleted = photos.delete(id: photoID) else { return }
-            router.returnToCamera()
+            router.closeResult()
             toasts.show("Photo deleted", actionTitle: "Undo") { [photos] in
                 photos.restore(deleted)
             }

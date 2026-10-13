@@ -15,6 +15,8 @@ final class AppDependencies {
         let location: any LocationProviding
         let exporter: any PhotoExporting
         let clipPlayer: any ClipPlaying
+        /// Brings pictures and clips in from the Photos library.
+        let importer: any PhotoImporting
         let sharing: any PhotoSharing
         let printing: any PhotoPrinting
         /// Decodes the library's files for the screen; nil while the library is in memory.
@@ -91,13 +93,25 @@ final class AppDependencies {
 
     func makeResultViewModel(photoID: Photo.ID) -> ResultViewModel {
         ResultViewModel(
-            photoID: photoID, photos: services.photos, saver: saver, sharing: services.sharing, router: router,
-            toasts: toasts, scheduler: scheduler, dayLabeler: dayLabeler, isProcessing: boards.isProcessing
+            photoID: photoID, photos: services.photos, saver: saver, sharing: services.sharing,
+            importer: services.importer, router: router, toasts: toasts, scheduler: scheduler, dayLabeler: dayLabeler,
+            isProcessing: boards.isProcessing
         )
     }
 
     func makeGalleryViewModel() -> GalleryViewModel {
-        GalleryViewModel(photos: services.photos, router: router, dayLabeler: dayLabeler)
+        GalleryViewModel(
+            photos: services.photos, settings: services.settings, importer: services.importer, router: router,
+            toasts: toasts, dayLabeler: dayLabeler
+        )
+    }
+
+    func makeDevelopViewModel(draft: Photo) -> DevelopViewModel {
+        DevelopViewModel(
+            draft: draft, photos: services.photos, saver: saver, importer: services.importer,
+            player: services.clipPlayer, feedback: feedback, router: router, toasts: toasts, scheduler: scheduler,
+            dayLabeler: dayLabeler
+        )
     }
 
     func makeViewerViewModel(photoID: Photo.ID) -> ViewerViewModel {
@@ -170,6 +184,7 @@ extension AppDependencies.Services {
             location: LiveLocationService(),
             exporter: exporter,
             clipPlayer: ClipPlayer(folder: folder),
+            importer: PhotoImporter(folder: folder, loader: loader, clock: clock),
             sharing: PhotoShareSheet(exporter: exporter, toasts: toasts),
             printing: AirPrinter(exporter: exporter, settings: settings),
             imageLoader: loader,
