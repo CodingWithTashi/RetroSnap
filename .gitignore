@@ -1,0 +1,4 @@
+# Reference photos for tuning camera looks (see docs/camera-lineup.md). Local only.
+ref/
+# The calibration scripts' Python environment (tools/README.md).
+venv/

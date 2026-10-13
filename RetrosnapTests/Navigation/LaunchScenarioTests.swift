@@ -24,6 +24,14 @@ struct LaunchScenarioTests {
         #expect(s.camera == .instant)
     }
 
+    @Test func readsTheFilmCameras() {
+        #expect(scenario("-rsCamera", "negative").camera == .negative)
+        #expect(scenario("-rsCamera", "slide").camera == .slide)
+        #expect(scenario("-rsCamera", "tlr").camera == .tlr)
+        #expect(LaunchScenario.photoScreens.contains(.result))
+        #expect(!LaunchScenario.photoScreens.contains(.camera))
+    }
+
     @Test func unknownValuesAreIgnored() {
         let s = scenario("-rsScreen", "nonsense", "-rsVariant", "??", "-rsCamera", "pinhole")
         #expect(s.screen == nil)

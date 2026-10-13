@@ -98,6 +98,11 @@ struct LookRenderModelTests {
         (.instant, .none),
         (.digicam, .date),
         (.camcorder, .vhs),
+        (.negative, .none),
+        (.plastic35, .date),
+        (.slide, .none),
+        (.mediumFormat, .none),
+        (.tlr, .none),
     ])
     func stampKindPerCamera(camera: CameraStyle, expected: LookStamp) {
         #expect(model(camera).stamp == expected)
@@ -115,10 +120,64 @@ struct LookRenderModelTests {
         #expect(model(.film, adjustments).stamp == .date)
     }
 
-    @Test func onlyInstantGetsTheWhiteFrame() {
-        #expect(model(.instant, framed: true).isFramed)
-        #expect(!model(.instant, framed: false).isFramed)
-        #expect(!model(.film, framed: true).isFramed)
+    @Test(arguments: [
+        (CameraStyle.instant, LookFrame?.some(.instantPrint)),
+        (.negative, .filmStrip),
+        (.slide, .slideMount),
+        (.mediumFormat, .mediumFormat),
+        (.tlr, .square),
+        (.film, nil),
+        (.plastic35, nil),
+    ])
+    func framedCamerasGetTheirFrame(camera: CameraStyle, frame: LookFrame?) {
+        #expect(model(camera, framed: true).frame == frame)
+        #expect(model(camera, framed: true).isFramed == (frame != nil))
+        #expect(model(camera, framed: false).frame == nil)
+        #expect(!model(camera, framed: false).isFramed)
+    }
+
+    // MARK: Fitted cameras
+
+    @Test func aFittedCameraDrawsItsColourStageInsteadOfAFilterChain() {
+        let m = model(.negative)
+        #expect(m.filters.isEmpty)
+        #expect(m.color?.matrix.count == 3)
+        #expect(m.color?.curves.count == 3)
+        #expect(isClose(m.color?.matrix[0][0] ?? 0, 1.0868))
+        #expect(isClose(m.vignetteOpacity, 0.516))
+        #expect(isClose(m.grainOpacity, 0))
+        #expect(isClose(m.tintOpacity, 0))
+        #expect(m.halation?.radius == 7)
+        #expect(m.soft == nil)
+        #expect(model(.film).color == nil)
+    }
+
+    @Test func filmGrainFollowsTheSliderAndFadesWithTheEffect() {
+        #expect(isClose(model(.negative).filmGrain?.amount ?? 0, 0.085))
+        #expect(isClose(model(.negative).filmGrain?.size ?? 0, 0.8))
+
+        var heavy = PhotoAdjustments.neutral
+        heavy.grain = 100
+        #expect(isClose(model(.negative, heavy).filmGrain?.amount ?? 0, 0.17))
+
+        var none = PhotoAdjustments.neutral
+        none.grain = 0
+        #expect(isClose(model(.negative, none).filmGrain?.amount ?? 0, 0))
+
+        var faded = PhotoAdjustments.neutral
+        faded.intensity = 0
+        #expect(isClose(model(.negative, faded).filmGrain?.amount ?? 0, 0.085 * 0.4))
+        #expect(model(.film).filmGrain == nil)
+    }
+
+    @Test func thePlasticCompactIsSharpWithNoSoftCorners() {
+        // Its reference export keeps 0.92 of the input's fine detail in the middle and 0.90 at the corners
+        // (`tools/grain.py` on the second picture), so the lens neither blurs nor falls off at the corners.
+        let m = model(.plastic35)
+        #expect(isClose(m.blurRadius, 0))
+        #expect(m.soft == nil)
+        #expect(m.halation != nil)
+        #expect(m.stamp == .date)
     }
 
     @Test func originalComparisonShowsThePlainPhoto() {

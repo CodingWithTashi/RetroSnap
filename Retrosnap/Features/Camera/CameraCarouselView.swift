@@ -6,6 +6,9 @@ struct CameraCarouselView: View {
     let stamp: PhotoStampText
     let onClose: () -> Void
     @Environment(\.designLayout) private var layout
+    /// The card at the carousel's leading edge. Set to the selected camera's as the carousel appears, so that
+    /// card is in view; set then rather than at first, because the position is only taken once there is a size.
+    @State private var leadingCard: CameraStyle.ID?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,7 +31,9 @@ struct CameraCarouselView: View {
             }
             .contentMargins(.horizontal, 38, for: .scrollContent)
             .scrollTargetBehavior(.viewAligned)
+            .scrollPosition(id: $leadingCard)
             .scrollIndicators(.hidden)
+            .onAppear { leadingCard = viewModel.style.id }
             .frame(maxHeight: .infinity, alignment: .top)
 
             Text("Tap a camera to use it · Swipe for more")

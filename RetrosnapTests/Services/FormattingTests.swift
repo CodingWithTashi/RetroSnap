@@ -55,8 +55,9 @@ struct FormattingTests {
 
     @Test func cameraStepsWrapAroundBothEnds() {
         #expect(CameraStyle.film.stepped(by: 1) == .disposable)
-        #expect(CameraStyle.camcorder.stepped(by: 1) == .film)
-        #expect(CameraStyle.film.stepped(by: -1) == .camcorder)
+        #expect(CameraStyle.camcorder.stepped(by: 1) == .negative)
+        #expect(CameraStyle.tlr.stepped(by: 1) == .film)
+        #expect(CameraStyle.film.stepped(by: -1) == .tlr)
         #expect(CameraStyle.instant.stepped(by: -1) == .disposable)
     }
 

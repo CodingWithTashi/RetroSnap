@@ -84,7 +84,7 @@ struct DesignCatalogView: View {
                         }
                     }
                 }
-                section("THE FIVE CAMERAS") {
+                section("THE CAMERAS") {
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
                         ForEach(CameraStyle.allCases) { camera in
                             VStack(alignment: .leading, spacing: 10) {

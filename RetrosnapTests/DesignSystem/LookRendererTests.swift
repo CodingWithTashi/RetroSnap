@@ -81,9 +81,14 @@ struct LookRendererTests {
 
     @Test(arguments: CameraStyle.allCases)
     func everyCameraChangesThePicture(camera: CameraStyle) {
+        // A fitted look can leave one colour where it was; no look leaves both the orange and a mid grey.
+        let grey = CIImage.flat(red: 0.5, green: 0.5, blue: 0.5, width: 30, height: 40)
         let image = renderer.render(orange, model: model(camera, .neutral), scale: 1)
+        let greyed = renderer.render(grey, model: model(camera, .neutral), scale: 1)
         #expect(image.extent == orange.extent)
-        #expect(!centre(image).isClose(to: Pixel(red: 200, green: 120, blue: 40), tolerance: 3))
+        let orangeMoved = !centre(image).isClose(to: Pixel(red: 200, green: 120, blue: 40), tolerance: 3)
+        let greyMoved = !centre(greyed).isClose(to: Pixel(red: 128, green: 128, blue: 128), tolerance: 3)
+        #expect(orangeMoved || greyMoved)
     }
 
     @Test func theStampGoesUnderLightAndContrast() {
@@ -97,7 +102,7 @@ struct LookRendererTests {
     // MARK: The saved picture
 
     @Test func aPhotoIsSavedWholeAtItsOwnSize() {
-        let layout = BakeLayout(source: orange.extent.size, isFramed: false)
+        let layout = BakeLayout(source: orange.extent.size, frame: nil)
         let image = renderer.picture(from: orange, model: model(.film, .neutral), layout: layout, stamp: nil)
         #expect(image.extent == orange.extent)
     }
@@ -105,7 +110,7 @@ struct LookRendererTests {
     @Test func anInstantPhotoIsSavedAsAFramedPrint() {
         let source = CIImage.flat(red: 0.2, green: 0.3, blue: 0.4, width: 300, height: 400)
         let framed = LookRenderModel(camera: .instant, adjustments: .neutral, framed: true, stampEnabled: true)
-        let layout = BakeLayout(source: source.extent.size, isFramed: true)
+        let layout = BakeLayout(source: source.extent.size, frame: .instantPrint)
         let image = renderer.picture(from: source, model: framed, layout: layout, stamp: nil)
 
         #expect(image.extent.size == layout.canvas)
@@ -113,5 +118,61 @@ struct LookRendererTests {
         #expect(renderer.context.pixel(of: image, x: 2, y: 2).isClose(to: paper, tolerance: 1))
         #expect(renderer.context.pixel(of: image, x: 2, y: Int(layout.canvas.height) - 3).isClose(to: paper, tolerance: 1))
         #expect(!centre(image).isClose(to: paper, tolerance: 20))
+    }
+}
+
+// MARK: Fitted cameras
+
+extension LookRendererTests {
+    /// The colour stage on a flat orange gives what `tools/colour.py` computes for the same recipe.
+    @Test func aFittedCameraRunsItsColourStage() {
+        let noGrain = PhotoAdjustments(intensity: 100, grain: 0)
+        let tlr = renderer.render(orange, model: model(.tlr, noGrain), scale: 1)
+        #expect(centre(tlr).isClose(to: Pixel(red: 222, green: 112, blue: 18), tolerance: 3))
+        let negative = renderer.render(orange, model: model(.negative, noGrain), scale: 1)
+        #expect(centre(negative).isClose(to: Pixel(red: 218, green: 123, blue: 34), tolerance: 3))
+    }
+
+    @Test func filmGrainRoughensAFlatPicture() {
+        let grey = CIImage.flat(red: 0.5, green: 0.5, blue: 0.5, width: 40, height: 40)
+        let plain = renderer.render(grey, model: model(.negative, PhotoAdjustments(intensity: 100, grain: 0)), scale: 1)
+        let grainy = renderer.render(grey, model: model(.negative, .neutral), scale: 1)
+        let region = CGRect(x: 10, y: 10, width: 20, height: 20)
+        let flat = renderer.context.pixels(of: plain, in: region).map(\.green)
+        let rough = renderer.context.pixels(of: grainy, in: region).map(\.green)
+        #expect(Set(flat).count <= 2)
+        #expect(Set(rough).count > 8)
+    }
+
+    @Test func halationGlowsBesideAHighlight() {
+        // A white square on black: just outside the square the glow lifts the black; far from it nothing changes.
+        let black = CIImage.flat(red: 0, green: 0, blue: 0, width: 120, height: 120)
+        let white = CIImage.flat(red: 1, green: 1, blue: 1, width: 30, height: 30)
+            .transformed(by: CGAffineTransform(translationX: 45, y: 45))
+        let scene = white.composited(over: black)
+        let image = renderer.render(scene, model: model(.negative, PhotoAdjustments(intensity: 100, grain: 0)), scale: 1)
+        // The square covers rows 45 to 74 counted from the top; the row above it is 44.
+        let beside = renderer.context.pixel(of: image, x: 60, y: 44)
+        let far = renderer.context.pixel(of: image, x: 60, y: 5)
+        // The glow is gentle by design: a few levels, and no less red than the film's own black, within a level:
+        // the fitted toe of 135 NE's curves lifts blue a touch faster than red, so a faint glow can round one level
+        // the other way (`tools/colour.py`: black -> red-blue +2.7, with a faint warm glow +2.5, a stronger one +3.7).
+        #expect(beside.red > far.red + 1)
+        #expect(beside.red - beside.blue >= far.red - far.blue - 1)
+    }
+
+    @Test func aFramedNegativeIsSavedOnItsStrip() {
+        let source = CIImage.flat(red: 0.2, green: 0.3, blue: 0.4, width: 300, height: 400)
+        let framed = LookRenderModel(camera: .negative, adjustments: .neutral, framed: true, stampEnabled: false)
+        let layout = BakeLayout(source: source.extent.size, frame: .filmStrip)
+        let image = renderer.picture(from: source, model: framed, layout: layout, stamp: nil, paper: CIColor(hex: 0))
+        #expect(image.extent.size == layout.canvas)
+        let black = Pixel(red: 0, green: 0, blue: 0)
+        #expect(renderer.context.pixel(of: image, x: 2, y: Int(layout.canvas.height) / 2).isClose(to: black, tolerance: 1))
+        #expect(!centre(image).isClose(to: black, tolerance: 20))
+        // The artwork goes over the lot.
+        let art = CIImage.flat(red: 1, green: 0, blue: 0, width: Int(layout.canvas.width), height: Int(layout.canvas.height))
+        let decorated = renderer.picture(from: source, model: framed, layout: layout, stamp: nil, paper: CIColor(hex: 0), artwork: art)
+        #expect(centre(decorated).isClose(to: Pixel(red: 255, green: 0, blue: 0), tolerance: 1))
     }
 }

@@ -7,6 +7,7 @@ import Foundation
 ///
 ///     -rsScreen gallery -rsVariant empty
 ///     -rsScreen camera -rsCamera inst -rsSheet 1
+///     -rsScreen result -rsCamera slide
 ///     -rsScenario returning
 ///     -rsLive fresh
 nonisolated struct LaunchScenario: Equatable, Sendable {
@@ -16,6 +17,9 @@ nonisolated struct LaunchScenario: Equatable, Sendable {
         /// Debug-only design system pages.
         case catalog, look
     }
+
+    /// The screens that open on one photo. With `-rsCamera`, that photo is posed as taken with the camera.
+    static let photoScreens: Set<Screen> = [.result, .viewer, .edit, .print, .collage]
 
     enum Variant: String, Sendable {
         case capture, saved, processing, recording, videoMode, video

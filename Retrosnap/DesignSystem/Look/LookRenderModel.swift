@@ -19,7 +19,15 @@ nonisolated struct LookRenderModel: Hashable, Sendable {
     let brightness: Double
     let contrast: Double
     let stamp: LookStamp
-    let isFramed: Bool
+    /// The measured colour response, drawn instead of `filters` when the camera has one.
+    let color: ColorStage?
+    /// Drawn inside the looked copy, so they fade with the effect like the colour does.
+    let halation: Halation?
+    let soft: Softness?
+    /// Its amount already follows the Grain slider and the effect strength.
+    let filmGrain: FilmGrain?
+    /// The canvas around the picture, when the photo is shown framed and the camera has one.
+    let frame: LookFrame?
 
     init(camera: CameraStyle, adjustments: PhotoAdjustments, framed: Bool, stampEnabled: Bool) {
         let look = camera.look
@@ -42,7 +50,18 @@ nonisolated struct LookRenderModel: Hashable, Sendable {
         brightness = 1 + Double(adjustments.exposure) / 100
         contrast = 1 + Double(adjustments.contrast) / 100
         stamp = stampEnabled && strength > 0.3 ? look.stamp : .none
-        isFramed = framed && camera == .instant
+        color = look.color
+        halation = look.halation
+        soft = look.soft
+        filmGrain = look.filmGrain.map { grain in
+            FilmGrain(size: grain.size, amount: min(1, grain.amount * grainScale * (0.4 + 0.6 * strength)), color: grain.color)
+        }
+        frame = framed ? look.frame : nil
+    }
+
+    /// The photo is shown on its canvas: the Instant print's paper, or a film camera's strip, mount or rebate.
+    var isFramed: Bool {
+        frame != nil
     }
 
     /// Light and contrast run as a second pass over the finished photo, only when they are set.

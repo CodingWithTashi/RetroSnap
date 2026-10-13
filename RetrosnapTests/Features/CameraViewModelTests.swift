@@ -101,7 +101,7 @@ struct CameraViewModelTests {
         #expect(vm.style == .disposable)
         vm.viewfinderSwiped(.right)
         vm.viewfinderSwiped(.right)
-        #expect(vm.style == .camcorder)
+        #expect(vm.style == CameraStyle.allCases.last)
         vm.viewfinderSwiped(.left)
         #expect(vm.style == .film)
         #expect(vm.styleChangeCount == 4)

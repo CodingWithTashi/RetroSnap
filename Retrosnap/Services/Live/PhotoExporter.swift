@@ -194,7 +194,7 @@ final class PhotoExporter: PhotoExporting {
         )
         let stamp = stampImage(dayLabeler.stamp(for: photo.capturedAt), kind: model.stamp, layout: layout)
         guard let picture = await Self.encode(
-            original, model: model, layout: layout, stamp: stamp, paper: .white, metadata: [:], with: renderer
+            original, model: model, layout: layout, stamp: stamp, artwork: nil, paper: .white, metadata: [:], with: renderer
         ) else { return nil }
         return temporaryFile(named: "RetroSnap print \(photo.id).jpg", holding: picture)
     }
@@ -218,14 +218,15 @@ final class PhotoExporter: PhotoExporting {
     func bake(_ photo: Photo) async -> Data? {
         guard let renderer, let original = await original(of: photo.image) else { return nil }
         let model = LookRenderModel(camera: photo.camera, adjustments: photo.adjustments, framed: true, stampEnabled: true)
-        let layout = BakeLayout(source: original.extent.size, isFramed: model.isFramed)
+        let layout = BakeLayout(source: original.extent.size, frame: model.frame)
         let stamp = stampImage(dayLabeler.stamp(for: photo.capturedAt), kind: model.stamp, layout: layout)
+        let artwork = frameImage(model.frame, layout: layout)
         let metadata = PhotoMetadata.properties(
             original: original.properties, capturedAt: photo.capturedAt, location: photo.location
         )
         return await Self.encode(
-            original, model: model, layout: layout, stamp: stamp, paper: CIColor(hex: RSColor.printFrameHex),
-            metadata: metadata, with: renderer
+            original, model: model, layout: layout, stamp: stamp, artwork: artwork,
+            paper: CIColor(hex: model.frame?.baseHex ?? RSColor.printFrameHex), metadata: metadata, with: renderer
         )
     }
 
@@ -242,7 +243,7 @@ final class PhotoExporter: PhotoExporting {
             guard let track = try await asset.loadTracks(withMediaType: .video).first else { return nil }
             let (size, transform) = try await track.load(.naturalSize, .preferredTransform)
             let upright = CGRect(origin: .zero, size: size).applying(transform).size
-            let layout = BakeLayout(source: CGSize(width: abs(upright.width), height: abs(upright.height)), isFramed: false)
+            let layout = BakeLayout(source: CGSize(width: abs(upright.width), height: abs(upright.height)), frame: nil)
             let stamp = stampImage(dayLabeler.stamp(for: photo.capturedAt), kind: model.stamp, layout: layout)
 
             let composition = try await AVMutableVideoComposition.videoComposition(with: asset) { request in
@@ -315,12 +316,27 @@ final class PhotoExporter: PhotoExporting {
         ))
     }
 
+    /// The frame's artwork as the screen draws it, as a transparent picture exactly the size of the file.
+    private func frameImage(_ frame: LookFrame?, layout: BakeLayout) -> CIImage? {
+        guard let frame, frame != .instantPrint else { return nil }
+        let size = layout.canvasPointSize
+        let renderer = ImageRenderer(
+            content: LookFrameView(frame: frame, size: size).frame(width: size.width, height: size.height)
+        )
+        renderer.scale = layout.scale
+        guard let drawn = renderer.cgImage else { return nil }
+        let image = CIImage(cgImage: drawn)
+        return image.transformed(by: CGAffineTransform(
+            scaleX: layout.canvas.width / image.extent.width, y: layout.canvas.height / image.extent.height
+        ))
+    }
+
     @concurrent
     private nonisolated static func encode(
-        _ original: CIImage, model: LookRenderModel, layout: BakeLayout, stamp: CIImage?, paper: CIColor,
-        metadata: [String: Any], with renderer: LookRenderer
+        _ original: CIImage, model: LookRenderModel, layout: BakeLayout, stamp: CIImage?, artwork: CIImage?,
+        paper: CIColor, metadata: [String: Any], with renderer: LookRenderer
     ) async -> Data? {
-        let picture = renderer.picture(from: original, model: model, layout: layout, stamp: stamp, paper: paper)
+        let picture = renderer.picture(from: original, model: model, layout: layout, stamp: stamp, paper: paper, artwork: artwork)
         return renderer.jpeg(picture.settingProperties(metadata), quality: quality)
     }
 }

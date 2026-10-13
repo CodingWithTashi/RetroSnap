@@ -1,15 +1,22 @@
 import Foundation
 
-/// The five cameras. Raw values are the ids used by the design prototype.
+/// The cameras, in carousel order. Raw values are the ids used by the design prototype and `docs/camera-lineup.md`;
+/// they are written to disk, so they never change.
 nonisolated enum CameraStyle: String, CaseIterable, Identifiable, Hashable, Sendable, Codable {
     case film
     case disposable = "disp"
     case instant = "inst"
     case digicam = "digi"
     case camcorder = "vhs"
+    case negative
+    case plastic35
+    case slide
+    case mediumFormat
+    case tlr
 
     var id: String { rawValue }
 
+    /// Cameras added from the lineup are named exactly as the reference app names them (D6 in `docs/camera-lineup.md`).
     var name: String {
         switch self {
         case .film: "35mm Film"
@@ -17,6 +24,11 @@ nonisolated enum CameraStyle: String, CaseIterable, Identifiable, Hashable, Send
         case .instant: "Instant"
         case .digicam: "Digicam"
         case .camcorder: "Camcorder"
+        case .negative: "135 NE"
+        case .plastic35: "CPM35"
+        case .slide: "D Slide"
+        case .mediumFormat: "S 67"
+        case .tlr: "S Classic"
         }
     }
 
@@ -27,6 +39,11 @@ nonisolated enum CameraStyle: String, CaseIterable, Identifiable, Hashable, Send
         case .instant: "Square"
         case .digicam: "Date stamp"
         case .camcorder: "Home video"
+        case .negative: "Sprockets"
+        case .plastic35: "Hazy"
+        case .slide: "Mounted"
+        case .mediumFormat: "6×7"
+        case .tlr: "1:1"
         }
     }
 
@@ -37,6 +54,11 @@ nonisolated enum CameraStyle: String, CaseIterable, Identifiable, Hashable, Send
         case .instant: "Soft, faded square prints in a white frame, like they just slid out of the camera."
         case .digicam: "Crisp early-2000s digital with a cool cast and an orange date in the corner."
         case .camcorder: "Fuzzy home-video color with scanlines and an on-screen timestamp."
+        case .negative: "Colour negative on the scanned strip, sprocket holes and all. Warm, grainy and honest."
+        case .plastic35: "A cheap plastic point-and-shoot: hazy, flat and a little green. Nothing is punchy and everything is nice."
+        case .slide: "Slide film in a cardboard mount. Rich colour, deep shadows and a tiny picture to hold up to the light."
+        case .mediumFormat: "Medium format at 6×7: a big negative with fine grain and smooth tones. Portraits love it."
+        case .tlr: "A twin-lens reflex shooting square frames. Fine grain, creamy skin and a black rebate."
         }
     }
 
@@ -54,6 +76,11 @@ nonisolated enum CameraStyle: String, CaseIterable, Identifiable, Hashable, Send
         case .instant: 0xF4A99B
         case .digicam: 0x6FA8FF
         case .camcorder: 0xFF5A4E
+        case .negative: 0xF28C38
+        case .plastic35: 0xB8C9B4
+        case .slide: 0x5FC7B8
+        case .mediumFormat: 0xD9C3A5
+        case .tlr: 0xA7B4C2
         }
     }
 
@@ -65,6 +92,11 @@ nonisolated enum CameraStyle: String, CaseIterable, Identifiable, Hashable, Send
         case .instant: 0x352B26
         case .digicam: 0x262B32
         case .camcorder: 0x37231E
+        case .negative: 0x35281D
+        case .plastic35: 0x2E2E29
+        case .slide: 0x262E29
+        case .mediumFormat: 0x312D27
+        case .tlr: 0x2C2C2A
         }
     }
 
@@ -75,7 +107,17 @@ nonisolated enum CameraStyle: String, CaseIterable, Identifiable, Hashable, Send
         case .instant: .photo(1027)
         case .digicam: .photo(1069)
         case .camcorder: .photo(1039)
+        case .negative: .photo(1043)
+        case .plastic35: .photo(42)
+        case .slide: .photo(110)
+        case .mediumFormat: .photo(1074)
+        case .tlr: .photo(1025)
         }
+    }
+
+    /// The picture's width over its height when this camera shows it framed; nil when it is the whole photo.
+    var pictureRatio: CGFloat? {
+        look.frame?.pictureRatio
     }
 
     /// The camera `offset` steps away, wrapping around both ends.

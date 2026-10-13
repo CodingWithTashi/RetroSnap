@@ -107,16 +107,17 @@ struct CameraView: View {
             .id(viewModel.style)
             .transition(.opacity)
 
-            // Instant shoots square: the rest of the frame is dimmed.
+            // A camera whose picture is not the whole frame (Instant shoots square, a film strip 2:3): the rest is dimmed.
             GeometryReader { proxy in
-                let bar = max(0, (proxy.size.height - proxy.size.width) / 2)
+                let ratio = viewModel.style.pictureRatio ?? 1
+                let bar = max(0, (proxy.size.height - proxy.size.width / ratio) / 2)
                 VStack(spacing: 0) {
                     Color(hex: 0x0A0908, opacity: 0.72).frame(height: bar)
                     Spacer(minLength: 0)
                     Color(hex: 0x0A0908, opacity: 0.72).frame(height: bar)
                 }
             }
-            .opacity(viewModel.style == .instant ? 1 : 0)
+            .opacity(viewModel.style.pictureRatio != nil ? 1 : 0)
         }
         .animation(RSMotion.crossFade, value: viewModel.style)
     }
@@ -408,19 +409,28 @@ private struct CameraStrip: View {
             .padding(.leading, 18)
             .padding(.trailing, 12)
 
-            ScrollView(.horizontal) {
-                HStack(spacing: 10) {
-                    ForEach(CameraStyle.allCases) { camera in
-                        CameraCard(camera: camera, isSelected: camera == viewModel.style) {
-                            viewModel.pick(camera)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal) {
+                    HStack(spacing: 10) {
+                        ForEach(CameraStyle.allCases) { camera in
+                            CameraCard(camera: camera, isSelected: camera == viewModel.style) {
+                                viewModel.pick(camera)
+                            }
                         }
                     }
+                    .padding(.top, 14)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 2)
                 }
-                .padding(.top, 14)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 2)
+                .scrollIndicators(.hidden)
+                // The strip is longer than the screen: the selected card is brought into view, moving no
+                // further than it has to, so a card that is already in view leaves the strip where it is.
+                .onAppear { proxy.scrollTo(viewModel.style.id, anchor: nil) }
+                .onChange(of: visible) { _, isVisible in
+                    if isVisible { proxy.scrollTo(viewModel.style.id, anchor: nil) }
+                }
+                .onChange(of: viewModel.style) { proxy.scrollTo(viewModel.style.id, anchor: nil) }
             }
-            .scrollIndicators(.hidden)
         }
         .padding(.top, 16)
         .padding(.bottom, 14)

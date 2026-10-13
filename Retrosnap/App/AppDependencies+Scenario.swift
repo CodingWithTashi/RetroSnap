@@ -76,6 +76,11 @@ extension AppDependencies.Services {
         if scenario.variant == .video, !seed.isEmpty {
             seed[0] = SeedData.sampleVideo(clock: clock)
         }
+        // On a photo screen, `-rsCamera` poses the photo shown as taken with that camera.
+        if let camera = scenario.camera, let screen = scenario.screen, LaunchScenario.photoScreens.contains(screen),
+           let index = seed.firstIndex(where: { $0.id == (scenario.photoID ?? seed.first?.id) }) {
+            seed[index].camera = camera
+        }
 
         let availability: CameraAvailability = switch scenario.variant {
         case .denied: .denied
