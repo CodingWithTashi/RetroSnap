@@ -28,6 +28,21 @@ nonisolated struct BakeLayout: Hashable, Sendable {
         CGSize(width: canvas.width / scale, height: canvas.height / scale)
     }
 
+    /// The longest side, in pixels, of a bitmap the artwork is drawn into before Core Image scales it to the
+    /// file. A slide mount around a full-resolution photo would otherwise want a bitmap of a hundred
+    /// megapixels, which `ImageRenderer` quietly refuses.
+    static let artworkPixelLimit: CGFloat = 4096
+
+    /// Pixels per point for rasterising the frame's artwork: the file's scale, or less for a huge canvas.
+    var artworkScale: CGFloat {
+        min(scale, Self.artworkPixelLimit / max(canvasPointSize.width, canvasPointSize.height))
+    }
+
+    /// Pixels per point for rasterising the stamp over the photo, bounded the same way.
+    var stampScale: CGFloat {
+        min(scale, Self.artworkPixelLimit / max(pointSize.width, pointSize.height))
+    }
+
     /// A print: the photo filling the paper from its centre, inside a border when there is one.
     /// - Parameters:
     ///   - paper: The paper as the Print screen draws it, in points.
@@ -62,11 +77,19 @@ nonisolated struct BakeLayout: Hashable, Sendable {
             canvas = CGSize(width: size.width + side * 2, height: bottom + size.height + side)
             photoOrigin = CGPoint(x: side, y: bottom)
             scale = canvas.width / Self.printWidth
+        case .fullFrame:
+            // The film's crop and nothing around it, measured as the Viewer shows it at its full width.
+            let aspect = LookFrame.fullFrame.pictureAspect(forPhotoAspect: source.width / source.height)
+            crop = Self.centredCrop(of: source, aspect: aspect)
+            canvas = crop.size
+            photoOrigin = .zero
+            scale = crop.width / Self.photoWidth
         case let frame?:
-            // The canvas is the photo's own box at the Viewer's width; the picture keeps every pixel of the
+            // The canvas has the camera's own shape at the Viewer's width; the picture keeps every pixel of the
             // original that fits the window, so the canvas is as many pixels as that needs.
-            let canvasPoints = CGSize(width: Self.photoWidth, height: Self.photoWidth * source.height / source.width)
-            let window = frame.window(in: canvasPoints)
+            let photoAspect = source.width / source.height
+            let canvasPoints = CGSize(width: Self.photoWidth, height: Self.photoWidth / frame.canvasAspect(forPhotoAspect: photoAspect))
+            let window = frame.window(in: canvasPoints, photoAspect: photoAspect)
             crop = Self.centredCrop(of: source, aspect: window.width / window.height)
             scale = crop.width / window.width
             canvas = CGSize(width: (canvasPoints.width * scale).rounded(), height: (canvasPoints.height * scale).rounded())

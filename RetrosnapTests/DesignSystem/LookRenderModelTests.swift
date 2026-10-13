@@ -99,7 +99,7 @@ struct LookRenderModelTests {
         (.digicam, .date),
         (.camcorder, .vhs),
         (.negative, .none),
-        (.plastic35, .date),
+        (.plastic35, .dateMatrix),
         (.slide, .none),
         (.mediumFormat, .none),
         (.tlr, .none),
@@ -127,7 +127,7 @@ struct LookRenderModelTests {
         (.mediumFormat, .mediumFormat),
         (.tlr, .square),
         (.film, nil),
-        (.plastic35, nil),
+        (.plastic35, .fullFrame),
     ])
     func framedCamerasGetTheirFrame(camera: CameraStyle, frame: LookFrame?) {
         #expect(model(camera, framed: true).frame == frame)
@@ -143,22 +143,24 @@ struct LookRenderModelTests {
         #expect(m.filters.isEmpty)
         #expect(m.color?.matrix.count == 3)
         #expect(m.color?.curves.count == 3)
-        #expect(isClose(m.color?.matrix[0][0] ?? 0, 1.0868))
-        #expect(isClose(m.vignetteOpacity, 0.516))
+        #expect(m.colorCube == "negative")
+        #expect(isClose(m.color?.matrix[0][0] ?? 0, 1.0745))
+        #expect(isClose(m.vignetteOpacity, 0.510))
         #expect(isClose(m.grainOpacity, 0))
         #expect(isClose(m.tintOpacity, 0))
-        #expect(m.halation?.radius == 7)
+        #expect(m.halation?.radius == 2)
+        #expect(m.halation?.tintHex == 0xFFFFFF)
         #expect(m.soft == nil)
         #expect(model(.film).color == nil)
     }
 
     @Test func filmGrainFollowsTheSliderAndFadesWithTheEffect() {
-        #expect(isClose(model(.negative).filmGrain?.amount ?? 0, 0.085))
+        #expect(isClose(model(.negative).filmGrain?.amount ?? 0, 0.065))
         #expect(isClose(model(.negative).filmGrain?.size ?? 0, 0.8))
 
         var heavy = PhotoAdjustments.neutral
         heavy.grain = 100
-        #expect(isClose(model(.negative, heavy).filmGrain?.amount ?? 0, 0.17))
+        #expect(isClose(model(.negative, heavy).filmGrain?.amount ?? 0, 0.13))
 
         var none = PhotoAdjustments.neutral
         none.grain = 0
@@ -166,7 +168,7 @@ struct LookRenderModelTests {
 
         var faded = PhotoAdjustments.neutral
         faded.intensity = 0
-        #expect(isClose(model(.negative, faded).filmGrain?.amount ?? 0, 0.085 * 0.4))
+        #expect(isClose(model(.negative, faded).filmGrain?.amount ?? 0, 0.065 * 0.4))
         #expect(model(.film).filmGrain == nil)
     }
 
@@ -177,7 +179,7 @@ struct LookRenderModelTests {
         #expect(isClose(m.blurRadius, 0))
         #expect(m.soft == nil)
         #expect(m.halation != nil)
-        #expect(m.stamp == .date)
+        #expect(m.stamp == .dateMatrix)
     }
 
     @Test func originalComparisonShowsThePlainPhoto() {

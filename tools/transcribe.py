@@ -3,11 +3,12 @@
     venv/bin/python tools/transcribe.py ref/pairs/<id>.json [...]
 """
 import json
+import math
 import sys
 
 
-def row(values):
-    return "[" + ", ".join(f"{v:.4f}" for v in values) + "]"
+def row(values, digits=4):
+    return "[" + ", ".join(f"{v:.{digits}f}" for v in values) + "]"
 
 
 def main(paths):
@@ -24,7 +25,13 @@ def main(paths):
         print("color: ColorStage(")
         print(f"    matrix: [{row(rows[0])}, {row(rows[1])}, {row(rows[2])}],")
         print(f"    curves: [{row(d['knots'][0])}, {row(d['knots'][1])},")
-        print(f"             {row(d['knots'][2])}]")
+        print(f"             {row(d['knots'][2])}]" + ("," if d.get("hue") else ""))
+        if d.get("hue"):
+            hue = d["hue"]
+            print(f"    hue: HueTerms(shift: {row(hue['shift'])},")
+            print(f"                  saturation: {row(hue['saturation'])},")
+            print(f"                  lightness: {row(hue['lightness'])})")
+            print("    // shift in degrees: " + " ".join(f"{math.degrees(v):+.1f}" for v in hue["shift"]))
         print("),")
 
 

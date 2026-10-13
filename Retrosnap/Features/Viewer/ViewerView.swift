@@ -41,7 +41,7 @@ struct ViewerView: View {
         if let photo = viewModel.photo, let picture = viewModel.picture {
             PhotoLookView(
                 image: picture, camera: photo.camera, adjustments: photo.adjustments, framed: true,
-                stamp: viewModel.stamp, videoDuration: viewModel.badgeText
+                stamp: viewModel.stamp, videoDuration: viewModel.badgeText, photoAspect: photo.aspectRatio
             )
                 .environment(\.liveFrames, viewModel.movieFrames)
                 .aspectRatio(viewModel.displayAspect, contentMode: .fit)

@@ -75,7 +75,14 @@ nonisolated final class LookRenderer: @unchecked Sendable {
             if model.blurRadius > 0 {
                 filtered = Self.blurred(filtered, sigma: model.blurRadius * scale)
             }
-            if let stage = uniforms.colorStage {
+            if let name = model.colorCube, let table = ColorCubes.cubeData(named: name) {
+                let cube = CIFilter.colorCubeWithColorSpace()
+                cube.inputImage = filtered
+                cube.cubeDimension = Float(table.size)
+                cube.cubeData = table.data
+                cube.colorSpace = colorSpace
+                filtered = cube.outputImage?.cropped(to: extent) ?? filtered
+            } else if let stage = uniforms.colorStage {
                 filtered = colorStage.apply(extent: extent, arguments: [filtered] + stage.map(Self.vector)) ?? filtered
             } else {
                 let operations = uniforms.operations.map { CIVector(x: $0.kind, y: $0.amount) }

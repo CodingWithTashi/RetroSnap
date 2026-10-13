@@ -20,6 +20,7 @@ from PIL import Image
 
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from colour import ColourStage, delta_e2000, srgb_to_lab  # noqa: E402
+from lut import DARK, evaluate, read_cube  # noqa: E402
 
 
 def load(path):
@@ -29,15 +30,6 @@ def load(path):
 def box(a, n=4):
     h, w = a.shape[0] // n, a.shape[1] // n
     return a[: h * n, : w * n].reshape(h, n, w, n, 3).mean(axis=(1, 3))
-
-
-def params(d):
-    p = np.zeros(ColourStage.SIZE)
-    p[0:9] = np.array(d["matrix"]).ravel()
-    p[9:12] = d["offset"]
-    p[12:30] = np.array(d["knots"]).ravel()
-    p[30] = d["vignette"]
-    return p
 
 
 def camera_of(pair):
@@ -61,14 +53,24 @@ def main(prefix, fit_path=None):
     inp, ref, ours = load(prefix + "-input.png"), load(prefix + "-reference.png"), load(prefix + "-retrosnap.png")
     h, w = ref.shape[:2]
     uv = np.stack([(np.arange(w) + 0.5)[None, :].repeat(h, 0) / w, (np.arange(h) + 0.5)[:, None].repeat(w, 1) / h], -1)
-    fit = ColourStage.apply(params(d), inp, uv)
+    cube_path = os.path.join(folder, cam + ".cube")
+    if os.path.exists(cube_path):
+        # The camera's colour is its table (`tools/lut.py`), with the look's vignette put back.
+        cube, size = read_cube(cube_path)
+        fit = evaluate(cube, size, inp)
+        dd = (uv - 0.5) / 0.70710678
+        k = (0.9 * np.clip((np.hypot(dd[..., 0], dd[..., 1]) - 0.48) / 0.52, 0, 1) * d["vignette"])[..., None]
+        fit = fit * (1 - k) + DARK * k
+        fit_path = cube_path
+    else:
+        fit = ColourStage.apply(ColourStage.from_json(d), inp, uv)
     inset = 0.06 if cam == "slide" else 0.02
     print(f"{pair}: {w}x{h}, fit {fit_path}")
     ours_ref = report("RetroSnap vs reference", box(ours), box(ref), inset)
     report("fit vs reference", box(fit), box(ref), inset)
     report("RetroSnap vs fit (parity)", box(ours), box(fit), inset)
     if pair != cam and os.path.exists(prefix + ".json"):
-        own = ColourStage.apply(params(json.load(open(prefix + ".json"))), inp, uv)
+        own = ColourStage.apply(ColourStage.from_json(json.load(open(prefix + ".json"))), inp, uv)
         report("own single-picture fit vs reference", box(own), box(ref), inset)
     report("input vs reference", box(inp), box(ref), inset)
     return ours_ref

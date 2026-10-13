@@ -2,12 +2,18 @@ import SwiftUI
 
 /// The only place the Metal look shaders are called as SwiftUI effects, so names and argument order live in one spot.
 nonisolated enum LookShaders {
-    /// The colour: a fitted camera's colour stage, or the design's CSS filter chain.
+    /// The colour: a fitted camera's colour table, else its colour stage, else the design's CSS filter chain.
     static func color(_ model: LookRenderModel) -> Shader {
+        if let name = model.colorCube, let texture = ColorCubes.texture(named: name), let cube = ColorCubes.cube(named: name) {
+            return ShaderLibrary.rsColorCube(.image(Image(decorative: texture, scale: 1)), .float(Double(cube.size)))
+        }
         let uniforms = LookUniforms(model)
         guard let stage = uniforms.colorStage else { return filterChain(uniforms.operations) }
         let v = stage.map(vector)
-        return ShaderLibrary.rsColor(v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11])
+        return ShaderLibrary.rsColor(
+            v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9], v[10], v[11],
+            v[12], v[13], v[14], v[15], v[16], v[17]
+        )
     }
 
     static func filterChain(_ filters: [LookFilter]) -> Shader {

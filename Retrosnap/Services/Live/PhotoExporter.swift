@@ -219,8 +219,8 @@ final class PhotoExporter: PhotoExporting {
         guard let renderer, let original = await original(of: photo.image) else { return nil }
         let model = LookRenderModel(camera: photo.camera, adjustments: photo.adjustments, framed: true, stampEnabled: true)
         let layout = BakeLayout(source: original.extent.size, frame: model.frame)
-        let stamp = stampImage(dayLabeler.stamp(for: photo.capturedAt), kind: model.stamp, layout: layout)
-        let artwork = frameImage(model.frame, layout: layout)
+        let stamp = stampImage(dayLabeler.stamp(for: photo.stampDate), kind: model.stamp, layout: layout)
+        let artwork = frameImage(model.frame, layout: layout, photoAspect: original.extent.width / original.extent.height)
         let metadata = PhotoMetadata.properties(
             original: original.properties, capturedAt: photo.capturedAt, location: photo.location
         )
@@ -244,7 +244,7 @@ final class PhotoExporter: PhotoExporting {
             let (size, transform) = try await track.load(.naturalSize, .preferredTransform)
             let upright = CGRect(origin: .zero, size: size).applying(transform).size
             let layout = BakeLayout(source: CGSize(width: abs(upright.width), height: abs(upright.height)), frame: nil)
-            let stamp = stampImage(dayLabeler.stamp(for: photo.capturedAt), kind: model.stamp, layout: layout)
+            let stamp = stampImage(dayLabeler.stamp(for: photo.stampDate), kind: model.stamp, layout: layout)
 
             let composition = try await AVMutableVideoComposition.videoComposition(with: asset) { request in
                 let frame = request.sourceImage
@@ -308,7 +308,7 @@ final class PhotoExporter: PhotoExporting {
         let renderer = ImageRenderer(
             content: PhotoStampView(text: text, kind: kind, size: size).frame(width: size.width, height: size.height)
         )
-        renderer.scale = layout.scale
+        renderer.scale = layout.stampScale
         guard let drawn = renderer.cgImage else { return nil }
         let image = CIImage(cgImage: drawn)
         return image.transformed(by: CGAffineTransform(
@@ -317,13 +317,13 @@ final class PhotoExporter: PhotoExporting {
     }
 
     /// The frame's artwork as the screen draws it, as a transparent picture exactly the size of the file.
-    private func frameImage(_ frame: LookFrame?, layout: BakeLayout) -> CIImage? {
-        guard let frame, frame != .instantPrint else { return nil }
+    private func frameImage(_ frame: LookFrame?, layout: BakeLayout, photoAspect: CGFloat) -> CIImage? {
+        guard let frame, frame != .instantPrint, frame != .fullFrame else { return nil }
         let size = layout.canvasPointSize
         let renderer = ImageRenderer(
-            content: LookFrameView(frame: frame, size: size).frame(width: size.width, height: size.height)
+            content: LookFrameView(frame: frame, size: size, photoAspect: photoAspect).frame(width: size.width, height: size.height)
         )
-        renderer.scale = layout.scale
+        renderer.scale = layout.artworkScale
         guard let drawn = renderer.cgImage else { return nil }
         let image = CIImage(cgImage: drawn)
         return image.transformed(by: CGAffineTransform(

@@ -65,7 +65,7 @@ static float3 rs_screen(float3 cb, float3 cs) {
     return cb + cs - cb * cs;
 }
 
-// MARK: Colour stage (a fitted camera: matrix, then monotone tone curves)
+// MARK: Colour stage (a fitted camera: matrix, monotone tone curves, then the per-hue terms)
 
 constant float rs_knot[6] = {0.0, 0.1, 0.25, 0.45, 0.7, 1.0};
 
@@ -89,12 +89,80 @@ static float rs_curve(float v, float4 a, float4 b, float4 c) {
     return clamp(r, 0.0, 1.0);
 }
 
+// The per-hue terms: eight sectors around the hue circle, each with a hue shift (radians), a chroma gain and a
+// luma gain, blended by triangular weights a sector wide (which add up to one), and faded out below a small
+// chroma so near-neutral pixels keep their hue. Hue and chroma come from the red and blue differences to luma on
+// the gamma-encoded values, as `hue_adjust` in `tools/colour.py` computes them.
+constant float rs_hueCentre[8] = {0.0, 45.0, 90.0, 135.0, 180.0, 225.0, 270.0, 315.0};
+
+static float3 rs_hueAdjust(float3 c, float4 s0, float4 s1, float4 g0, float4 g1, float4 l0, float4 l1) {
+    const float3 luma = float3(0.2126, 0.7152, 0.0722);
+    float y = dot(c, luma);
+    float u = c.r - y;
+    float v = c.b - y;
+    float chroma = sqrt(u * u + v * v);
+    float angle = atan2(v, u) * 57.295779513;
+    if (angle < 0.0) { angle += 360.0; }
+    float shift[8] = {s0.x, s0.y, s0.z, s0.w, s1.x, s1.y, s1.z, s1.w};
+    float sat[8] = {g0.x, g0.y, g0.z, g0.w, g1.x, g1.y, g1.z, g1.w};
+    float light[8] = {l0.x, l0.y, l0.z, l0.w, l1.x, l1.y, l1.z, l1.w};
+    float dAngle = 0.0;
+    float gain = 0.0;
+    float lum = 0.0;
+    for (int k = 0; k < 8; k++) {
+        float d = fmod(angle - rs_hueCentre[k] + 540.0, 360.0) - 180.0;
+        float w = clamp(1.0 - fabs(d) / 45.0, 0.0, 1.0);
+        dAngle += w * shift[k];
+        gain += w * sat[k];
+        lum += w * light[k];
+    }
+    float t = clamp((chroma - 0.02) / 0.08, 0.0, 1.0);
+    float fade = t * t * (3.0 - 2.0 * t);
+    dAngle *= fade;
+    gain = 1.0 + (gain - 1.0) * fade;
+    lum = 1.0 + (lum - 1.0) * fade;
+    float a = angle * 0.017453292520 + dAngle;
+    float c2 = chroma * gain;
+    float y2 = y * lum;
+    float r = y2 + c2 * cos(a);
+    float b = y2 + c2 * sin(a);
+    float g = (y2 - luma.r * r - luma.b * b) / luma.g;
+    return clamp(float3(r, g, b), 0.0, 1.0);
+}
+
 // m0-m2: the matrix rows, each with its offset in w. r, g, b: each channel's curve as rs_curve takes it.
+// h0-h5: the per-hue terms as rs_hueAdjust takes them (shift, saturation, lightness; two float4 each).
 static float3 rs_colorStage(float3 c, float4 m0, float4 m1, float4 m2,
                             float4 r0, float4 r1, float4 r2, float4 g0, float4 g1, float4 g2,
-                            float4 b0, float4 b1, float4 b2) {
+                            float4 b0, float4 b1, float4 b2,
+                            float4 h0, float4 h1, float4 h2, float4 h3, float4 h4, float4 h5) {
     float3 x = clamp(float3(dot(m0.xyz, c) + m0.w, dot(m1.xyz, c) + m1.w, dot(m2.xyz, c) + m2.w), 0.0, 1.0);
-    return float3(rs_curve(x.r, r0, r1, r2), rs_curve(x.g, g0, g1, g2), rs_curve(x.b, b0, b1, b2));
+    float3 toned = float3(rs_curve(x.r, r0, r1, r2), rs_curve(x.g, g0, g1, g2), rs_curve(x.b, b0, b1, b2));
+    return rs_hueAdjust(toned, h0, h1, h2, h3, h4, h5);
+}
+
+// MARK: Colour table (a camera measured as a 3D lookup table, `ColorCube`)
+
+// The table laid out as a texture: row = green node, column = blue node * size + red node. Trilinear
+// interpolation between the eight nodes around the colour, as `ColorCube.apply` and `tools/lut.py` do it.
+static float3 rs_colorCube(float3 c, texture2d<half> cube, float size) {
+    int n = int(size);
+    float3 p = clamp(c, 0.0, 1.0) * (size - 1.0);
+    int3 i0 = min(int3(floor(p)), int3(n - 2));
+    float3 f = p - float3(i0);
+    float3 out = float3(0.0);
+    for (int db = 0; db < 2; db++) {
+        float wb = db == 1 ? f.b : 1.0 - f.b;
+        for (int dg = 0; dg < 2; dg++) {
+            float wg = dg == 1 ? f.g : 1.0 - f.g;
+            for (int dr = 0; dr < 2; dr++) {
+                float wr = dr == 1 ? f.r : 1.0 - f.r;
+                uint2 at = uint2(uint((i0.b + db) * n + i0.r + dr), uint(i0.g + dg));
+                out += float3(cube.read(at).rgb) * (wr * wg * wb);
+            }
+        }
+    }
+    return clamp(out, 0.0, 1.0);
 }
 
 // MARK: Halation and softness (the spatial parts run outside, as blurs and blends)
@@ -237,10 +305,20 @@ static float3 rs_adjust(float3 c, float brightness, float contrast) {
 
 [[ stitchable ]] half4 rsColor(float2 position, half4 color, float4 m0, float4 m1, float4 m2,
                                float4 r0, float4 r1, float4 r2, float4 g0, float4 g1, float4 g2,
-                               float4 b0, float4 b1, float4 b2) {
+                               float4 b0, float4 b1, float4 b2,
+                               float4 h0, float4 h1, float4 h2, float4 h3, float4 h4, float4 h5) {
     if (color.a <= 0.0h) { return color; }
     float alpha = float(color.a);
-    float3 c = rs_colorStage(float3(color.rgb) / alpha, m0, m1, m2, r0, r1, r2, g0, g1, g2, b0, b1, b2);
+    float3 c = rs_colorStage(float3(color.rgb) / alpha, m0, m1, m2, r0, r1, r2, g0, g1, g2, b0, b1, b2,
+                             h0, h1, h2, h3, h4, h5);
+    return half4(half3(c * alpha), color.a);
+}
+
+// cube: the colour table as `ColorCube.texture` lays it out; size: its nodes along each axis.
+[[ stitchable ]] half4 rsColorCube(float2 position, half4 color, texture2d<half> cube, float size) {
+    if (color.a <= 0.0h) { return color; }
+    float alpha = float(color.a);
+    float3 c = rs_colorCube(float3(color.rgb) / alpha, cube, size);
     return half4(half3(c * alpha), color.a);
 }
 
@@ -289,9 +367,11 @@ static float3 rs_adjust(float3 c, float brightness, float contrast) {
 // size they have on screen. Core Image counts rows from the bottom; the look counts them from the top.
 [[ stitchable ]] float4 rsColorKernel(coreimage::sample_t color, float4 m0, float4 m1, float4 m2,
                                       float4 r0, float4 r1, float4 r2, float4 g0, float4 g1, float4 g2,
-                                      float4 b0, float4 b1, float4 b2) {
+                                      float4 b0, float4 b1, float4 b2,
+                                      float4 h0, float4 h1, float4 h2, float4 h3, float4 h4, float4 h5) {
     if (color.a <= 0.0) { return color; }
-    float3 c = rs_colorStage(color.rgb / color.a, m0, m1, m2, r0, r1, r2, g0, g1, g2, b0, b1, b2);
+    float3 c = rs_colorStage(color.rgb / color.a, m0, m1, m2, r0, r1, r2, g0, g1, g2, b0, b1, b2,
+                             h0, h1, h2, h3, h4, h5);
     return float4(c * color.a, color.a);
 }
 

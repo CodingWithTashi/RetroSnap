@@ -21,6 +21,9 @@ nonisolated struct Photo: Identifiable, Hashable, Sendable {
     var isCollage = false
     /// The picture's size, when the shot did not come from the camera, whose pictures are all 3:4.
     var pixelSize: PixelSize?
+    /// When the picture was taken, for one brought in from the library whose file says so; the camera's own
+    /// shots were taken when they were captured.
+    var takenAt: Date?
 
     var isVideo: Bool {
         videoSeconds != nil
@@ -31,10 +34,15 @@ nonisolated struct Photo: Identifiable, Hashable, Sendable {
         pixelSize?.aspectRatio ?? 3.0 / 4.0
     }
 
-    /// The width over the height of the box a screen gives this photo: the Instant print's paper, or the
-    /// picture's own shape, which a film camera's canvas takes as well.
+    /// The width over the height of the box a screen gives this photo: the camera's own canvas (the Instant
+    /// print's paper, a film strip, a slide mount, a rebate, or the film's crop), or the picture's own shape.
     var displayAspect: CGFloat {
-        camera == .instant ? InstantPrint.size.width / InstantPrint.size.height : aspectRatio
+        camera.look.frame?.canvasAspect(forPhotoAspect: aspectRatio) ?? aspectRatio
+    }
+
+    /// The date a camera stamps on the picture: when it was taken.
+    var stampDate: Date {
+        takenAt ?? capturedAt
     }
 
     /// The library files this shot owns.
@@ -51,7 +59,7 @@ nonisolated struct Photo: Identifiable, Hashable, Sendable {
 extension Photo: Codable {
     /// Everything the library keeps. "Just now" belongs to the session and is left out.
     private enum CodingKeys: String, CodingKey {
-        case id, image, camera, capturedAt, videoSeconds, videoFile, adjustments, location, isCollage, pixelSize
+        case id, image, camera, capturedAt, videoSeconds, videoFile, adjustments, location, isCollage, pixelSize, takenAt
     }
 
     /// Fields added after the first saved libraries are optional when reading one back.
@@ -67,5 +75,6 @@ extension Photo: Codable {
         location = try values.decodeIfPresent(PhotoLocation.self, forKey: .location)
         isCollage = try values.decodeIfPresent(Bool.self, forKey: .isCollage) ?? false
         pixelSize = try values.decodeIfPresent(PixelSize.self, forKey: .pixelSize)
+        takenAt = try values.decodeIfPresent(Date.self, forKey: .takenAt)
     }
 }

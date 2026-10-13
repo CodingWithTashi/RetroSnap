@@ -1,26 +1,40 @@
 import CoreGraphics
 
-/// The canvas a camera puts around its picture when a photo is shown as its finished print or negative:
-/// the Instant print's paper, a strip of 35mm film, a cardboard slide mount, or a medium-format rebate.
-/// The canvas is the photo's own box; the picture sits in a window inside it, at the film's own ratio.
+/// The canvas a camera puts around its picture when a photo is shown as its finished print or negative: the
+/// Instant print's paper, a strip of 35mm film, a cardboard slide mount, a medium-format rebate, or nothing but
+/// the film's own crop. The canvas has the camera's own shape (`canvasAspect`), not the photo's; the picture is
+/// the photo's centred crop at the film's ratio, in the canvas's window. Proportions are measured from the
+/// reference app's result screens (`docs/camera-lineup.md`, "Frames").
 nonisolated enum LookFrame: Hashable, Sendable, CaseIterable {
     /// White paper with the wide strip at the bottom. Its canvas has the print's own shape (`InstantPrint`).
     case instantPrint
-    /// A strip of 35mm film running the long way: the picture at 2:3 between the sprocket holes, edge print outside them.
+    /// A strip of 135 film: the 3:2 picture between the perforations, the edge print and DX code along one edge.
+    /// Turns with the photo: a landscape picture lies in a horizontal strip, a portrait one stands in a vertical strip.
     case filmStrip
-    /// A cardboard slide mount with a 2:3 window, lying on a light table.
+    /// A square cardboard mount lying on a white light table, its 3:2 window turned the way the picture is.
     case slideMount
-    /// A 6×7 negative: the picture at 4:5 inside a thin black rebate with frame numbers.
+    /// A 6×7 negative: the 5:4 picture inside a black rebate with frame numbers along the top and the film's
+    /// name along the bottom. Turns with the photo.
     case mediumFormat
-    /// A 6×6 negative: the picture square inside a thin black rebate, with the edge print down one side.
+    /// A 6×6 negative: the square picture inside a dark rebate with the edge print down the right side.
     case square
+    /// A 35mm compact's 3:2 frame with nothing around it: the canvas is the picture.
+    case fullFrame
 
-    /// The picture's width over its height, with the canvas upright.
+    /// The picture's width over its height with the film the long way round (landscape).
     var pictureRatio: CGFloat {
         switch self {
         case .instantPrint, .square: 1
-        case .filmStrip, .slideMount: 2.0 / 3
-        case .mediumFormat: 4.0 / 5
+        case .filmStrip, .slideMount, .fullFrame: 3.0 / 2
+        case .mediumFormat: 5.0 / 4
+        }
+    }
+
+    /// Whether the canvas stands up for a portrait photo and lies down for a landscape one.
+    var turnsWithThePhoto: Bool {
+        switch self {
+        case .filmStrip, .mediumFormat, .fullFrame: true
+        case .instantPrint, .slideMount, .square: false
         }
     }
 
@@ -29,125 +43,214 @@ nonisolated enum LookFrame: Hashable, Sendable, CaseIterable {
         switch self {
         case .instantPrint: RSColor.printFrameHex
         case .slideMount: SlideMountGeometry.tableHex
-        case .filmStrip, .mediumFormat, .square: 0x000000
+        case .filmStrip: FilmStripGeometry.filmHex
+        case .mediumFormat: RebateGeometry.sevenFilmHex
+        case .square: RebateGeometry.squareFilmHex
+        case .fullFrame: 0x000000
         }
     }
 
-    /// Where the picture sits inside a canvas of this size, in points. A wider-than-tall canvas gets the
-    /// frame turned on its side, so the window turns with it.
-    func window(in canvas: CGSize) -> CGRect {
-        if self != .instantPrint, canvas.width > canvas.height {
-            let upright = uprightWindow(in: CGSize(width: canvas.height, height: canvas.width))
-            return CGRect(x: canvas.width - upright.maxY, y: upright.minX, width: upright.height, height: upright.width)
+    /// The picture's width over its height for a photo of this shape: the film's ratio the way the photo is.
+    func pictureAspect(forPhotoAspect photoAspect: CGFloat) -> CGFloat {
+        switch self {
+        case .instantPrint, .square: 1
+        case .slideMount, .filmStrip, .mediumFormat, .fullFrame:
+            photoAspect >= 1 ? pictureRatio : 1 / pictureRatio
         }
-        return uprightWindow(in: canvas)
     }
 
-    private func uprightWindow(in canvas: CGSize) -> CGRect {
-        let width = canvas.width
-        let height = canvas.height
+    /// The canvas's width over its height for a photo of this shape.
+    func canvasAspect(forPhotoAspect photoAspect: CGFloat) -> CGFloat {
+        switch self {
+        case .instantPrint:
+            InstantPrint.size.width / InstantPrint.size.height
+        case .slideMount:
+            SlideMountGeometry.canvasAspect
+        case .square:
+            RebateGeometry.squareBands.canvasAspect
+        case .fullFrame:
+            pictureAspect(forPhotoAspect: photoAspect)
+        case .filmStrip:
+            photoAspect >= 1 ? FilmStripGeometry.canvasAspect : 1 / FilmStripGeometry.canvasAspect
+        case .mediumFormat:
+            (photoAspect >= 1 ? RebateGeometry.sevenLandscape : RebateGeometry.sevenPortrait).canvasAspect
+        }
+    }
+
+    /// Where the picture sits inside a canvas of this size, in points. The canvas is expected at
+    /// `canvasAspect`; a canvas of another shape gets the drawing fitted and centred in it.
+    /// - Parameter photoAspect: The photo's own shape, which decides which way the slide mount's window turns.
+    func window(in canvas: CGSize, photoAspect: CGFloat = 3.0 / 4) -> CGRect {
         switch self {
         case .instantPrint:
             // padding: 5.5% 5.5% 22% 5.5%, every side measured against the width.
-            let side = width * InstantPrint.side
-            return CGRect(x: side, y: side, width: width - side * 2, height: max(0, height - side - width * InstantPrint.bottom))
+            let side = canvas.width * InstantPrint.side
+            return CGRect(
+                x: side, y: side, width: canvas.width - side * 2,
+                height: max(0, canvas.height - side - canvas.width * InstantPrint.bottom)
+            )
+        case .fullFrame:
+            return CGRect(origin: .zero, size: canvas)
         case .filmStrip:
             return FilmStripGeometry(canvas: canvas).picture
         case .slideMount:
-            return SlideMountGeometry(canvas: canvas).window
+            return SlideMountGeometry(canvas: canvas, photoAspect: photoAspect).window
         case .mediumFormat:
-            return Self.fitted(ratio: pictureRatio, margin: 0.05 * width, in: canvas)
+            return RebateGeometry.seven(in: canvas).picture
         case .square:
-            return Self.fitted(ratio: 1, margin: 0.035 * width, in: canvas)
+            return RebateGeometry.square(in: canvas).picture
         }
-    }
-
-    /// The largest picture of this ratio that fits inside the canvas with the margin kept on every side, centred.
-    static func fitted(ratio: CGFloat, margin: CGFloat, in canvas: CGSize) -> CGRect {
-        let room = CGSize(width: max(1, canvas.width - margin * 2), height: max(1, canvas.height - margin * 2))
-        let size = room.width / room.height <= ratio
-            ? CGSize(width: room.width, height: room.width / ratio)
-            : CGSize(width: room.height * ratio, height: room.height)
-        return CGRect(
-            x: (canvas.width - size.width) / 2, y: (canvas.height - size.height) / 2,
-            width: size.width, height: size.height
-        )
     }
 }
 
-/// A strip of 135 film standing upright, measured in its picture's short side (24mm on real film): the film is
-/// 35mm wide, a perforation 2.8mm across and 2mm along at a 4.75mm pitch, 0.7mm from the picture, and the edge
-/// print lies in the 2mm outside the perforations.
+/// A strip of 135 film, measured in its picture's short side (24mm on real film) as the reference app draws it:
+/// the perforations at the real KS pitch and size, 0.6 from the picture, with 0.45 of film beyond them, so the
+/// strip is 31.96 across; along the film the canvas is the 36 picture plus 1 of film at each end.
 nonisolated struct FilmStripGeometry: Hashable, Sendable {
+    static let filmHex: UInt32 = 0x0B0B0B
+    static let printHex: UInt32 = 0xB56A1A
+    static let pictureLong: CGFloat = 36
+    static let pictureShort: CGFloat = 24
+    static let gap: CGFloat = 0.6
+    static let holeAcross: CGFloat = 2.93
+    static let holeAlong: CGFloat = 2.05
+    static let pitch: CGFloat = 4.72
+    static let edge: CGFloat = 0.45
+    static let endMargin: CGFloat = 1
+    static let across = pictureShort + 2 * (gap + holeAcross + edge)
+    static let along = pictureLong + 2 * endMargin
+    /// The canvas's width over its height with the strip lying down.
+    static let canvasAspect = along / across
+
     let canvas: CGSize
 
-    static let filmHex: UInt32 = 0x141210
-    static let printHex: UInt32 = 0xE8892B
-
-    /// The picture's short side in points. The strip is as wide as the canvas unless the picture would not fit.
-    var unit: CGFloat {
-        min(canvas.width * 24 / 35, canvas.height / 1.5 * 0.96)
+    /// The strip lies down (a landscape picture) or stands up.
+    var isLandscape: Bool {
+        canvas.width > canvas.height
     }
 
-    /// The picture, 2:3 and centred.
+    /// Points per unit of the picture's short side.
+    var unit: CGFloat {
+        isLandscape
+            ? min(canvas.height / Self.across, canvas.width / Self.along)
+            : min(canvas.width / Self.across, canvas.height / Self.along)
+    }
+
+    /// The picture, 3:2 the way the strip lies, centred.
     var picture: CGRect {
-        let size = CGSize(width: unit, height: unit * 1.5)
+        let size = isLandscape
+            ? CGSize(width: Self.pictureLong * unit, height: Self.pictureShort * unit)
+            : CGSize(width: Self.pictureShort * unit, height: Self.pictureLong * unit)
         return CGRect(x: (canvas.width - size.width) / 2, y: (canvas.height - size.height) / 2, width: size.width, height: size.height)
     }
 
-    /// The film's two edges, when it is narrower than the canvas.
+    /// The film itself, when the canvas is larger than the strip.
     var film: CGRect {
-        let width = unit * 35 / 24
-        return CGRect(x: (canvas.width - width) / 2, y: 0, width: width, height: canvas.height)
-    }
-
-    var gap: CGFloat { unit * 0.7 / 24 }
-    var holeAcross: CGFloat { unit * 2.8 / 24 }
-    var holeAlong: CGFloat { unit * 2.0 / 24 }
-    var pitch: CGFloat { unit * 4.75 / 24 }
-    var holeRadius: CGFloat { unit * 0.45 / 24 }
-    /// The edge zone outside the perforations.
-    var edge: CGFloat { unit * 2.0 / 24 }
-    /// Edge print text size.
-    var printSize: CGFloat { unit * 1.15 / 24 }
-
-    /// The perforations down one side: their left edges, for the left side; mirrored for the right.
-    var leftHoleX: CGFloat { picture.minX - gap - holeAcross }
-    var rightHoleX: CGFloat { picture.maxX + gap }
-
-    /// The perforations' top edges, pitched down the whole strip from a hole centred on the picture's top.
-    var holeTops: [CGFloat] {
-        var tops: [CGFloat] = []
-        var y = picture.minY - holeAlong / 2
-        while y > -pitch { y -= pitch }
-        while y < canvas.height {
-            tops.append(y)
-            y += pitch
-        }
-        return tops
+        let size = isLandscape
+            ? CGSize(width: Self.along * unit, height: Self.across * unit)
+            : CGSize(width: Self.across * unit, height: Self.along * unit)
+        return CGRect(x: (canvas.width - size.width) / 2, y: (canvas.height - size.height) / 2, width: size.width, height: size.height)
     }
 }
 
-/// A square cardboard mount lying on a light table, with a window near the real 23×35mm aperture of a 50mm mount.
-nonisolated struct SlideMountGeometry: Hashable, Sendable {
+/// A black rebate around a medium-format negative, with the bands measured as fractions of the picture.
+nonisolated struct RebateGeometry: Hashable, Sendable {
+    static let sevenFilmHex: UInt32 = 0x020707
+    static let sevenPrintHex: UInt32 = 0xD48E58
+    static let squareFilmHex: UInt32 = 0x0B0C0B
+    static let squarePrintHex: UInt32 = 0xD99340
+    static let squareMarkHex: UInt32 = 0xE4A356
+
+    /// The 6×7 negative lying down: a 1.25 × 1 picture with the bands around it.
+    static let sevenLandscape = Bands(picture: CGSize(width: 1.25, height: 1), left: 0.0375, right: 0.0375, top: 0.069, bottom: 0.082)
+    /// Standing up: the frame numbers' band on the left and the film name's on the right.
+    static let sevenPortrait = Bands(picture: CGSize(width: 1, height: 1.25), left: 0.102, right: 0.033, top: 0.056, bottom: 0.056)
+    /// The 6×6 negative: the edge print's band on the right, the same whichever way the photo is.
+    static let squareBands = Bands(picture: CGSize(width: 1, height: 1), left: 0.03, right: 0.056, top: 0.026, bottom: 0.032)
+
+    /// A picture with a band of film on each side, in units of the picture's short side.
+    struct Bands: Hashable, Sendable {
+        let picture: CGSize
+        let left: CGFloat
+        let right: CGFloat
+        let top: CGFloat
+        let bottom: CGFloat
+
+        var canvas: CGSize {
+            CGSize(width: picture.width + left + right, height: picture.height + top + bottom)
+        }
+
+        var canvasAspect: CGFloat {
+            let size = canvas
+            return size.width / size.height
+        }
+
+        /// The bands fitted into a canvas of this size and centred: points per unit, and the picture.
+        func fitted(in size: CGSize) -> RebateGeometry {
+            let unit = min(size.width / canvas.width, size.height / canvas.height)
+            let x = (size.width - canvas.width * unit) / 2 + left * unit
+            let y = (size.height - canvas.height * unit) / 2 + top * unit
+            return RebateGeometry(
+                canvas: size, unit: unit, bands: self,
+                picture: CGRect(x: x, y: y, width: picture.width * unit, height: picture.height * unit)
+            )
+        }
+    }
+
     let canvas: CGSize
+    let unit: CGFloat
+    let bands: Bands
+    let picture: CGRect
 
-    static let tableHex: UInt32 = 0xEDECE8
-    static let cardHex: UInt32 = 0xC9C7BF
+    static func seven(in canvas: CGSize) -> RebateGeometry {
+        (canvas.width > canvas.height ? sevenLandscape : sevenPortrait).fitted(in: canvas)
+    }
 
-    var side: CGFloat { min(canvas.width, canvas.height) * 0.9 }
+    static func square(in canvas: CGSize) -> RebateGeometry {
+        squareBands.fitted(in: canvas)
+    }
+}
+
+/// A square cardboard mount on a white light table, on a 3:4 canvas: the mount 0.81 of the canvas wide and
+/// centred, its 3:2 window centred in it and turned the way the picture is.
+nonisolated struct SlideMountGeometry: Hashable, Sendable {
+    static let canvasAspect: CGFloat = 3.0 / 4
+    static let tableHex: UInt32 = 0xFFFFFF
+    static let greyCardHex: UInt32 = 0xBABAAB
+    static let creamCardHex: UInt32 = 0xE9E0C9
+    static let stripeHex: UInt32 = 0xE9D882
+    static let mountFraction: CGFloat = 0.81
+    static let windowLong: CGFloat = 0.667
+    static let windowShort: CGFloat = 0.447
+
+    let canvas: CGSize
+    let photoAspect: CGFloat
+
+    init(canvas: CGSize, photoAspect: CGFloat = 3.0 / 4) {
+        self.canvas = canvas
+        self.photoAspect = photoAspect
+    }
+
+    var isLandscape: Bool {
+        photoAspect >= 1
+    }
+
+    var side: CGFloat {
+        min(canvas.width, canvas.height * Self.canvasAspect) * Self.mountFraction
+    }
 
     var mount: CGRect {
         CGRect(x: (canvas.width - side) / 2, y: (canvas.height - side) / 2, width: side, height: side)
     }
 
-    /// The window, upright: 0.46 of the mount wide and 0.69 tall.
     var window: CGRect {
-        let size = CGSize(width: side * 0.46, height: side * 0.69)
+        let size = isLandscape
+            ? CGSize(width: side * Self.windowLong, height: side * Self.windowShort)
+            : CGSize(width: side * Self.windowShort, height: side * Self.windowLong)
         return CGRect(x: (canvas.width - size.width) / 2, y: (canvas.height - size.height) / 2, width: size.width, height: size.height)
     }
 
-    var cornerRadius: CGFloat { side * 0.012 }
-    var windowRadius: CGFloat { side * 0.02 }
-    var dimpleRadius: CGFloat { side * 0.024 }
+    var cornerRadius: CGFloat { side * 0.008 }
+    var windowRadius: CGFloat { side * 0.012 }
+    var dimpleRadius: CGFloat { side * 0.026 }
 }

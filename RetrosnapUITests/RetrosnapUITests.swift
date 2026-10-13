@@ -312,4 +312,22 @@ final class RetrosnapUITests: XCTestCase {
         expectText("Photo deleted")
         expectButton("Start recording")
     }
+
+    /// A probe for a phone: the look screen of two fitted cameras, screenshotted and kept in the result bundle,
+    /// so the phone's own rendering can be measured against the simulator's and the bake (the calibration notes in
+    /// `docs/camera-lineup.md`). On the simulator it only checks that the screens come up.
+    func testLookScreensAreKeptAsScreenshotsForTheDeviceProbe() throws {
+        for camera in ["negative", "plastic35", "tlr"] {
+            let probe = XCUIApplication()
+            probe.launchArguments = ["-rsScreen", "look", "-rsCamera", camera]
+            probe.launch()
+            sleep(5)
+            let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            attachment.name = "look-\(camera)"
+            attachment.lifetime = .keepAlways
+            add(attachment)
+            XCTAssertTrue(probe.state == .runningForeground)
+            probe.terminate()
+        }
+    }
 }

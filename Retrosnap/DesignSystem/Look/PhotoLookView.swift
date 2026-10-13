@@ -20,23 +20,38 @@ struct PhotoLookView: View {
     var usesThumbnail = false
     /// Enlarges the picture inside its box, under the look: a still scene standing in for a zoomed lens.
     var magnification: CGFloat = 1
+    /// The photo's own width over its height: which way a frame's window turns, and where a film's stamp lands.
+    var photoAspect: CGFloat = 3.0 / 4
 
     var body: some View {
         GeometryReader { proxy in
             let model = LookRenderModel(camera: camera, adjustments: adjustments, framed: framed, stampEnabled: stamp != nil)
             let size = proxy.size
             if let frame = model.frame {
-                let window = frame.window(in: size)
+                let window = frame.window(in: size, photoAspect: photoAspect)
                 ZStack(alignment: .topLeading) {
                     Color(hex: frame.baseHex)
                     photo(model, size: window.size)
                         .offset(x: window.minX, y: window.minY)
-                    LookFrameView(frame: frame, size: size)
+                    LookFrameView(frame: frame, size: size, photoAspect: photoAspect)
                 }
             } else {
                 photo(model, size: size)
             }
         }
+    }
+
+    /// Where the film's frame lies in an unframed box: the part the camera keeps, centred, the way the box is.
+    /// A framed photo's box is the window itself.
+    private func filmFrame(in size: CGSize) -> CGRect {
+        guard !framed, let frame = camera.look.frame, frame != .instantPrint else {
+            return CGRect(origin: .zero, size: size)
+        }
+        let ratio = frame.pictureAspect(forPhotoAspect: size.width / size.height)
+        let fitted = size.width / size.height <= ratio
+            ? CGSize(width: size.width, height: size.width / ratio)
+            : CGSize(width: size.height * ratio, height: size.height)
+        return CGRect(x: (size.width - fitted.width) / 2, y: (size.height - fitted.height) / 2, width: fitted.width, height: fitted.height)
     }
 
     private func source(_ size: CGSize) -> some View {
@@ -98,7 +113,10 @@ struct PhotoLookView: View {
         ZStack {
             rendered(model, size: size)
             if let stamp {
-                PhotoStampView(text: stamp, kind: model.stamp, size: size, bottomInset: stampBottom, topInset: stampTop)
+                PhotoStampView(
+                    text: stamp, kind: model.stamp, size: size, bottomInset: stampBottom, topInset: stampTop,
+                    filmFrame: filmFrame(in: size)
+                )
             }
             if let videoDuration {
                 videoBadge(model, duration: videoDuration, size: size)
@@ -147,7 +165,8 @@ extension PhotoLookView {
     init(photo: Photo, framed: Bool = false, stamp: PhotoStampText? = nil, usesThumbnail: Bool = false) {
         self.init(
             image: photo.image, camera: photo.camera, adjustments: photo.adjustments, framed: framed,
-            stamp: stamp, videoDuration: photo.videoDurationText, usesThumbnail: usesThumbnail
+            stamp: stamp, videoDuration: photo.videoDurationText, usesThumbnail: usesThumbnail,
+            photoAspect: photo.aspectRatio
         )
     }
 }

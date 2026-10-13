@@ -12,15 +12,6 @@ sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from colour import ColourStage, srgb_to_lab  # noqa: E402
 
 
-def params(d):
-    p = np.zeros(ColourStage.SIZE)
-    p[0:9] = np.array(d["matrix"]).ravel()
-    p[9:12] = d["offset"]
-    p[12:30] = np.array(d["knots"]).ravel()
-    p[30] = d["vignette"]
-    return p
-
-
 def hue_chroma(rgb):
     lab = srgb_to_lab(rgb)
     return np.degrees(np.arctan2(lab[..., 2], lab[..., 1])) % 360, np.hypot(lab[..., 1], lab[..., 2]), lab[..., 0]
@@ -40,7 +31,7 @@ def main(paths):
     greys = np.linspace(0, 1, 11)[:, None].repeat(3, 1)
     for path in paths:
         d = json.load(open(path))
-        p = params(d)
+        p = ColourStage.from_json(d)
         out = ColourStage.apply(p, sweep)
         h0, c0, _ = hue_chroma(sweep)
         h1, c1, _ = hue_chroma(out)

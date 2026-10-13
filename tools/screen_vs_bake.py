@@ -3,8 +3,9 @@ same photo (`BakeVersusScreenTests` writes `ref/pairs/bake-<id>.png`).
 
     venv/bin/python tools/screen_vs_bake.py <id> <viewer screenshot> [ref/pairs]
 
-The Viewer shows the photo 390pt wide, 140pt from the top, on the design's 390x844 frame; at the
-simulator's 3x that is the 1170x1560 region from y=420. The bake is resized to it and compared: mean
+The Viewer shows the canvas 390pt wide, centred in the 592pt between 104pt and 148pt from the bottom of the
+design's 390x844 frame (a 3:4 canvas therefore starts 140pt down); the canvas's own shape comes from the bake.
+At the simulator's 3x that region is cut from the screenshot, the bake is resized to it and compared: mean
 absolute difference per channel and median ΔE2000 over 4x4 boxes (grain and resampling average out).
 """
 import sys
@@ -23,9 +24,13 @@ def box(a, n=4):
 def main(cam, shot, pairs="ref/pairs"):
     screen = Image.open(shot).convert("RGB")
     scale = screen.width / 390
-    top = int(round(140 * scale))
-    region = screen.crop((0, top, screen.width, top + int(round(520 * scale))))
-    bake = Image.open(f"{pairs}/bake-{cam}.png").convert("RGB").resize(region.size, Image.LANCZOS)
+    bake = Image.open(f"{pairs}/bake-{cam}.png").convert("RGB")
+    height = min(592.0, 390 * bake.height / bake.width)
+    width = height * bake.width / bake.height
+    top = int(round((104 + (592 - height) / 2) * scale))
+    left = int(round((390 - width) / 2 * scale))
+    region = screen.crop((left, top, left + int(round(width * scale)), top + int(round(height * scale))))
+    bake = bake.resize(region.size, Image.LANCZOS)
     a = np.asarray(region).astype(np.float64) / 255
     b = np.asarray(bake).astype(np.float64) / 255
     diff = np.abs(a - b)

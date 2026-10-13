@@ -21,6 +21,8 @@ nonisolated struct LookRenderModel: Hashable, Sendable {
     let stamp: LookStamp
     /// The measured colour response, drawn instead of `filters` when the camera has one.
     let color: ColorStage?
+    /// The colour table drawn instead of `color` when the camera ships one.
+    let colorCube: String?
     /// Drawn inside the looked copy, so they fade with the effect like the colour does.
     let halation: Halation?
     let soft: Softness?
@@ -51,6 +53,7 @@ nonisolated struct LookRenderModel: Hashable, Sendable {
         contrast = 1 + Double(adjustments.contrast) / 100
         stamp = stampEnabled && strength > 0.3 ? look.stamp : .none
         color = look.color
+        colorCube = look.colorCube
         halation = look.halation
         soft = look.soft
         filmGrain = look.filmGrain.map { grain in

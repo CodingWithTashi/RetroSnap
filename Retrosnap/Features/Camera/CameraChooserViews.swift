@@ -45,12 +45,10 @@ struct ViewfinderPicture: View {
         .animation(RSMotion.crossFade, value: camera)
     }
 
-    /// The width over the height of the camera's picture in this box. A film camera's canvas turns with a wide
-    /// picture, as `LookFrame.window(in:)` does; the Instant print stays upright.
+    /// The width over the height of the camera's picture in this box: the film's frame the way the box is, as
+    /// `LookFrame.pictureAspect(forPhotoAspect:)` turns it; the Instant print and the square stay as they are.
     private static func pictureRatio(of camera: CameraStyle, in box: CGSize) -> CGFloat {
-        let ratio = camera.pictureRatio ?? 1
-        let turns = camera.look.frame != .instantPrint && box.width > box.height
-        return turns ? 1 / ratio : ratio
+        camera.look.frame?.pictureAspect(forPhotoAspect: box.width / max(1, box.height)) ?? 1
     }
 }
 

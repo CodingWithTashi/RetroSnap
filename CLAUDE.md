@@ -149,7 +149,7 @@ The mocks, `SeedData`, `LaunchScenario`, the design catalog and `MockSamples.xca
 
 A camera's look is drawn in four stages, each mirroring a part of the prototype's Photo component:
 
-1. `CameraStyle.look` returns a `CameraLook` recipe, transcribed from the `LOOKS` table.
+1. `CameraStyle.look` returns a `CameraLook` recipe: for the first five cameras transcribed from the `LOOKS` table; for the cameras matched to the reference app, a measured 3D colour table (`colorCube`, loaded from `Resources/Looks/<id>.cube` by `ColorCubes`) over a `ColorStage` (matrix, tone curves, per-hue terms) that is its prior and fallback, both fitted in sRGB by `tools/lut.py` and `tools/fit.py`, plus the camera's `LookFrame`, whose canvas has the camera's own shape (`Photo.displayAspect`) with the picture cropped to the film's ratio in its window.
 2. `LookRenderModel` combines the recipe with the `PhotoAdjustments` sliders. It is pure and unit-tested, and mirrors `renderVals()`.
 3. `PhotoLookView` draws the layers in the prototype's order: image, filtered image, overlays, stamps, then Light and Contrast over everything.
 4. `LookShaders` is the only caller of `ShaderLibrary`; `RetroLook.metal` implements the CSS filter and blend maths on gamma-encoded sRGB.
@@ -157,7 +157,7 @@ A camera's look is drawn in four stages, each mirroring a part of the prototype'
 Those four stages are the screen. Pictures that leave the app are drawn a second time, by different code that must give the same result:
 
 - `LookRenderer` draws the look with Core Image for everything `PhotoExporter` bakes: photos saved to Photos, shared or printed, collages, and every frame of a clip.
-- `RetroLook.metal` therefore enters each of its three functions twice: as a SwiftUI colour effect (`rsFilterChain`, `rsOverlays`, `rsAdjust`) and as a Core Image kernel (`rsFilterChainKernel`, `rsOverlaysKernel`, `rsAdjustKernel`).
+- `RetroLook.metal` therefore enters each of its functions twice: as a SwiftUI colour effect (`rsFilterChain`, `rsColor`, `rsOverlays`, `rsAdjust`) and as a Core Image kernel (`rsFilterChainKernel`, `rsColorKernel`, `rsOverlaysKernel`, `rsAdjustKernel`). The colour table is the one layer drawn by different code on each side: `rsColorCube` samples it as a texture on screen, `CIColorCube` interpolates it in the bake; `BakeVersusScreenTests` and `tools/screen_vs_bake.py` hold the two together.
 - `LookUniforms` turns a `LookRenderModel` into the numbers both entries take.
 - `BakeLayout` sizes a baked file so that grain, scanlines and stamps, which are measured in points, come out as they look on the design's 390pt-wide screen.
 

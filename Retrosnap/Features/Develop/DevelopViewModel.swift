@@ -69,7 +69,7 @@ final class DevelopViewModel {
     }
 
     var stamp: PhotoStampText {
-        dayLabeler.stamp(for: draft.capturedAt)
+        dayLabeler.stamp(for: draft.stampDate)
     }
 
     var isStripVisible: Bool {

@@ -87,7 +87,7 @@ final class ResultViewModel {
     }
 
     var stamp: PhotoStampText? {
-        photo.map { dayLabeler.stamp(for: $0.capturedAt) }
+        photo.map { dayLabeler.stamp(for: $0.stampDate) }
     }
 
     /// The photo was brought in from the library: the result sits on the gallery, and the way on is another pick.

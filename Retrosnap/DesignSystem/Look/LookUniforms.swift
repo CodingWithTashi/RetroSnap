@@ -48,8 +48,9 @@ nonisolated struct LookUniforms: Hashable, Sendable {
     let grain: Double
     let brightness: Double
     let contrast: Double
-    /// The colour stage as the shader's twelve `float4`s: the matrix rows with their offsets, then for each channel
-    /// the curve's six values and six tangents. Nil for a camera drawn by its filter chain.
+    /// The colour stage as the shader's eighteen `float4`s: the matrix rows with their offsets, for each channel
+    /// the curve's six values and six tangents, then the per-hue shifts, saturation gains and lightness gains,
+    /// two vectors each. Nil for a camera drawn by its filter chain.
     let colorStage: [Vector]?
     /// Film grain: clump size, amount, colour; zero amount when there is none.
     let filmGrain: Vector
@@ -94,7 +95,8 @@ nonisolated struct LookUniforms: Hashable, Sendable {
     }
 
     /// The colour stage packed for the shader: three matrix rows, then per channel the values at knots 0-3,
-    /// the values at knots 4-5 with the tangents at knots 0-1, and the tangents at knots 2-5.
+    /// the values at knots 4-5 with the tangents at knots 0-1, and the tangents at knots 2-5; then the hue
+    /// terms' eight shifts, eight saturation gains and eight lightness gains (identity when the stage has none).
     static func vectors(_ stage: ColorStage) -> [Vector] {
         var vectors = stage.matrix.map { Vector(x: $0[0], y: $0[1], z: $0[2], w: $0[3]) }
         for values in stage.curves {
@@ -102,6 +104,11 @@ nonisolated struct LookUniforms: Hashable, Sendable {
             vectors.append(Vector(x: values[0], y: values[1], z: values[2], w: values[3]))
             vectors.append(Vector(x: values[4], y: values[5], z: m[0], w: m[1]))
             vectors.append(Vector(x: m[2], y: m[3], z: m[4], w: m[5]))
+        }
+        let hue = stage.hue ?? .identity
+        for terms in [hue.shift, hue.saturation, hue.lightness] {
+            vectors.append(Vector(x: terms[0], y: terms[1], z: terms[2], w: terms[3]))
+            vectors.append(Vector(x: terms[4], y: terms[5], z: terms[6], w: terms[7]))
         }
         return vectors
     }

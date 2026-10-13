@@ -44,7 +44,7 @@ final class PrintViewModel {
     }
 
     var stamp: PhotoStampText? {
-        photo.map { dayLabeler.stamp(for: $0.capturedAt) }
+        photo.map { dayLabeler.stamp(for: $0.stampDate) }
     }
 
     var paperSize: CGSize {

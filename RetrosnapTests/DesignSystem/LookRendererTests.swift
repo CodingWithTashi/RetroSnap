@@ -125,12 +125,14 @@ struct LookRendererTests {
 
 extension LookRendererTests {
     /// The colour stage on a flat orange gives what `tools/colour.py` computes for the same recipe.
-    @Test func aFittedCameraRunsItsColourStage() {
+    @Test func aFittedCameraRunsItsColourTable() {
+        // The fixtures' orange through each camera's table (`tools/lut.py` gives the same numbers), with no
+        // grain, no vignette in the middle, and no glow (the orange is below the halation threshold).
         let noGrain = PhotoAdjustments(intensity: 100, grain: 0)
         let tlr = renderer.render(orange, model: model(.tlr, noGrain), scale: 1)
-        #expect(centre(tlr).isClose(to: Pixel(red: 222, green: 112, blue: 18), tolerance: 3))
+        #expect(centre(tlr).isClose(to: Pixel(red: 219, green: 107, blue: 17), tolerance: 2))
         let negative = renderer.render(orange, model: model(.negative, noGrain), scale: 1)
-        #expect(centre(negative).isClose(to: Pixel(red: 218, green: 123, blue: 34), tolerance: 3))
+        #expect(centre(negative).isClose(to: Pixel(red: 216, green: 126, blue: 44), tolerance: 2))
     }
 
     @Test func filmGrainRoughensAFlatPicture() {
@@ -145,20 +147,20 @@ extension LookRendererTests {
     }
 
     @Test func halationGlowsBesideAHighlight() {
-        // A white square on black: just outside the square the glow lifts the black; far from it nothing changes.
-        let black = CIImage.flat(red: 0, green: 0, blue: 0, width: 120, height: 120)
+        // A white square on dark grey: just outside the square the glow lifts the grey; far from it nothing changes.
+        // (Dark grey rather than black: 135 NE's fitted toe is flat enough at black to swallow a faint glow.)
+        let grey = CIImage.flat(red: 0.2, green: 0.2, blue: 0.2, width: 120, height: 120)
         let white = CIImage.flat(red: 1, green: 1, blue: 1, width: 30, height: 30)
             .transformed(by: CGAffineTransform(translationX: 45, y: 45))
-        let scene = white.composited(over: black)
+        let scene = white.composited(over: grey)
         let image = renderer.render(scene, model: model(.negative, PhotoAdjustments(intensity: 100, grain: 0)), scale: 1)
         // The square covers rows 45 to 74 counted from the top; the row above it is 44.
         let beside = renderer.context.pixel(of: image, x: 60, y: 44)
         let far = renderer.context.pixel(of: image, x: 60, y: 5)
-        // The glow is gentle by design: a few levels, and no less red than the film's own black, within a level:
-        // the fitted toe of 135 NE's curves lifts blue a touch faster than red, so a faint glow can round one level
-        // the other way (`tools/colour.py`: black -> red-blue +2.7, with a faint warm glow +2.5, a stronger one +3.7).
-        #expect(beside.red > far.red + 1)
-        #expect(beside.red - beside.blue >= far.red - far.blue - 1)
+        // The glow is white: beside the square every channel is lifted by a few levels.
+        #expect(beside.red > far.red + 3)
+        #expect(beside.green > far.green + 3)
+        #expect(beside.blue > far.blue + 2)
     }
 
     @Test func aFramedNegativeIsSavedOnItsStrip() {

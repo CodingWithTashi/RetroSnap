@@ -53,8 +53,11 @@ struct DayLabeler {
 
     /// The text burned into a photo taken at `date`.
     func stamp(for date: Date) -> PhotoStampText {
-        PhotoStampText(
+        let parts = clock.calendar.dateComponents([.year, .month, .day], from: date)
+        let year = (parts.year ?? 2000) % 100
+        return PhotoStampText(
             date: stampFormatter.string(from: date),
+            dateBack: String(format: "'%02d年 %d月%d日", year, parts.month ?? 1, parts.day ?? 1),
             tapeDate: tapeDateFormatter.string(from: date).uppercased(),
             tapeTime: tapeTimeFormatter.string(from: date)
         )

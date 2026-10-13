@@ -47,7 +47,7 @@ final class EditViewModel {
     }
 
     var stamp: PhotoStampText? {
-        photo.map { dayLabeler.stamp(for: $0.capturedAt) }
+        photo.map { dayLabeler.stamp(for: $0.stampDate) }
     }
 
     /// What the preview draws: the draft, or the untouched photo while comparing.

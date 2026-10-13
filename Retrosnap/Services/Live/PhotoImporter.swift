@@ -98,9 +98,10 @@ final class PhotoImporter: NSObject, PhotoImporting, PHPickerViewControllerDeleg
             let original = try Data(contentsOf: copy)
             let fileExtension = copy.pathExtension.isEmpty ? "jpg" : copy.pathExtension.lowercased()
             let image = try folder.store(original: original, id: id, fileExtension: fileExtension)
+            let header = properties(of: original)
             return .imported(Photo(
                 id: id, image: image, camera: .film, capturedAt: now, isJustCaptured: true,
-                pixelSize: pixelSize(of: original)
+                pixelSize: pixelSize(of: header), takenAt: takenAt(of: header)
             ))
         } catch {
             log.error("A picture could not be brought in: \(error.localizedDescription)")
@@ -155,16 +156,52 @@ final class PhotoImporter: NSObject, PhotoImporting, PHPickerViewControllerDeleg
         }
     }
 
-    /// The picture's size the way up it is shown, from its header alone.
-    private nonisolated static func pixelSize(of picture: Data) -> PixelSize? {
+    /// The picture's header, read without decoding it.
+    private nonisolated static func properties(of picture: Data) -> [CFString: Any] {
         guard let source = CGImageSourceCreateWithData(picture as CFData, nil),
-              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
-              let width = properties[kCGImagePropertyPixelWidth] as? Int,
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+        else { return [:] }
+        return properties
+    }
+
+    /// The picture's size the way up it is shown, from its header alone.
+    private nonisolated static func pixelSize(of properties: [CFString: Any]) -> PixelSize? {
+        guard let width = properties[kCGImagePropertyPixelWidth] as? Int,
               let height = properties[kCGImagePropertyPixelHeight] as? Int
         else { return nil }
         let orientation = (properties[kCGImagePropertyOrientation] as? UInt32)
             .flatMap(CGImagePropertyOrientation.init(rawValue:)) ?? .up
         let isSideways = [.left, .right, .leftMirrored, .rightMirrored].contains(orientation)
         return isSideways ? PixelSize(width: height, height: width) : PixelSize(width: width, height: height)
+    }
+
+    /// When the picture was taken, as its EXIF says ("2026:10:08 12:32:41", with the zone when it is there).
+    nonisolated static func takenAt(of properties: [CFString: Any]) -> Date? {
+        guard let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any],
+              let text = exif[kCGImagePropertyExifDateTimeOriginal] as? String
+        else { return nil }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
+        if let offset = exif[kCGImagePropertyExifOffsetTimeOriginal] as? String,
+           let zone = TimeZone(iso8601: offset) {
+            formatter.timeZone = zone
+        } else {
+            formatter.timeZone = .current
+        }
+        return formatter.date(from: text)
+    }
+}
+
+
+extension TimeZone {
+    /// A zone from an EXIF offset such as "+02:00" or "-07:00".
+    nonisolated init?(iso8601 offset: String) {
+        let trimmed = offset.trimmingCharacters(in: .whitespaces)
+        guard trimmed.count == 6, let sign = trimmed.first, sign == "+" || sign == "-",
+              let hours = Int(trimmed.dropFirst().prefix(2)), let minutes = Int(trimmed.suffix(2))
+        else { return nil }
+        let seconds = (hours * 3600 + minutes * 60) * (sign == "-" ? -1 : 1)
+        self.init(secondsFromGMT: seconds)
     }
 }

@@ -15,9 +15,16 @@ more when a camera cannot meet the tolerance on both and the worse of the two me
 A pair's mask and inset come from its own JSON (written by the first form) unless given here, qualified with
 the pair's name when they differ.
 
-The fit: the colour stage (3x3 matrix + offset, six-knot monotone tone curve per channel, the look's vignette) by
-least squares on CIELAB differences, with mild regularisation toward identity. `--reg` is the pull toward the
-identity matrix (default 0.02); raise it when `tools/sanity.py` shows the fit swinging hues it never saw.
+The fit: the colour stage (3x3 matrix + offset, six-knot monotone tone curve per channel, eight per-hue
+shift / saturation / lightness terms, the look's vignette) by least squares on CIELAB differences, with mild
+regularisation toward identity. `--reg` is the pull toward the identity matrix (default 0.02); raise it when
+`tools/sanity.py` shows the fit swinging hues it never saw. `--hue-reg` scales the pull of the per-hue terms
+toward doing nothing (default 1); `--neutral k` makes the reference's near-neutral colours count 1 + k times
+as much, so whites and greys come out exactly as the reference's; `--skin k` does the same for skin tones (a
+mid-light orange of moderate chroma in the input), which a viewer judges a picture by first. Every picture is
+converted to sRGB first (an iPhone's photos and screenshots
+are Display P3), because that is the space the app's shaders work in. A pair over 150k samples is fitted on a
+fixed random subset.
 `--mask` keeps a date stamp out of the fit (a rectangle in reference pixels), `--inset` a mount's shadow (a
 fraction of the width, default 0.02).
 
@@ -28,18 +35,31 @@ pair, and the curves), and prints the median and 95th percentile ΔE2000 of the 
 import json
 import os
 import sys
+import io
 import numpy as np
-from PIL import Image, ImageOps, ImageDraw
+from PIL import Image, ImageCms, ImageOps, ImageDraw
 from scipy import ndimage, optimize
 
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
-from colour import ColourStage, KNOT_X, curve, delta_e2000, srgb_to_lab  # noqa: E402
+from colour import ColourStage, HUE_SECTORS, KNOT_X, curve, delta_e2000, srgb_to_lab  # noqa: E402
 
 BOX = 4
+# A pair larger than this is fitted on a fixed random subset: the fit does not get better past it, only slower.
+MAX_SAMPLES = 150_000
 
 
 def load(path):
-    return np.asarray(ImageOps.exif_transpose(Image.open(path)).convert("RGB")).astype(np.float64) / 255
+    """A picture upright, as sRGB in 0...1. A picture tagged with another profile (an iPhone photo and its
+    screenshots are Display P3) is converted, because the app's shaders work on sRGB values: fitting on the
+    tagged values as if they were sRGB would make every saturated colour come out duller on a phone."""
+    image = ImageOps.exif_transpose(Image.open(path))
+    icc = image.info.get("icc_profile")
+    image = image.convert("RGB")
+    if icc:
+        profile = ImageCms.ImageCmsProfile(io.BytesIO(icc))
+        if "sRGB" not in (ImageCms.getProfileDescription(profile) or ""):
+            image = ImageCms.profileToProfile(image, profile, ImageCms.createProfile("sRGB"), outputMode="RGB")
+    return np.asarray(image).astype(np.float64) / 255
 
 
 def save(path, rgb):
@@ -132,27 +152,84 @@ def samples(pair_in, ref, inset, mask_rect):
     return a[keep], b[keep], uv[keep]
 
 
-def fit(pairs, reg, weights=None):
+def subsample(pair, limit=MAX_SAMPLES, seed=7):
+    """A fixed random subset of a pair's samples when it has more than `limit`."""
+    A, B, UV = pair
+    if len(A) <= limit:
+        return pair
+    keep = np.random.RandomState(seed).choice(len(A), limit, replace=False)
+    return A[keep], B[keep], UV[keep]
+
+
+def neutral_weights(B, k):
+    """Per-sample weights that favour the reference's near-neutral colours: 1 + k at zero chroma, falling to 1
+    by a chroma of about 20 (CIELAB)."""
+    if not k:
+        return None
+    lab = srgb_to_lab(B)
+    chroma = np.hypot(lab[..., 1], lab[..., 2])
+    return 1.0 + k * np.exp(-(chroma / 12.0) ** 2)
+
+
+def skin_weights(A, k):
+    """Per-sample weights that favour skin tones, by the input's colour: 1 + k where the input is a mid-light
+    orange of moderate chroma (CIELAB L 35-85, a 4-30, b 8-40, chroma 10-40), 1 elsewhere. A face is what a
+    viewer judges a picture's colour by first, and it is a small part of most pictures."""
+    if not k:
+        return None
+    lab = srgb_to_lab(A)
+    chroma = np.hypot(lab[..., 1], lab[..., 2])
+    skin = ((lab[..., 0] > 35) & (lab[..., 0] < 85) & (lab[..., 1] > 4) & (lab[..., 1] < 30)
+            & (lab[..., 2] > 8) & (lab[..., 2] < 40) & (chroma > 10) & (chroma < 40))
+    return 1.0 + k * skin
+
+
+def fit(pairs, reg, weights=None, hue_reg=1.0, neutral=0.0, skin=0.0):
     """The colour stage that fits every pair in `pairs` (name -> (A, B, UV)) at once, each pair counting the
-    same (or as `weights` says: name -> weight, 1 by default), whatever its size."""
+    same (or as `weights` says: name -> weight, 1 by default), whatever its size. `hue_reg` scales the pull of
+    the per-hue terms toward doing nothing (and toward their neighbours), so a sector the pictures never
+    show stays put."""
     lam_m, lam_o, lam_c = reg, reg, 0.01
+    pairs = {name: subsample(pair) for name, pair in pairs.items()}
     labs = {name: srgb_to_lab(B) for name, (_, B, _) in pairs.items()}
     weights = {name: (weights or {}).get(name, 1.0) for name in pairs}
     total = sum(weights.values())
+    lam_shift, lam_sat, lam_light = 1.5 * hue_reg, 2.0 * hue_reg, 4.0 * hue_reg
+    per_sample = {}
+    for name, (A, B, _) in pairs.items():
+        w = None
+        for extra in (neutral_weights(B, neutral), skin_weights(A, skin)):
+            if extra is not None:
+                w = extra if w is None else w * extra
+        per_sample[name] = None if w is None else np.sqrt(w / w.mean())[:, None]
 
     def residuals(p):
         parts = []
         for name, (A, _, UV) in pairs.items():
             out = ColourStage.apply(p, A, UV)
-            parts.append((srgb_to_lab(out) - labs[name]).ravel() * np.sqrt(weights[name] / (len(A) * total)))
-        M, o, knots, vig = ColourStage.unpack(p)
+            diff = srgb_to_lab(out) - labs[name]
+            if per_sample[name] is not None:
+                diff = diff * per_sample[name]
+            parts.append(diff.ravel() * np.sqrt(weights[name] / (len(A) * total)))
+        M, o, knots, vig, (shift, sat, light) = ColourStage.unpack(p)
         parts += [lam_m * (M - np.eye(3)).ravel(), lam_o * o,
                   lam_c * np.diff(knots, 2, axis=1).ravel(),
                   # Curves stay increasing, and end near black and white unless the data insists.
-                  20 * np.minimum(np.diff(knots, axis=1), 0).ravel()]
+                  20 * np.minimum(np.diff(knots, axis=1), 0).ravel(),
+                  # The hue terms stay near identity and change smoothly around the circle.
+                  lam_shift * shift, lam_sat * (sat - 1), lam_light * (light - 1),
+                  lam_shift * (shift - np.roll(shift, 1)), lam_sat * (sat - np.roll(sat, 1)),
+                  lam_light * (light - np.roll(light, 1))]
         return np.concatenate(parts)
 
-    res = optimize.least_squares(residuals, ColourStage.identity(), method="trf", x_scale="jac", max_nfev=400, verbose=0)
+    n = HUE_SECTORS
+    lower = np.full(ColourStage.SIZE, -np.inf)
+    upper = np.full(ColourStage.SIZE, np.inf)
+    lower[31:31 + n], upper[31:31 + n] = -1.2, 1.2
+    lower[31 + n:31 + 2 * n], upper[31 + n:31 + 2 * n] = 0.1, 2.5
+    lower[31 + 2 * n:], upper[31 + 2 * n:] = 0.5, 1.6
+    res = optimize.least_squares(residuals, ColourStage.identity(), bounds=(lower, upper), method="trf",
+                                 x_scale="jac", max_nfev=400, verbose=0)
     return res.x
 
 
@@ -194,7 +271,7 @@ def report(path, p, images, pairs, label):
         for i, text in enumerate((f"{name}: input", f"fit  ΔE median {label[name]['deltaE_median']:.2f}  p95 {label[name]['deltaE_p95']:.2f}", "reference")):
             d.text((10 + i * (tile_w + 10), y + 10), text, fill=(230, 230, 230))
         y += tile_h + 30
-    M, o, knots, vig = ColourStage.unpack(p)
+    M, o, knots, vig, _ = ColourStage.unpack(p)
     px, py, size = 10, y + 20, plot_h - 10
     d.rectangle([px, py, px + size, py + size], outline=(120, 120, 120))
     xs = np.linspace(0, 1, 200)
@@ -222,9 +299,9 @@ def report(path, p, images, pairs, label):
 
 
 def parse_options(argv):
-    """--mask, --inset, --weight, --reg, --pair; --mask, --inset and --weight qualified by a pair's name when
-    there are several."""
-    masks, insets, weights, reg, pair_prefixes = {}, {}, {}, 0.02, []
+    """--mask, --inset, --weight, --reg, --hue-reg, --pair; --mask, --inset and --weight qualified by a pair's
+    name when there are several."""
+    masks, insets, weights, reg, hue_reg, neutral, skin, pair_prefixes = {}, {}, {}, 0.02, 1.0, 0.0, 0.0, []
     i = 0
     while i < len(argv):
         flag = argv[i]
@@ -237,12 +314,21 @@ def parse_options(argv):
         elif flag == "--reg":
             reg = float(argv[i + 1])
             i += 2
+        elif flag == "--hue-reg":
+            hue_reg = float(argv[i + 1])
+            i += 2
+        elif flag == "--neutral":
+            neutral = float(argv[i + 1])
+            i += 2
+        elif flag == "--skin":
+            skin = float(argv[i + 1])
+            i += 2
         elif flag == "--pair":
             pair_prefixes.append(argv[i + 1])
             i += 2
         else:
             i += 1
-    return masks, insets, weights, reg, pair_prefixes
+    return masks, insets, weights, reg, hue_reg, neutral, skin, pair_prefixes
 
 
 def setting(table, name, default):
@@ -256,7 +342,7 @@ def main(argv):
     cam = argv[1]
     if "--pair" in argv:
         outdir = argv[2]
-        masks, insets, weights, reg, prefixes = parse_options(argv[3:])
+        masks, insets, weights, reg, hue_reg, neutral, skin, prefixes = parse_options(argv[3:])
         images, pairs, alignments = {}, {}, {}
         for prefix in prefixes:
             name = os.path.basename(prefix)
@@ -271,7 +357,7 @@ def main(argv):
             print(f"{cam}: pair {name} {ref.shape[1]}x{ref.shape[0]}, inset {inset}, mask {mask}, {len(pairs[name][0])} samples")
     else:
         input_path, ref_path, outdir = argv[2:5]
-        masks, insets, weights, reg, _ = parse_options(argv[5:])
+        masks, insets, weights, reg, hue_reg, neutral, skin, _ = parse_options(argv[5:])
         mask, inset = masks.get(None), insets.get(None, 0.02)
         pair_in, ref, alignment = make_pair(cam, input_path, ref_path, outdir)
         images = {cam: (pair_in, ref)}
@@ -280,22 +366,21 @@ def main(argv):
         print(f"  fitting on {len(pairs[cam][0])} pairs")
 
     weights = {name: setting(weights, name, 1.0) for name in pairs}
-    p = fit(pairs, reg, weights)
+    p = fit(pairs, reg, weights, hue_reg, neutral, skin)
     numbers = measure(p, pairs)
     for name, n in numbers.items():
         print(f"  {name}: ΔE2000 input vs reference: median {n['deltaE_input_median']:.2f}, p95 {n['deltaE_input_p95']:.2f}")
         print(f"  {name}: ΔE2000 fit vs reference:   median {n['deltaE_median']:.2f}, p95 {n['deltaE_p95']:.2f}, mean {n['deltaE_mean']:.2f}")
     print("  " + ColourStage.describe(p).replace("\n", "\n  "))
 
-    M, o, knots, vig = ColourStage.unpack(p)
     worst = max(numbers.values(), key=lambda n: n["deltaE_median"])
-    record = {"camera": cam, "reg": reg,
-              "pairs": [{"name": name, "weight": weights[name]} | alignments[name] | n for name, n in numbers.items()],
-              "matrix": M.tolist(), "offset": o.tolist(), "knots": knots.tolist(), "knotX": KNOT_X.tolist(), "vignette": vig,
-              "deltaE_median": worst["deltaE_median"], "deltaE_p95": worst["deltaE_p95"],
-              "deltaE_input_median": worst["deltaE_input_median"]}
+    record = {"camera": cam, "reg": reg, "hue_reg": hue_reg, "neutral": neutral, "skin": skin,
+              "pairs": [{"name": name, "weight": weights[name]} | alignments[name] | n for name, n in numbers.items()]}
+    record |= ColourStage.to_json(p)
+    record |= {"deltaE_median": worst["deltaE_median"], "deltaE_p95": worst["deltaE_p95"],
+               "deltaE_input_median": worst["deltaE_input_median"]}
     if len(pairs) == 1:
-        record |= alignments[cam]
+        record |= next(iter(alignments.values()))
     with open(f"{outdir}/{cam}.json", "w") as f:
         json.dump(record, f, indent=2)
     report(f"{outdir}/{cam}-report.png", p, images, pairs, numbers)

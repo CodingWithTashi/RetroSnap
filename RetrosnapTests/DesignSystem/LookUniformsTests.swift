@@ -47,13 +47,13 @@ struct LookUniformsTests {
         #expect(isClose(uniforms(.film).soft.z, 0))
     }
 
-    @Test func theColourStageIsPackedAsTwelveVectors() {
+    @Test func theColourStageIsPackedAsEighteenVectors() {
         let stage = try! #require(uniforms(.negative).colorStage)
-        #expect(stage.count == 12)
+        #expect(stage.count == 18)
         // The matrix rows with their offsets.
-        #expect(isClose(stage[0].x, 1.0868))
-        #expect(isClose(stage[0].w, -0.0158))
-        #expect(isClose(stage[2].z, 0.8094))
+        #expect(isClose(stage[0].x, 1.0745))
+        #expect(isClose(stage[0].w, -0.0188))
+        #expect(isClose(stage[2].z, 1.0919))
         // Red: values at knots 0-3, then knots 4-5 and the first two tangents, then the last four tangents.
         let red = CameraStyle.negative.look.color!.curves[0]
         let tangents = LookUniforms.tangents(of: red)
@@ -67,6 +67,22 @@ struct LookUniformsTests {
         #expect(isClose(stage[5].w, tangents[5]))
         // Blue starts at the tenth vector.
         #expect(isClose(stage[9].x, CameraStyle.negative.look.color!.curves[2][0]))
+        // Then the hue terms: eight shifts, eight saturation gains, eight lightness gains, two vectors each.
+        let hue = CameraStyle.negative.look.color!.hue ?? .identity
+        #expect(isClose(stage[12].x, hue.shift[0]))
+        #expect(isClose(stage[13].w, hue.shift[7]))
+        #expect(isClose(stage[14].x, hue.saturation[0]))
+        #expect(isClose(stage[16].y, hue.lightness[1]))
+        #expect(isClose(stage[17].w, hue.lightness[7]))
+    }
+
+    @Test func aStageWithoutHueTermsPacksTheIdentity() {
+        let stage = ColorStage(matrix: [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0]], curves: Array(repeating: ColorStage.knotPositions, count: 3))
+        let vectors = LookUniforms.vectors(stage)
+        #expect(vectors.count == 18)
+        #expect(vectors[12] == LookUniforms.Vector(x: 0, y: 0, z: 0, w: 0))
+        #expect(vectors[14] == LookUniforms.Vector(x: 1, y: 1, z: 1, w: 1))
+        #expect(vectors[17] == LookUniforms.Vector(x: 1, y: 1, z: 1, w: 1))
     }
 
     @Test func tangentsOfAStraightLineAreItsSlope() {
@@ -92,19 +108,19 @@ struct LookUniformsTests {
     @Test func filmLayersComeFromTheRenderModel() {
         let negative = uniforms(.negative)
         #expect(isClose(negative.filmGrain.x, 0.8))
-        #expect(isClose(negative.filmGrain.y, 0.085))
-        #expect(isClose(negative.filmGrain.z, 0.35))
-        #expect(isClose(negative.halation.x, 0.8))
-        #expect(isClose(negative.halation.y, 0.15))
+        #expect(isClose(negative.filmGrain.y, 0.065))
+        #expect(isClose(negative.filmGrain.z, 0.15))
+        #expect(isClose(negative.halation.x, 0.6))
+        #expect(isClose(negative.halation.y, 0.4))
         #expect(isClose(negative.halationTint.x, 1))
-        #expect(isClose(negative.halationTint.y, 0x7A / 255.0))
+        #expect(isClose(negative.halationTint.y, 1))
         let plastic = uniforms(.plastic35)
         // No camera has soft corners since the plastic compact's export showed none; the layer packs as absent.
         #expect(isClose(plastic.soft.x, 0))
         #expect(isClose(plastic.soft.y, 1))
         #expect(isClose(plastic.soft.z, 0))
-        #expect(isClose(plastic.halation.x, 0.75))
-        #expect(isClose(plastic.halation.y, 0.1))
+        #expect(isClose(plastic.halation.x, 0.6))
+        #expect(isClose(plastic.halation.y, 0.25))
     }
 
     @Test func layerStrengthsComeFromTheRenderModel() {
