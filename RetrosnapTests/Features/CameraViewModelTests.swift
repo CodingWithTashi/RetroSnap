@@ -54,7 +54,7 @@ struct CameraViewModelTests {
         #expect(vm.isStripVisible)
         #expect(!vm.isChipVisible)
         #expect(vm.stripTitle == "Choose a camera")
-        #expect(vm.stripSubtitle == "35mm Film is on. You can shoot right away.")
+        #expect(vm.stripSubtitle == "D Classic is on. You can shoot right away.")
     }
 
     @Test func returningUserSeesTheChipNotTheStrip() {
@@ -67,8 +67,8 @@ struct CameraViewModelTests {
     @Test func stripShowsTheCameraNameAndFirstSentenceAfterFirstRun() {
         let vm = returning()
         vm.chipTapped()
-        #expect(vm.stripTitle == "35mm Film")
-        #expect(vm.stripSubtitle == "Golden tones, fine grain and soft edges.")
+        #expect(vm.stripTitle == "D Classic")
+        #expect(vm.stripSubtitle == "True, gently warm colour and a red date in the corner.")
     }
 
     // MARK: Choosing a camera
@@ -231,7 +231,7 @@ struct CameraViewModelTests {
     }
 
     @Test func chipDescribesTheCameraForVoiceOver() {
-        #expect(returning().chipLabel == "Camera: 35mm Film. Change camera")
+        #expect(returning().chipLabel == "Camera: D Classic. Change camera")
     }
 
     // MARK: Zoom
@@ -401,7 +401,7 @@ struct CameraViewModelTests {
         vm.shutterTapped()
         world.scheduler.advance(by: .seconds(1))
         #expect(world.router.path.isEmpty)
-        #expect(world.toasts.current?.text == "Saved · 35mm Film")
+        #expect(world.toasts.current?.text == "Saved · D Classic")
     }
 
     @Test func alwaysRuleOpensTheResultEveryTime() {
@@ -417,7 +417,7 @@ struct CameraViewModelTests {
         vm.shutterTapped()
         world.scheduler.advance(by: .seconds(1))
         #expect(world.router.path.isEmpty)
-        #expect(world.toasts.current?.text == "Saved · 35mm Film")
+        #expect(world.toasts.current?.text == "Saved · D Classic")
     }
 
     @Test func resultIsSkippedIfTheUserAlreadyOpenedTheGallery() {
@@ -458,7 +458,7 @@ struct CameraViewModelTests {
 
         camera.deliver(world.photo("fresh"))
         #expect(world.photos.photos.first?.id == "fresh")
-        #expect(world.toasts.current?.text == "Saved · 35mm Film")
+        #expect(world.toasts.current?.text == "Saved · D Classic")
     }
 
     @Test func theShotCarriesTheLookTheLensAndTheFlash() {
@@ -819,7 +819,7 @@ struct CameraViewModelTests {
         vm.shutterTapped()
         #expect(world.photos.photos.count == 14)
         #expect(world.exporter.savedIDs.isEmpty)
-        #expect(world.toasts.current?.text == "Saved · 35mm Film")
+        #expect(world.toasts.current?.text == "Saved · D Classic")
     }
 
     @Test func aShotStaysInsideTheAppWithoutPhotosAccess() {

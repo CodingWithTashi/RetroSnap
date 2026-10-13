@@ -58,6 +58,7 @@ struct DayLabeler {
         return PhotoStampText(
             date: stampFormatter.string(from: date),
             dateBack: String(format: "'%02d年 %d月%d日", year, parts.month ?? 1, parts.day ?? 1),
+            dateBackPlain: String(format: "%2d %2d '%02d", parts.month ?? 1, parts.day ?? 1, year),
             tapeDate: tapeDateFormatter.string(from: date).uppercased(),
             tapeTime: tapeTimeFormatter.string(from: date)
         )

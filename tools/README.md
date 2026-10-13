@@ -5,14 +5,19 @@ The calibration scripts for matching a camera to its reference pair. `docs/camer
 | Script | Does |
 |---|---|
 | `refscan.py` | Scans a reference screenshot for where the picture and canvas are. |
-| `refcrop.py` | Snaps a rough rectangle to the picture's edges and saves the crop; `--deskew` first turns a tilted canvas straight. |
+| `refcrop.py` | Snaps a rough rectangle to the picture's edges and saves the crop with its colour profile; `--deskew` first turns a tilted canvas straight. |
+| `printscan.py` | Measures a print camera's export: the sheet, the print, its window, outline, shadow and paper colours, as fractions the app draws from; `--corners` saves the corners at 1:1. |
+| `stamp.py` | Measures a date back on an export (or on RetroSnap's): where it sits, its glyphs, its ink under a screen blend, its glow; prints the `--mask` for `fit.py`. |
+| `softness.py` | Fits a camera's `blurRadius` from its pairs: the Gaussian radius that makes the input, through the camera's colour, keep as much fine detail as the reference does. |
 | `fit.py` | Converts the pictures to sRGB, aligns the crop with the input photo, writes the pair to `ref/pairs`, fits the colour stage (matrix, curves, per-hue terms) and vignette, writes the JSON and a report. With `--pair`, fits one colour stage over several pairs already aligned, each counting the same. |
 | `sanity.py` | Runs a fit over a hue sweep and a grey ramp, to catch a fit that misbehaves on colours it never saw. |
 | `transcribe.py` | Prints a fit as the Swift literal for `CameraLook.swift`. |
+| `recipe.py` | Prints a camera's whole `CameraLook` block from its fit, table, halation, blur and grain, ready for `CameraLook.swift`. |
+| `cube_fixture.py` | The fixtures' orange through a shipped table, as `ColorCubeTests` pins it. |
 | `compare.py` | ΔE2000 of RetroSnap's render (from `ReferencePairTests`) against the reference and against the camera's fit (its table when it ships one, else the parametric fit), for the first pair or any later one. |
 | `grain.py` | The grain of a pair's reference and of RetroSnap's render: amplitude by luminance, their ratio at mid grey, texture size, and the detail each keeps where the input has some (softness). |
-| `lut.py` | Fits a camera's colour as a 3D lookup table from all its pairs at once (one sparse least-squares solve), held toward the parametric fit where the pictures showed nothing and kept smooth; writes the `.cube` the app ships. |
-| `halation.py` | Fits a camera's halation from its pairs: the glow the reference spreads around highlights, found as the threshold, radius, amount and tint that best explain what the colour-only fit leaves next to bright pixels. |
+| `lut.py` | Fits a camera's colour as a 3D lookup table from all its pairs at once (one sparse least-squares solve), held toward the parametric fit where the pictures showed nothing and kept smooth, after the camera's halation and blur; writes the `.cube` the app ships. |
+| `halation.py` | Fits a camera's halation from its pairs: the glow the reference spreads around highlights, found as the threshold, radius, amount and tint that best explain what the colour-only fit leaves next to bright pixels; `--blur` runs it with the camera's blur in the loop, `--wide` widens the fine grid to 16 pt. |
 | `face.py` | The selfie's face (skin-tone pixels) under a fit or RetroSnap's render against the reference: the region a viewer judges first, which whole-picture medians hide. |
 | `glow_grain.py` | How coloured the grain is and what the reference adds next to highlights, for RetroSnap's renders against the references. |
 | `frames.py` | RetroSnap's exports (`ReferenceExportTests`) beside the reference app's screens, canvas to canvas, and one sheet of them all for the owner. |

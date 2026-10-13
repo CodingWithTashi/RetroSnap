@@ -19,6 +19,12 @@ struct PhotoStampView: View {
         case .dateMatrix:
             DateBackStampView(text: text.dateBack, frame: filmFrame ?? CGRect(origin: .zero, size: size))
                 .frame(width: size.width, height: size.height)
+        case .dateSegments:
+            FilmDateStampView(text: text.dateBackPlain, style: .segments, frame: filmFrame ?? CGRect(origin: .zero, size: size))
+                .frame(width: size.width, height: size.height)
+        case .dateDots:
+            FilmDateStampView(text: text.dateBackPlain, style: .dots, frame: filmFrame ?? CGRect(origin: .zero, size: size))
+                .frame(width: size.width, height: size.height)
         case .date:
             DateStampView(text: text.date, size: max(9, size.width * 0.075))
                 .padding(.trailing, size.width * 0.06)
@@ -205,5 +211,191 @@ nonisolated enum DotMatrixFont {
         default: rows = ["     ", "     ", "     ", "     ", "     ", "     ", "     "]
         }
         return Glyph(width: rows[0].count, rows: rows)
+    }
+}
+
+
+/// How a 1990s date back prints: the glyphs, their size and place in the film's landscape frame, the lamp's
+/// colour and glow, all measured from the reference app's exports (`tools/stamp.py`). Sizes are fractions of
+/// the frame's short side; the text ends at `rightMarginLandscape` or `rightMarginPortrait` of the long side
+/// from the frame's right edge (the reference app places it differently when the frame stands up).
+nonisolated struct DateBackStyle: Hashable, Sendable {
+    enum Glyphs: Hashable, Sendable {
+        case segments
+        case dots
+    }
+
+    let glyphs: Glyphs
+    let capHeight: CGFloat
+    let baseline: CGFloat
+    let rightMarginLandscape: CGFloat
+    let rightMarginPortrait: CGFloat
+    /// A digit cell's width and the advance from one cell to the next, in cap heights.
+    let cellWidth: CGFloat
+    let advance: CGFloat
+    let inkHex: UInt32
+
+    /// Red seven-segment digits: D Classic and CT2F.
+    static let segments = DateBackStyle(
+        glyphs: .segments, capHeight: 0.0298, baseline: 0.1146, rightMarginLandscape: 0.1565, rightMarginPortrait: 0.2175,
+        cellWidth: 0.57, advance: 0.76, inkHex: 0xFC4840
+    )
+    /// Red dots: Classic U.
+    static let dots = DateBackStyle(
+        glyphs: .dots, capHeight: 0.0283, baseline: 0.1153, rightMarginLandscape: 0.1553, rightMarginPortrait: 0.2167,
+        cellWidth: 0.62, advance: 0.79, inkHex: 0xFF3937
+    )
+}
+
+/// A 1990s compact's date back: "10  8 '26" screened into the lower right of the film's landscape frame by a
+/// small lamp, so it glows a little into the picture around it. On a portrait picture the frame is turned a
+/// quarter clockwise and the date runs down the left edge. Drawn in the style's glyphs: seven-segment digits
+/// or a dot matrix; the apostrophe before the year is a short tick in the gap before its first digit. The view
+/// is screened over the photo by its parent (`LookStamp.isScreened`), as the exporter screens the same drawing.
+struct FilmDateStampView: View {
+    let text: String
+    let style: DateBackStyle
+    /// The film's frame, in the box this view fills.
+    let frame: CGRect
+
+    var body: some View {
+        Canvas(rendersAsynchronously: false) { context, _ in
+            let isLandscape = frame.width >= frame.height
+            let long = max(frame.width, frame.height)
+            let short = min(frame.width, frame.height)
+            let cap = short * style.capHeight
+            let cells = Array(text)
+            // The text's width: one advance per cell, the last cell ending at its own width; the apostrophe
+            // takes no cell of its own.
+            let cellCount = cells.filter { $0 != "'" }.count
+            let width = (CGFloat(max(cellCount - 1, 0)) * style.advance + style.cellWidth) * cap
+            let right = long - long * (isLandscape ? style.rightMarginLandscape : style.rightMarginPortrait)
+            let bottom = short - short * style.baseline
+            var context = context
+            context.translateBy(x: frame.minX, y: frame.minY)
+            if !isLandscape {
+                // The landscape frame turned a quarter clockwise: its bottom-right corner is now bottom-left.
+                context.translateBy(x: frame.width, y: 0)
+                context.rotate(by: .degrees(90))
+            }
+            let origin = CGPoint(x: right - width, y: bottom - cap)
+            let ink = Self.ink(of: cells, at: origin, cap: cap, style: style)
+            // The lamp's glow: the ink spread a little, then the ink itself.
+            var glow = context
+            glow.addFilter(.blur(radius: cap * 0.06))
+            glow.fill(ink, with: .color(Color(hex: style.inkHex, opacity: 0.55)))
+            context.fill(ink, with: .color(Color(hex: style.inkHex)))
+        }
+        .accessibilityHidden(true)
+    }
+
+    /// Every glyph of the text as one path, laid out from `origin` (the top-left of the first cell).
+    static func ink(of cells: [Character], at origin: CGPoint, cap: CGFloat, style: DateBackStyle) -> Path {
+        var path = Path()
+        var x = origin.x
+        for (index, character) in cells.enumerated() {
+            let cell = CGRect(x: x, y: origin.y, width: style.cellWidth * cap, height: cap)
+            if character == "'" {
+                // The tick sits in the gap before the next cell, not in a cell of its own: the next cell starts
+                // where this one would have.
+                addTick(to: &path, before: x, capLine: origin.y, cap: cap)
+                x -= style.advance * cap
+            } else {
+                switch style.glyphs {
+                case .segments: addSegments(of: character, in: cell, to: &path)
+                case .dots: addDots(of: character, in: cell, to: &path)
+                }
+            }
+            if index < cells.count - 1 {
+                x += style.advance * cap
+            }
+        }
+        return path
+    }
+
+    /// The apostrophe: a short bar leaning right, its top on the cap line, ending just before `next`.
+    private static func addTick(to path: inout Path, before next: CGFloat, capLine: CGFloat, cap: CGFloat) {
+        let width = cap * 0.12
+        let height = cap * 0.3
+        let x = next - cap * 0.05 - width
+        path.move(to: CGPoint(x: x + width * 0.4, y: capLine))
+        path.addLine(to: CGPoint(x: x + width, y: capLine))
+        path.addLine(to: CGPoint(x: x + width * 0.6, y: capLine + height))
+        path.addLine(to: CGPoint(x: x, y: capLine + height))
+        path.closeSubpath()
+    }
+
+    /// Seven segments in a cell: the bars with chamfered ends, 0.14 of the cap thick.
+    private static func addSegments(of character: Character, in cell: CGRect, to path: inout Path) {
+        let lit = segmentsLit(for: character)
+        guard !lit.isEmpty else { return }
+        let t = cell.height * 0.14
+        let w = cell.width
+        let h = cell.height
+        let x = cell.minX
+        let y = cell.minY
+        let gap = t * 0.18
+        func horizontal(_ cy: CGFloat) -> Path {
+            var p = Path()
+            p.move(to: CGPoint(x: x + t / 2 + gap, y: cy))
+            p.addLine(to: CGPoint(x: x + t + gap, y: cy - t / 2))
+            p.addLine(to: CGPoint(x: x + w - t - gap, y: cy - t / 2))
+            p.addLine(to: CGPoint(x: x + w - t / 2 - gap, y: cy))
+            p.addLine(to: CGPoint(x: x + w - t - gap, y: cy + t / 2))
+            p.addLine(to: CGPoint(x: x + t + gap, y: cy + t / 2))
+            p.closeSubpath()
+            return p
+        }
+        func vertical(_ cx: CGFloat, from y0: CGFloat, to y1: CGFloat) -> Path {
+            var p = Path()
+            p.move(to: CGPoint(x: cx, y: y0 + t / 2 + gap))
+            p.addLine(to: CGPoint(x: cx + t / 2, y: y0 + t + gap))
+            p.addLine(to: CGPoint(x: cx + t / 2, y: y1 - t - gap))
+            p.addLine(to: CGPoint(x: cx, y: y1 - t / 2 - gap))
+            p.addLine(to: CGPoint(x: cx - t / 2, y: y1 - t - gap))
+            p.addLine(to: CGPoint(x: cx - t / 2, y: y0 + t + gap))
+            p.closeSubpath()
+            return p
+        }
+        // a (top), g (middle), d (bottom); f and b the upper left and right, e and c the lower.
+        if lit.contains("a") { path.addPath(horizontal(y + t / 2)) }
+        if lit.contains("g") { path.addPath(horizontal(y + h / 2)) }
+        if lit.contains("d") { path.addPath(horizontal(y + h - t / 2)) }
+        if lit.contains("f") { path.addPath(vertical(x + t / 2, from: y, to: y + h / 2)) }
+        if lit.contains("b") { path.addPath(vertical(x + w - t / 2, from: y, to: y + h / 2)) }
+        if lit.contains("e") { path.addPath(vertical(x + t / 2, from: y + h / 2, to: y + h)) }
+        if lit.contains("c") { path.addPath(vertical(x + w - t / 2, from: y + h / 2, to: y + h)) }
+    }
+
+    static func segmentsLit(for character: Character) -> Set<Character> {
+        switch character {
+        case "0": ["a", "b", "c", "d", "e", "f"]
+        case "1": ["b", "c"]
+        case "2": ["a", "b", "g", "e", "d"]
+        case "3": ["a", "b", "g", "c", "d"]
+        case "4": ["f", "g", "b", "c"]
+        case "5": ["a", "f", "g", "c", "d"]
+        case "6": ["a", "f", "g", "e", "d", "c"]
+        case "7": ["a", "b", "c"]
+        case "8": ["a", "b", "c", "d", "e", "f", "g"]
+        case "9": ["a", "b", "c", "d", "f", "g"]
+        default: []
+        }
+    }
+
+    /// A 5×7 dot matrix in a cell: round dots 0.6 of their pitch across, the pitch set so the five columns
+    /// fill the cell's width and the seven rows its height.
+    private static func addDots(of character: Character, in cell: CGRect, to path: inout Path) {
+        let glyph = DotMatrixFont.glyph(for: character)
+        guard glyph.width == 5 else { return }
+        let pitchX = cell.width / 4.6
+        let pitchY = cell.height / 6.6
+        let radius = min(pitchX, pitchY) * 0.3
+        for (row, line) in glyph.rows.enumerated() {
+            for (column, dot) in line.enumerated() where dot == "#" {
+                let centre = CGPoint(x: cell.minX + 0.3 * pitchX + CGFloat(column) * pitchX, y: cell.minY + 0.3 * pitchY + CGFloat(row) * pitchY)
+                path.addEllipse(in: CGRect(x: centre.x - radius, y: centre.y - radius, width: radius * 2, height: radius * 2))
+            }
+        }
     }
 }

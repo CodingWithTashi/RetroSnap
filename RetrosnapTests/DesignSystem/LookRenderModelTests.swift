@@ -13,16 +13,16 @@ struct LookRenderModelTests {
         LookRenderModel(camera: camera, adjustments: adjustments, framed: framed, stampEnabled: stamp)
     }
 
-    @Test func filmAtFullEffectUsesTheTableValues() {
-        let m = model(.film)
+    @Test func theDisposableAtFullEffectUsesTheTableValues() {
+        let m = model(.disposable)
         #expect(isClose(m.lookOpacity, 1))
-        #expect(isClose(m.tintOpacity, 0.2))
-        #expect(isClose(m.flashOpacity, 0))
+        #expect(isClose(m.tintOpacity, 0.18))
+        #expect(isClose(m.flashOpacity, 0.7))
         #expect(isClose(m.fadeOpacity, 0))
         #expect(isClose(m.chromaOpacity, 0))
         #expect(isClose(m.scanOpacity, 0))
-        #expect(isClose(m.vignetteOpacity, 0.6))
-        #expect(isClose(m.grainOpacity, 0.26))
+        #expect(isClose(m.vignetteOpacity, 0.4))
+        #expect(isClose(m.grainOpacity, 0.42))
         #expect(isClose(m.brightness, 1))
         #expect(isClose(m.contrast, 1))
         #expect(isClose(m.warmOpacity, 0))
@@ -51,15 +51,15 @@ struct LookRenderModelTests {
     @Test func grainFollowsTheSliderAndFadesWithTheEffect() {
         var heavy = PhotoAdjustments.neutral
         heavy.grain = 100
-        #expect(isClose(model(.film, heavy).grainOpacity, 0.52))
+        #expect(isClose(model(.disposable, heavy).grainOpacity, 0.84))
 
         var none = PhotoAdjustments.neutral
         none.grain = 0
-        #expect(isClose(model(.film, none).grainOpacity, 0))
+        #expect(isClose(model(.disposable, none).grainOpacity, 0))
 
         var faded = PhotoAdjustments.neutral
         faded.intensity = 0
-        #expect(isClose(model(.film, faded).grainOpacity, 0.26 * 0.4))
+        #expect(isClose(model(.disposable, faded).grainOpacity, 0.42 * 0.4))
     }
 
     @Test func grainOpacityNeverExceedsOne() {
@@ -93,7 +93,7 @@ struct LookRenderModelTests {
     }
 
     @Test(arguments: [
-        (CameraStyle.film, LookStamp.date),
+        (CameraStyle.film, LookStamp.dateSegments),
         (.disposable, .date),
         (.instant, .none),
         (.digicam, .date),
@@ -103,6 +103,9 @@ struct LookRenderModelTests {
         (.slide, .none),
         (.mediumFormat, .none),
         (.tlr, .none),
+        (.compactPro, .dateSegments),
+        (.classicSLR, .dateDots),
+        (.instSquare, .none),
     ])
     func stampKindPerCamera(camera: CameraStyle, expected: LookStamp) {
         #expect(model(camera).stamp == expected)
@@ -112,12 +115,21 @@ struct LookRenderModelTests {
         #expect(model(.film, stamp: false).stamp == .none)
     }
 
+    @Test func theDateBacksAreScreenedAndTheOthersPainted() {
+        #expect(LookStamp.dateSegments.isScreened)
+        #expect(LookStamp.dateDots.isScreened)
+        #expect(!LookStamp.dateMatrix.isScreened)
+        #expect(!LookStamp.date.isScreened)
+        #expect(!LookStamp.vhs.isScreened)
+        #expect(!LookStamp.none.isScreened)
+    }
+
     @Test func stampDisappearsOnceTheEffectIsMostlyOff() {
         var adjustments = PhotoAdjustments.neutral
         adjustments.intensity = 30
         #expect(model(.film, adjustments).stamp == .none)
         adjustments.intensity = 31
-        #expect(model(.film, adjustments).stamp == .date)
+        #expect(model(.film, adjustments).stamp == .dateSegments)
     }
 
     @Test(arguments: [
@@ -126,8 +138,13 @@ struct LookRenderModelTests {
         (.slide, .slideMount),
         (.mediumFormat, .mediumFormat),
         (.tlr, .square),
-        (.film, nil),
+        (.disposable, nil),
+        (.digicam, nil),
         (.plastic35, .fullFrame),
+        (.film, .fullFrame),
+        (.compactPro, .fullFrame),
+        (.classicSLR, .fullFrame),
+        (.instSquare, .squarePrint),
     ])
     func framedCamerasGetTheirFrame(camera: CameraStyle, frame: LookFrame?) {
         #expect(model(camera, framed: true).frame == frame)
@@ -151,7 +168,7 @@ struct LookRenderModelTests {
         #expect(m.halation?.radius == 2)
         #expect(m.halation?.tintHex == 0xFFFFFF)
         #expect(m.soft == nil)
-        #expect(model(.film).color == nil)
+        #expect(model(.disposable).color == nil)
     }
 
     @Test func filmGrainFollowsTheSliderAndFadesWithTheEffect() {
@@ -169,7 +186,7 @@ struct LookRenderModelTests {
         var faded = PhotoAdjustments.neutral
         faded.intensity = 0
         #expect(isClose(model(.negative, faded).filmGrain?.amount ?? 0, 0.065 * 0.4))
-        #expect(model(.film).filmGrain == nil)
+        #expect(model(.disposable).filmGrain == nil)
     }
 
     @Test func thePlasticCompactIsSharpWithNoSoftCorners() {

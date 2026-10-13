@@ -17,7 +17,20 @@ nonisolated enum LookStamp: Hashable, Sendable {
     /// A compact's date back: the date in a yellow dot-matrix with the year, month and day marks, burned into the
     /// lower right of the film's landscape frame (so it runs down the left edge of a portrait picture).
     case dateMatrix
+    /// A date back in red seven-segment digits ("10  8 '26": month, day, year), screened into the lower right of
+    /// the film's landscape frame; measured from the reference app (`DateBackStyle.segments`).
+    case dateSegments
+    /// The same date in a red dot matrix (`DateBackStyle.dots`).
+    case dateDots
     case vhs
+
+    /// Whether the stamp is screened over the picture (a lamp's light on the film) rather than painted on it.
+    var isScreened: Bool {
+        switch self {
+        case .dateSegments, .dateDots: true
+        case .none, .date, .dateMatrix, .vhs: false
+        }
+    }
 }
 
 /// The hue-dependent part of a measured colour response: around the hue circle, in eight sectors 45° apart
@@ -157,11 +170,25 @@ extension CameraStyle {
     nonisolated var look: CameraLook {
         switch self {
         case .film:
+            // D Classic: fit --reg 3 on its three pictures (2.0 and 2.0 and 2.2); the table 1.5 and 1.4 and 1.7.
             CameraLook(
-                filters: [.sepia(0.34), .saturate(1.3), .contrast(1.06), .brightness(1.03), .hueRotate(degrees: -8)],
-                blurRadius: 0, tintHex: 0xFF9A2E, tint: 0.2, flash: 0, fade: 0, chroma: 0, scan: 0,
-                vignette: 0.6, grain: 0.26, stamp: .date
+                blurRadius: 0.14, vignette: 0.096, stamp: .dateSegments,
+                color: ColorStage(
+                    matrix: [[1.0218, -0.0356, 0.1029, 0.0043], [0.0083, 1.0373, 0.0549, -0.0148], [-0.1299, -0.0311, 1.0270, 0.0467]],
+                    curves: [[0.0624, 0.0622, 0.2111, 0.4882, 0.7395, 0.9113], [0.0685, 0.0905, 0.2891, 0.5341, 0.7403, 0.8892],
+                             [0.0800, 0.0730, 0.2643, 0.5714, 0.8081, 0.9271]],
+                    hue: HueTerms(
+                        shift: [0.0267, 0.0253, 0.0491, 0.0330, -0.0424, -0.0754, -0.0050, 0.0833],
+                        saturation: [0.9431, 0.9553, 0.9229, 0.8721, 0.9035, 0.8611, 0.7493, 0.8740],
+                        lightness: [0.9966, 1.0059, 1.0211, 1.0260, 1.0137, 1.0015, 0.9730, 0.9829]
+                    )
+                ),
+                colorCube: "film",
+                halation: Halation(threshold: 0.5, radius: 0.75, amount: 0.15, tintHex: 0xFFFFFF),
+                filmGrain: FilmGrain(size: 0.8, amount: 0.048, color: 0.2),
+                frame: .fullFrame
             )
+
         case .disposable:
             CameraLook(
                 filters: [.contrast(1.22), .saturate(1.35), .sepia(0.16), .brightness(1.13)],
@@ -169,11 +196,25 @@ extension CameraStyle {
                 vignette: 0.4, grain: 0.42, stamp: .date
             )
         case .instant:
+            // Inst C: fit --reg 3 on its three pictures (2.9 and 3.5 and 2.9); the table 2.3 and 2.9 and 2.0.
             CameraLook(
-                filters: [.contrast(0.8), .saturate(0.74), .sepia(0.22), .brightness(1.12)],
-                blurRadius: 0, tintHex: 0xFFB9A0, tint: 0.22, flash: 0, fade: 0.16, chroma: 0, scan: 0,
-                vignette: 0.22, grain: 0.14, stamp: .none, frame: .instantPrint
+                blurRadius: 0.34, vignette: 0.352,
+                color: ColorStage(
+                    matrix: [[1.0039, -0.0594, 0.0869, 0.0195], [0.1334, 0.9392, 0.0657, -0.0390], [-0.0300, 0.1221, 1.0033, 0.0167]],
+                    curves: [[0.1162, 0.1296, 0.2031, 0.4316, 0.7646, 0.9025], [0.0743, 0.1111, 0.2575, 0.4932, 0.7663, 0.8922],
+                             [0.0423, 0.0475, 0.1901, 0.4849, 0.7973, 0.9050]],
+                    hue: HueTerms(
+                        shift: [-0.0080, -0.0092, -0.0195, -0.0546, -0.0251, 0.0120, 0.1845, 0.0383],
+                        saturation: [0.9739, 0.9756, 0.9536, 0.8913, 0.8826, 0.7775, 0.6562, 0.9517],
+                        lightness: [1.0201, 1.0155, 1.0259, 1.0386, 0.9971, 0.9503, 0.9368, 1.0400]
+                    )
+                ),
+                colorCube: "inst",
+                halation: Halation(threshold: 0.5, radius: 0.75, amount: 0.25, tintHex: 0xFFFFFF),
+                filmGrain: FilmGrain(size: 0.8, amount: 0.07, color: 0.22),
+                frame: .instantPrint
             )
+
         case .digicam:
             CameraLook(
                 filters: [.contrast(1.16), .saturate(0.86), .brightness(1.06)],
@@ -297,6 +338,69 @@ extension CameraStyle {
                 filmGrain: FilmGrain(size: 0.8, amount: 0.037, color: 0.2),
                 frame: .square
             )
+
+        // Batch 2: fitted from the reference app's exports on three pictures (`ref/pairs/<id>`, `<id>-1`, `<id>-2`).
+
+        case .compactPro:
+            // CT2F: fit --reg 3 on its three pictures (2.9 and 3.0 and 3.6); the table 2.3 and 2.5 and 2.9.
+            CameraLook(
+                blurRadius: 0.10, vignette: 0.209, stamp: .dateSegments,
+                color: ColorStage(
+                    matrix: [[1.0133, -0.0231, -0.0154, -0.0309], [0.1164, 0.8500, -0.2415, 0.0256], [0.1058, 0.2729, 0.8329, -0.0985]],
+                    curves: [[0.0856, 0.1277, 0.3786, 0.6569, 0.8256, 0.9302], [0.0839, 0.1087, 0.4452, 0.7102, 0.8406, 0.8393],
+                             [0.0879, 0.1619, 0.4014, 0.6399, 0.8106, 0.9064]],
+                    hue: HueTerms(
+                        shift: [-0.0013, 0.0278, 0.0775, -0.0397, -0.0039, 0.0992, 0.1441, 0.0687],
+                        saturation: [1.0167, 0.9972, 1.0210, 0.9962, 0.9572, 0.9164, 0.9929, 1.0759],
+                        lightness: [1.0043, 1.0594, 1.1057, 1.0849, 1.0600, 1.0369, 0.9516, 1.0005]
+                    )
+                ),
+                colorCube: "compactPro",
+                halation: Halation(threshold: 0.5, radius: 16, amount: 0.15, tintHex: 0xE0F0FF),
+                filmGrain: FilmGrain(size: 0.8, amount: 0.045, color: 0.28),
+                frame: .fullFrame
+            )
+
+        case .classicSLR:
+            // Classic U: fit --reg 3 on its three pictures (2.9 and 3.2 and 3.4); the table 2.5 and 2.8 and 2.8.
+            CameraLook(
+                blurRadius: 0.05, vignette: 0.168, stamp: .dateDots,
+                color: ColorStage(
+                    matrix: [[1.0022, -0.0835, 0.0232, -0.0064], [0.0069, 0.9910, 0.1513, -0.0054], [-0.1829, -0.0362, 0.9989, 0.0573]],
+                    curves: [[0.0810, 0.1095, 0.2811, 0.5445, 0.8243, 0.9443], [0.0421, 0.0750, 0.2520, 0.4973, 0.7316, 0.9049],
+                             [0.0297, 0.0280, 0.2849, 0.6718, 0.8947, 0.9386]],
+                    hue: HueTerms(
+                        shift: [0.0339, 0.0105, -0.0024, -0.0543, -0.0567, -0.0148, 0.1538, 0.1483],
+                        saturation: [0.9588, 0.9717, 0.9563, 0.9123, 0.9054, 0.8269, 0.6750, 0.8842],
+                        lightness: [0.9945, 0.9955, 0.9919, 0.9807, 0.9891, 0.9756, 0.9773, 0.9902]
+                    )
+                ),
+                colorCube: "classicSLR",
+                halation: Halation(threshold: 0.6, radius: 1.5, amount: 0.15, tintHex: 0xFFFFFF),
+                filmGrain: FilmGrain(size: 0.8, amount: 0.128, color: 0.15),
+                frame: .fullFrame
+            )
+
+        case .instSquare:
+            // Inst SQC: fit --reg 3 on its three pictures (2.4 and 2.2 and 2.9); the table 1.8 and 1.6 and 2.3.
+            CameraLook(
+                blurRadius: 0.36, vignette: 0.177,
+                color: ColorStage(
+                    matrix: [[1.0071, -0.0791, 0.0995, 0.0468], [0.1554, 0.9335, 0.0743, -0.0294], [-0.0462, 0.1232, 1.0202, 0.0281]],
+                    curves: [[0.1164, 0.1209, 0.1886, 0.4206, 0.7700, 0.8888], [0.0702, 0.1022, 0.2516, 0.4967, 0.7668, 0.8784],
+                             [0.0397, 0.0397, 0.1881, 0.4957, 0.8039, 0.8889]],
+                    hue: HueTerms(
+                        shift: [0.0028, 0.0007, -0.0008, -0.0343, -0.0148, 0.0136, 0.1886, 0.0541],
+                        saturation: [0.9669, 0.9739, 0.9550, 0.9140, 0.8846, 0.7552, 0.6531, 0.9294],
+                        lightness: [1.0044, 1.0074, 1.0171, 1.0307, 0.9887, 0.9377, 0.9408, 0.9990]
+                    )
+                ),
+                colorCube: "instSquare",
+                halation: Halation(threshold: 0.5, radius: 1.5, amount: 0.25, tintHex: 0xFFFFFF),
+                filmGrain: FilmGrain(size: 0.8, amount: 0.069, color: 0.22),
+                frame: .squarePrint
+            )
+
         }
     }
 }

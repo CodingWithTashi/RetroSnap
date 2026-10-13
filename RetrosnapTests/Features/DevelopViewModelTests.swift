@@ -33,10 +33,10 @@ struct DevelopViewModelTests {
         #expect(!vm.isVideo)
         #expect(vm.kindTitle == "Photo")
         #expect(vm.shutterLabel == "Develop photo")
-        #expect(vm.chipLabel == "Camera: 35mm Film. Change camera")
-        #expect(vm.pictureLabel == "Photo from your library, 35mm Film")
-        #expect(vm.stripTitle == "35mm Film")
-        #expect(vm.stripSubtitle == "Golden tones, fine grain and soft edges.")
+        #expect(vm.chipLabel == "Camera: D Classic. Change camera")
+        #expect(vm.pictureLabel == "Photo from your library, D Classic")
+        #expect(vm.stripTitle == "D Classic")
+        #expect(vm.stripSubtitle == "True, gently warm colour and a red date in the corner.")
         #expect(vm.stamp.date == "'26 10 11")
         #expect(vm.picture == draft.image)
         #expect(vm.badgeText == nil)
@@ -92,7 +92,7 @@ struct DevelopViewModelTests {
         vm.pictureSwiped(.right)
         #expect(vm.style == .film)
         vm.pictureSwiped(.right)
-        #expect(vm.style == .tlr)
+        #expect(vm.style == CameraStyle.allCases.last)
         #expect(vm.styleChangeCount == 3)
     }
 

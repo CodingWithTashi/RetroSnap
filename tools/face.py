@@ -15,7 +15,10 @@ def box(a, n=4):
 cam, fit_path = sys.argv[1], sys.argv[2]; render = "--render" in sys.argv
 p = ColourStage.from_json(json.load(open(fit_path)))
 R = __file__.rsplit("/", 1)[0] + "/../ref/pairs"
-for pair in [cam, f"{cam}-1"]:
+import os
+for pair in [cam, f"{cam}-1", f"{cam}-2"]:
+    if not os.path.exists(f"{R}/{pair}-input.png"):
+        continue
     inp, ref = load(f"{R}/{pair}-input.png"), load(f"{R}/{pair}-reference.png")
     h, w = ref.shape[:2]
     if render:

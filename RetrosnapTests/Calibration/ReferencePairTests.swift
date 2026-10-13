@@ -18,6 +18,11 @@ struct ReferencePairTests {
         FileManager.default.fileExists(atPath: pairs.appendingPathComponent("negative-input.png").path)
     }
 
+    /// The cameras fitted from reference pairs: batch 1, then batch 2 (which re-tuned D Classic and Inst C).
+    nonisolated static let fittedCameras: [CameraStyle] = [
+        .negative, .plastic35, .slide, .mediumFormat, .tlr, .film, .instant, .compactPro, .classicSLR, .instSquare,
+    ]
+
     /// The pairs a camera has: `<id>` for the picture it was first fitted on, then `<id>-1`, `<id>-2`, … for
     /// each picture added since, as "Re-verifying a shipped batch with a new picture" names them.
     nonisolated static func pairNames(for camera: CameraStyle) -> [String] {
@@ -29,7 +34,7 @@ struct ReferencePairTests {
         return names
     }
 
-    @Test(.enabled(if: hasPairs), arguments: [CameraStyle.negative, .plastic35, .slide, .mediumFormat, .tlr])
+    @Test(.enabled(if: hasPairs), arguments: fittedCameras)
     func rendersEveryReferencePair(camera: CameraStyle) throws {
         let renderer = try LookRenderer()
         let model = LookRenderModel(camera: camera, adjustments: .neutral, framed: false, stampEnabled: false)
@@ -37,11 +42,11 @@ struct ReferencePairTests {
             let input = Self.pairs.appendingPathComponent("\(name)-input.png")
             let source = try #require(CIImage(contentsOf: input))
             // The pair is the window's content, the way up the input was; scale it as the Viewer shows that
-            // window of a 3:4 photo taken that way up.
+            // window of a 3:4 photo taken that way up, on the camera's own canvas at the Viewer's width.
             let portrait = source.extent.height > source.extent.width
-            let canvas = CGSize(width: BakeLayout.photoWidth, height: BakeLayout.photoWidth * (portrait ? 4.0 / 3 : 3.0 / 4))
-            let window = camera.look.frame?.window(in: canvas) ?? CGRect(origin: .zero, size: canvas)
-            let scale = source.extent.width / window.width
+            let photoAspect: CGFloat = portrait ? 3.0 / 4 : 4.0 / 3
+            let layout = BakeLayout(source: CGSize(width: 3000 * photoAspect, height: 3000), frame: camera.look.frame)
+            let scale = source.extent.width / layout.pointSize.width
             let rendered = renderer.render(source, model: model, scale: scale)
             let output = Self.pairs.appendingPathComponent("\(name)-retrosnap.png")
             try renderer.context.writePNGRepresentation(

@@ -10,13 +10,15 @@ struct LookUniformsTests {
     }
 
     @Test func filterStepsCarryTheShadersNumbering() {
-        let operations = uniforms(.film).operations
-        #expect(operations.map(\.kind) == [1, 2, 3, 4, 5])
-        #expect(isClose(operations[0].amount, 0.34))
-        #expect(isClose(operations[1].amount, 1.3))
+        let operations = uniforms(.camcorder).operations
+        #expect(operations.map(\.kind) == [2, 3, 4, 0, 0])
+        #expect(isClose(operations[0].amount, 1.5))
+        #expect(isClose(operations[1].amount, 0.9))
         #expect(isClose(operations[2].amount, 1.06))
-        #expect(isClose(operations[3].amount, 1.03))
-        #expect(isClose(operations[4].amount, -8 * Double.pi / 180))
+        let hueRotated = LookUniforms.operations([.hueRotate(degrees: -8)])
+        #expect(hueRotated[0].kind == 5)
+        #expect(isClose(hueRotated[0].amount, -8 * Double.pi / 180))
+        #expect(LookUniforms.operations([.sepia(0.34)])[0].kind == 1)
     }
 
     @Test func aShorterChainIsPaddedToTheShadersFiveSteps() {
@@ -26,25 +28,25 @@ struct LookUniformsTests {
     }
 
     @Test func coloursAreRawSRGBWithTheirOpacity() {
-        let tint = uniforms(.film).tint
+        let tint = uniforms(.disposable).tint
         #expect(isClose(tint.red, 1))
-        #expect(isClose(tint.green, 154.0 / 255))
-        #expect(isClose(tint.blue, 46.0 / 255))
-        #expect(isClose(tint.opacity, 0.2))
+        #expect(isClose(tint.green, 207.0 / 255))
+        #expect(isClose(tint.blue, 90.0 / 255))
+        #expect(isClose(tint.opacity, 0.18))
 
         var warm = PhotoAdjustments.neutral
         warm.warmth = -30
-        let wash = uniforms(.film, warm).warm
+        let wash = uniforms(.disposable, warm).warm
         #expect(isClose(wash.red, 47.0 / 255))
         #expect(isClose(wash.blue, 1))
         #expect(isClose(wash.opacity, 0.3))
     }
 
     @Test func aFilterChainCameraHasNoColourStage() {
-        #expect(uniforms(.film).colorStage == nil)
-        #expect(isClose(uniforms(.film).filmGrain.y, 0))
-        #expect(isClose(uniforms(.film).halation.y, 0))
-        #expect(isClose(uniforms(.film).soft.z, 0))
+        #expect(uniforms(.disposable).colorStage == nil)
+        #expect(isClose(uniforms(.disposable).filmGrain.y, 0))
+        #expect(isClose(uniforms(.disposable).halation.y, 0))
+        #expect(isClose(uniforms(.disposable).soft.z, 0))
     }
 
     @Test func theColourStageIsPackedAsEighteenVectors() {

@@ -13,15 +13,19 @@ nonisolated enum CameraStyle: String, CaseIterable, Identifiable, Hashable, Send
     case slide
     case mediumFormat
     case tlr
+    case compactPro
+    case classicSLR
+    case instSquare
 
     var id: String { rawValue }
 
-    /// Cameras added from the lineup are named exactly as the reference app names them (D6 in `docs/camera-lineup.md`).
+    /// Cameras matched to the reference app are named exactly as it names them (D6 in `docs/camera-lineup.md`);
+    /// the three still on the design's looks keep the design's names until their references arrive.
     var name: String {
         switch self {
-        case .film: "35mm Film"
+        case .film: "D Classic"
         case .disposable: "Disposable"
-        case .instant: "Instant"
+        case .instant: "Inst C"
         case .digicam: "Digicam"
         case .camcorder: "Camcorder"
         case .negative: "135 NE"
@@ -29,14 +33,17 @@ nonisolated enum CameraStyle: String, CaseIterable, Identifiable, Hashable, Send
         case .slide: "D Slide"
         case .mediumFormat: "S 67"
         case .tlr: "S Classic"
+        case .compactPro: "CT2F"
+        case .classicSLR: "Classic U"
+        case .instSquare: "Inst SQC"
         }
     }
 
     var badge: String {
         switch self {
-        case .film: "Golden"
+        case .film: "Everyday"
         case .disposable: "Flash"
-        case .instant: "Square"
+        case .instant: "Mini print"
         case .digicam: "Date stamp"
         case .camcorder: "Home video"
         case .negative: "Sprockets"
@@ -44,14 +51,17 @@ nonisolated enum CameraStyle: String, CaseIterable, Identifiable, Hashable, Send
         case .slide: "Mounted"
         case .mediumFormat: "6×7"
         case .tlr: "1:1"
+        case .compactPro: "Premium"
+        case .classicSLR: "SLR"
+        case .instSquare: "Square print"
         }
     }
 
     var summary: String {
         switch self {
-        case .film: "Golden tones, fine grain and soft edges. The classic everyday look."
+        case .film: "True, gently warm colour and a red date in the corner. The everyday 35mm point-and-shoot."
         case .disposable: "Bright on-camera flash, warm grain, a little overexposed. Made for nights out."
-        case .instant: "Soft, faded square prints in a white frame, like they just slid out of the camera."
+        case .instant: "Soft, cool pastels on a mini print in a white frame. Like it just slid out of the camera."
         case .digicam: "Crisp early-2000s digital with a cool cast and an orange date in the corner."
         case .camcorder: "Fuzzy home-video color with scanlines and an on-screen timestamp."
         case .negative: "Colour negative on the scanned strip, sprocket holes and all. Warm, grainy and honest."
@@ -59,6 +69,9 @@ nonisolated enum CameraStyle: String, CaseIterable, Identifiable, Hashable, Send
         case .slide: "Slide film in a cardboard mount. Rich colour, deep shadows and a tiny picture to hold up to the light."
         case .mediumFormat: "Medium format at 6×7: a big negative with fine grain and smooth tones. Portraits love it."
         case .tlr: "A twin-lens reflex shooting square frames. Fine grain, creamy skin and a black rebate."
+        case .compactPro: "A premium 1990s compact: rich colour, deep contrast, fine grain and a red date in the corner."
+        case .classicSLR: "A classic 35mm SLR on consumer colour film: natural tones, honest grain and a dotted date in the corner."
+        case .instSquare: "A square instant print in a coloured frame. Gentle colour and a wide border to write on."
         }
     }
 
@@ -81,6 +94,9 @@ nonisolated enum CameraStyle: String, CaseIterable, Identifiable, Hashable, Send
         case .slide: 0x5FC7B8
         case .mediumFormat: 0xD9C3A5
         case .tlr: 0xA7B4C2
+        case .compactPro: 0xC9B79C
+        case .classicSLR: 0xD6553F
+        case .instSquare: 0x7FB8D6
         }
     }
 
@@ -97,6 +113,9 @@ nonisolated enum CameraStyle: String, CaseIterable, Identifiable, Hashable, Send
         case .slide: 0x262E29
         case .mediumFormat: 0x312D27
         case .tlr: 0x2C2C2A
+        case .compactPro: 0x302C26
+        case .classicSLR: 0x32221C
+        case .instSquare: 0x282C2D
         }
     }
 
@@ -112,6 +131,9 @@ nonisolated enum CameraStyle: String, CaseIterable, Identifiable, Hashable, Send
         case .slide: .photo(110)
         case .mediumFormat: .photo(1074)
         case .tlr: .photo(1025)
+        case .compactPro: .photo(1011)
+        case .classicSLR: .photo(1016)
+        case .instSquare: .photo(1080)
         }
     }
 

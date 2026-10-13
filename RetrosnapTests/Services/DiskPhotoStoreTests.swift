@@ -110,6 +110,8 @@ final class DiskPhotoStoreTests {
         let store = relaunched()
         var wide = photo("w")
         wide.pixelSize = PixelSize(width: 4032, height: 3024)
+        // A camera without a canvas shows the picture in its own shape.
+        wide.camera = .disposable
         store.add(wide)
         let saved = relaunched().photo(id: "w")
         #expect(saved?.pixelSize == PixelSize(width: 4032, height: 3024))
@@ -117,7 +119,8 @@ final class DiskPhotoStoreTests {
         #expect(saved?.displayAspect == 4032.0 / 3024.0)
         var instant = wide
         instant.camera = .instant
-        #expect(instant.displayAspect == InstantPrint.size.width / InstantPrint.size.height)
+        // A landscape photo's mini print lies down: a 3:2 sheet.
+        #expect(instant.displayAspect == 1.5)
     }
 
     @Test func justNowDoesNotOutliveTheSession() {

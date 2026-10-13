@@ -66,27 +66,27 @@ final class RetrosnapUITests: XCTestCase {
         finishOnboarding()
         tap("Allow Photos")
 
-        // First launch: the strip is open and 35mm Film is already on.
+        // First launch: the strip is open and D Classic is already on.
         expectText("Choose a camera")
         expectButton("Take photo")
 
         // One tap on a card switches the look and folds the strip into the chip.
-        let instant = buttonStarting(with: "Instant.")
+        let instant = buttonStarting(with: "Inst C.")
         XCTAssertTrue(instant.waitForExistence(timeout: 5))
         instant.tap()
-        expectButton("Camera: Instant. Change camera")
+        expectButton("Camera: Inst C. Change camera")
 
         // The first photo opens the result.
         tap("Take photo")
         expectButton("Take another")
-        expectText("Instant · Just now")
+        expectText("Inst C · Just now")
         expectText("Saved to Photos")
         tap("Take another")
 
         // Back in the camera on the same look; the second photo stays here.
-        expectButton("Camera: Instant. Change camera")
+        expectButton("Camera: Inst C. Change camera")
         tap("Take photo")
-        expectText("Saved · Instant")
+        expectText("Saved · Inst C")
         expectButton("Take photo")
         XCTAssertFalse(button("Take another").exists)
     }
@@ -118,8 +118,8 @@ final class RetrosnapUITests: XCTestCase {
         tap("Not now")
         expectText("Saving inside RetroSnap only")
 
-        // Leave the camera on Instant with the flash on, take one photo, then turn the timer on.
-        let instant = buttonStarting(with: "Instant.")
+        // Leave the camera on Inst C with the flash on, take one photo, then turn the timer on.
+        let instant = buttonStarting(with: "Inst C.")
         XCTAssertTrue(instant.waitForExistence(timeout: 5))
         instant.tap()
         tap("Flash: auto")
@@ -139,14 +139,14 @@ final class RetrosnapUITests: XCTestCase {
         app.launch()
 
         // Straight to the camera, as it was left: no onboarding and no first-launch strip.
-        expectButton("Camera: Instant. Change camera")
+        expectButton("Camera: Inst C. Change camera")
         expectButton("Flash: on")
         expectButton("Self-timer on, 3 seconds")
         XCTAssertFalse(button("Continue").exists)
 
         // The photo and the setting are still there.
         tap("Open photos")
-        expectButton("Instant photo, Today")
+        expectButton("Inst C photo, Today")
         tap("Settings")
         XCTAssertTrue(haptics.waitForExistence(timeout: 5))
         XCTAssertEqual(haptics.value as? String, "Off")
@@ -165,16 +165,16 @@ final class RetrosnapUITests: XCTestCase {
         expectText("Photos")
 
         // Viewer, with paging that must not pop the screen.
-        let firstTile = app.buttons["35mm Film photo, Today"].firstMatch
+        let firstTile = app.buttons["D Classic photo, Today"].firstMatch
         XCTAssertTrue(firstTile.waitForExistence(timeout: 5))
         firstTile.tap()
         expectButton("Back to photos")
-        expectText("35mm Film")
+        expectText("D Classic")
         app.swipeLeft()
         expectText("Disposable")
         expectButton("Back to photos")
         app.swipeRight()
-        expectText("35mm Film")
+        expectText("D Classic")
 
         // Edit, then back to the viewer.
         tap("Edit")
@@ -246,10 +246,10 @@ final class RetrosnapUITests: XCTestCase {
         tap("Open photos")
         tap("Add from your library")
         expectButton("Develop photo")
-        expectButton("Camera: 35mm Film. Change camera")
+        expectButton("Camera: D Classic. Change camera")
 
         // The same strip as the camera's; a card changes the look.
-        tap("Camera: 35mm Film. Change camera")
+        tap("Camera: D Classic. Change camera")
         let digicam = buttonStarting(with: "Digicam.")
         XCTAssertTrue(digicam.waitForExistence(timeout: 5))
         digicam.tap()
@@ -290,7 +290,7 @@ final class RetrosnapUITests: XCTestCase {
         let zoom = buttonStarting(with: "Zoom: ")
         XCTAssertTrue(zoom.waitForExistence(timeout: 5))
         XCTAssertNotEqual(zoom.label, "Zoom: 1×")
-        expectButton("Camera: 35mm Film. Change camera")
+        expectButton("Camera: D Classic. Change camera")
 
         // One finger still swipes to the next camera.
         viewfinder.swipeLeft()

@@ -39,18 +39,19 @@ final class PhotoExporterTests {
     }
 
     @Test func aBakedPhotoIsTheSizeOfItsOriginal() async throws {
-        let baked = try #require(await exporter.bake(try shot(.film)))
+        // A camera without a canvas: the file is the photo.
+        let baked = try #require(await exporter.bake(try shot(.digicam)))
         let picture = try #require(describe(baked))
         #expect(picture.width == 300)
         #expect(picture.height == 400)
     }
 
     @Test func theLookIsDrawnIntoTheFile() async throws {
-        var photo = try shot(.film)
+        var photo = try shot(.digicam)
         photo.adjustments = PhotoAdjustments(intensity: 100, grain: 0)
         let baked = try #require(await exporter.bake(photo))
-        // The film chain and tint on the fixtures' orange; JPEG costs a level or two.
-        #expect(try centre(of: baked).isClose(to: Pixel(red: 237, green: 135, blue: 47), tolerance: 4))
+        // The Digicam's chain, tint and flash on the fixtures' orange (`LookRendererTests`); JPEG costs a level or two.
+        #expect(try centre(of: baked).isClose(to: Pixel(red: 209, green: 133, blue: 62), tolerance: 4))
     }
 
     @Test func editsAreBakedInToo() async throws {
@@ -66,7 +67,7 @@ final class PhotoExporterTests {
     }
 
     @Test func aSidewaysOriginalIsBakedUprightAndSaysSo() async throws {
-        let baked = try #require(await exporter.bake(try shot(.film, width: 400, height: 300, orientation: .right)))
+        let baked = try #require(await exporter.bake(try shot(.digicam, width: 400, height: 300, orientation: .right)))
         let picture = try #require(describe(baked))
         #expect(picture.width == 300)
         #expect(picture.height == 400)
@@ -114,12 +115,16 @@ final class PhotoExporterTests {
     @Test func anInstantPhotoIsBakedAsAFramedPrint() async throws {
         let baked = try #require(await exporter.bake(try shot(.instant)))
         let picture = try #require(describe(baked))
-        #expect(isClose(Double(picture.height) / Double(picture.width), 107.0 / 88, tolerance: 0.01))
+        // A 3:4 photo's mini print stands on a 2:3 sheet, the print's paper inside the white sheet.
+        #expect(isClose(Double(picture.height) / Double(picture.width), 1.5, tolerance: 0.01))
         #expect(picture.width > 300)
 
         let image = try #require(CIImage(data: baked))
         let corner = renderer.context.pixel(of: image, x: 3, y: 3)
-        #expect(corner.isClose(to: Pixel(red: 0xF7, green: 0xF3, blue: 0xEC), tolerance: 3))
+        #expect(corner.isClose(to: Pixel(red: 255, green: 255, blue: 255), tolerance: 2))
+        let border = renderer.context.pixel(of: image, x: Int(image.extent.width * 0.08), y: Int(image.extent.height / 2))
+        #expect(border.red > 215 && border.red < 250)
+        #expect(abs(border.red - border.blue) < 8)
     }
 
     @Test func aDateStampedCameraLeavesItsStampInTheCorner() async throws {
@@ -144,7 +149,7 @@ final class PhotoExporterTests {
     /// Three flat originals in the library, shown as they are so their colours can be read back exactly.
     private func collage(_ template: CollageTemplate = .feature, border: CollageBorder = .cream) throws -> Collage {
         let photos = try (0..<template.photoCount).map { _ in
-            var photo = try shot(.film)
+            var photo = try shot(.digicam)
             photo.adjustments = .original
             return photo
         }
@@ -178,7 +183,7 @@ final class PhotoExporterTests {
         let left = renderer.context.pixel(of: image, x: Int(image.extent.width) / 4, y: y)
         let right = renderer.context.pixel(of: image, x: Int(image.extent.width) * 3 / 4, y: y)
         #expect(left.isClose(to: Pixel(red: 200, green: 120, blue: 40), tolerance: 4))
-        #expect(right.isClose(to: Pixel(red: 237, green: 135, blue: 47), tolerance: 5))
+        #expect(right.isClose(to: Pixel(red: 209, green: 133, blue: 62), tolerance: 5))
     }
 
     @Test func aSavedCollageIsFiledAsAPhotoWithNoLookOnTop() async throws {
@@ -209,7 +214,7 @@ final class PhotoExporterTests {
     // MARK: Prints
 
     @Test func aPrintIsThePhotoOnWhitePaperInThePapersShape() async throws {
-        var photo = try shot(.film, width: 600, height: 800)
+        var photo = try shot(.digicam, width: 600, height: 800)
         photo.adjustments = PhotoAdjustments(intensity: 100, grain: 0)
         let job = PrintJob(photo: photo, size: .fourBySix, hasBorder: true, copies: 1)
         let file = try #require(await exporter.printFile(for: job))
@@ -218,7 +223,7 @@ final class PhotoExporterTests {
         #expect(isClose(image.extent.width / image.extent.height, 240.0 / 360, tolerance: 0.01))
         #expect(renderer.context.pixel(of: image, x: 3, y: 3).isClose(to: Pixel(red: 255, green: 255, blue: 255), tolerance: 2))
         let centre = renderer.context.pixel(of: image, x: Int(image.extent.width) / 2, y: Int(image.extent.height) / 2)
-        #expect(centre.isClose(to: Pixel(red: 237, green: 135, blue: 47), tolerance: 5))
+        #expect(centre.isClose(to: Pixel(red: 209, green: 133, blue: 62), tolerance: 5))
     }
 
     @Test func withoutABorderThePhotoFillsThePaper() async throws {
@@ -285,7 +290,7 @@ final class PhotoExporterTests {
     }
 
     @Test func theLookIsDrawnIntoEveryFrameOfAClip() async throws {
-        let baked = try #require(await exporter.bakeClip(try await clip(.film)))
+        let baked = try #require(await exporter.bakeClip(try await clip(.digicam)))
         defer { try? FileManager.default.removeItem(at: baked) }
         let generator = AVAssetImageGenerator(asset: AVURLAsset(url: baked))
         generator.appliesPreferredTrackTransform = true
@@ -293,8 +298,8 @@ final class PhotoExporterTests {
             let frame = try await generator.image(at: CMTime(seconds: second, preferredTimescale: 600)).image
             let image = CIImage(cgImage: frame)
             let centre = renderer.context.pixel(of: image, x: frame.width / 2, y: frame.height / 2)
-            // The film chain and tint on the fixtures' orange; video compression costs a few levels.
-            #expect(centre.isClose(to: Pixel(red: 237, green: 135, blue: 47), tolerance: 12))
+            // The Digicam's chain, tint and flash on the fixtures' orange; video compression costs a few levels.
+            #expect(centre.isClose(to: Pixel(red: 209, green: 133, blue: 62), tolerance: 12))
         }
     }
 

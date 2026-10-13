@@ -6,8 +6,6 @@ nonisolated struct BakeLayout: Hashable, Sendable {
     /// The width the Viewer gives a photo on the design's 390pt screen. Grain, scanlines and stamps are
     /// sized in points, so the file is drawn as that screen shows it.
     static let photoWidth = DesignLayout.referenceSize.width
-    /// The width the Viewer gives an Instant print.
-    static let printWidth = InstantPrint.viewerWidth
 
     /// The part of the original that ends up in the picture, in pixels.
     let crop: CGRect
@@ -65,18 +63,6 @@ nonisolated struct BakeLayout: Hashable, Sendable {
             canvas = source
             photoOrigin = .zero
             scale = source.width / Self.photoWidth
-        case .instantPrint:
-            // The photo fills the print's window from its centre, as `scaledToFill` does on screen.
-            let windowWidth = 1 - InstantPrint.side * 2
-            let windowHeight = InstantPrint.size.height / InstantPrint.size.width - InstantPrint.side - InstantPrint.bottom
-            crop = Self.centredCrop(of: source, aspect: windowWidth / windowHeight)
-            let size = crop.size
-            let printWidth = size.width / windowWidth
-            let side = (printWidth * InstantPrint.side).rounded()
-            let bottom = (printWidth * InstantPrint.bottom).rounded()
-            canvas = CGSize(width: size.width + side * 2, height: bottom + size.height + side)
-            photoOrigin = CGPoint(x: side, y: bottom)
-            scale = canvas.width / Self.printWidth
         case .fullFrame:
             // The film's crop and nothing around it, measured as the Viewer shows it at its full width.
             let aspect = LookFrame.fullFrame.pictureAspect(forPhotoAspect: source.width / source.height)

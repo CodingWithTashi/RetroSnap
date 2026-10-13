@@ -1,9 +1,9 @@
 """Fit a camera's colour as a 3D lookup table from its reference pairs, on top of the parametric fit.
 
     venv/bin/python tools/lut.py <id> <outdir> --pair <prefix> [--pair ...] [--size 17] [--prior 4] [--smooth 20]
-                                 [--weight <pair>=w] [--skin k]
+                                 [--weight <pair>=w] [--skin k] [--halation t,r,a,tint] [--blur r]
 
-The table maps the picture after the halation glow (sRGB, gamma-encoded) to the reference with the look's vignette
+The table maps the picture after the halation glow and the camera's blur (`--blur`, its `blurRadius` in points; sRGB, gamma-encoded) to the reference with the look's vignette
 taken out, so the vignette and the glow stay the spatial layers they are. Trilinear interpolation is linear in the
 table's values, so the fit is one sparse least-squares solve per channel: every box-filtered sample of every pair
 (each pair counting the same, as `fit.py` does, `--weight` leaning toward one, `--skin` favouring skin tones)
@@ -31,7 +31,7 @@ DARK = np.array([20, 10, 0]) / 255
 
 def parse(argv):
     cam, outdir = argv[0], argv[1]
-    opts = {"pairs": [], "size": 17, "prior": 4.0, "smooth": 20.0, "weights": {}, "skin": 0.0, "fit": None, "halation": None}
+    opts = {"pairs": [], "size": 17, "prior": 4.0, "smooth": 20.0, "weights": {}, "skin": 0.0, "fit": None, "halation": None, "blur": 0.0}
     i = 2
     while i < len(argv):
         flag = argv[i]
@@ -54,6 +54,8 @@ def parse(argv):
         elif flag == "--weight":
             name, _, value = argv[i + 1].rpartition("=")
             opts["weights"][name] = float(value); i += 2
+        elif flag == "--blur":
+            opts["blur"] = float(argv[i + 1]); i += 2
         else:
             i += 1
     return cam, outdir, opts
@@ -139,10 +141,12 @@ def main(argv):
         ref = np.asarray(Image.open(prefix + "-reference.png").convert("RGB")).astype(np.float64) / 255
         own = json.load(open(prefix + ".json")) if os.path.exists(prefix + ".json") else {}
         h, w = ref.shape[:2]
+        window = WINDOW_POINTS[cam][0 if w >= h else 1]
         if o["halation"]:
             t, r, a, tint = o["halation"]
-            window = WINDOW_POINTS[cam][0 if w >= h else 1]
             inp = with_halation(inp, t, a, TINTS[tint], r * (w / window))
+        if o["blur"]:
+            inp = np.stack([ndimage.gaussian_filter(inp[..., c], o["blur"] * (w / window), mode="nearest") for c in range(3)], -1)
         A, B, UV = samples(inp, ref, own.get("inset", 0.02), own.get("mask"))
         B = unvignette(B, UV, vig)
         A, B, UV = subsample((A, B, UV), 300_000)
@@ -194,7 +198,7 @@ def main(argv):
                     v = rgb_cube[r, gg, b]
                     f.write(f"{v[0]:.6f} {v[1]:.6f} {v[2]:.6f}\n")
     worst = max(results.values(), key=lambda x: x["deltaE_median"])
-    json.dump({"camera": cam, "size": size, "prior": o["prior"], "smooth": o["smooth"], "skin": o["skin"], "halation": o["halation"],
+    json.dump({"camera": cam, "size": size, "prior": o["prior"], "smooth": o["smooth"], "skin": o["skin"], "halation": o["halation"], "blur": o["blur"],
                "fit": fit_path, "vignette": vig, "pairs": [{"name": n, "weight": weights[n]} | r for n, r in results.items()],
                "deltaE_median": worst["deltaE_median"]}, open(f"{outdir}/{cam}-lut.json", "w"), indent=2)
     print(f"wrote {outdir}/{cam}.cube")

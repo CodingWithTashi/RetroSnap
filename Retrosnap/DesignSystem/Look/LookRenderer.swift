@@ -103,7 +103,7 @@ nonisolated final class LookRenderer: @unchecked Sendable {
         ]) ?? image
 
         if let stamp {
-            image = stamp.composited(over: image).cropped(to: extent)
+            image = model.stamp.isScreened ? Self.screen(stamp, over: image) : stamp.composited(over: image).cropped(to: extent)
         }
         if model.needsAdjustmentPass {
             image = adjust.apply(extent: extent, arguments: [image, uniforms.brightness, uniforms.contrast]) ?? image

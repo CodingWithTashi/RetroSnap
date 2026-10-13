@@ -9,14 +9,51 @@ struct LookFrameTests {
     private let portrait: CGFloat = 3.0 / 4
     private let landscape: CGFloat = 4.0 / 3
 
-    @Test func theInstantWindowIsTheDesignsPadding() {
-        let window = LookFrame.instantPrint.window(in: CGSize(width: 88, height: 107))
-        #expect(isClose(window.minX, 88 * 0.055, tolerance: 1e-9))
-        #expect(isClose(window.minY, 88 * 0.055, tolerance: 1e-9))
-        #expect(isClose(window.width, 88 * 0.89, tolerance: 1e-9))
-        #expect(isClose(window.height, 107 - 88 * 0.275, tolerance: 1e-9))
-        #expect(isClose(LookFrame.instantPrint.canvasAspect(forPhotoAspect: portrait), 88.0 / 107, tolerance: 1e-9))
-        #expect(isClose(LookFrame.instantPrint.canvasAspect(forPhotoAspect: landscape), 88.0 / 107, tolerance: 1e-9))
+    @Test func theMiniPrintStandsOnItsSheetAndTurnsWithThePhoto() {
+        // Standing up: a 2:3 sheet, the print 0.899 of it wide with its 3:4 window 0.845 of the print wide.
+        #expect(isClose(LookFrame.instantPrint.canvasAspect(forPhotoAspect: portrait), 2.0 / 3, tolerance: 1e-9))
+        let canvas = CGSize(width: 390, height: 585)
+        let geometry = MiniPrintGeometry(canvas: canvas)
+        #expect(isClose(geometry.print.width, 390 * 0.8988, tolerance: 1e-6))
+        #expect(isClose(geometry.print.minX, 390 * 0.0439, tolerance: 1e-6))
+        #expect(isClose(geometry.print.minY, 390 * 0.0528, tolerance: 1e-6))
+        let window = LookFrame.instantPrint.window(in: canvas, photoAspect: portrait)
+        #expect(isClose(window.width, 390 * 0.8988 * 0.8452, tolerance: 1e-6))
+        #expect(isClose(window.height, window.width * 4 / 3, tolerance: 1e-6))
+        #expect(isClose(window.minX, 390 * (0.0439 + 0.0774 * 0.8988), tolerance: 1e-6))
+        #expect(isClose(window.minY, 390 * (0.0528 + 0.1306 * 0.8988), tolerance: 1e-6))
+        #expect(isClose(window.midX, geometry.print.midX, tolerance: 1e-6))
+        #expect(geometry.print.contains(window))
+        // Lying down for a landscape photo: the sheet turned a quarter anticlockwise, the wide border on the right.
+        #expect(isClose(LookFrame.instantPrint.canvasAspect(forPhotoAspect: landscape), 1.5, tolerance: 1e-9))
+        let wide = CGSize(width: 390, height: 260)
+        let lying = LookFrame.instantPrint.window(in: wide, photoAspect: landscape)
+        #expect(isClose(lying.height, 260 * 0.8988 * 0.8452, tolerance: 1e-6))
+        #expect(isClose(lying.width, lying.height * 4 / 3, tolerance: 1e-6))
+        #expect(isClose(lying.minX, 260 * (0.0528 + 0.1306 * 0.8988), tolerance: 1e-6))
+        let print = MiniPrintGeometry(canvas: wide).print
+        let bottomBorder: CGFloat = 1.5625 - 0.1306 - 0.8452 * 4 / 3
+        let unit: CGFloat = 260 * 0.8988
+        #expect(isClose(print.maxX - lying.maxX, unit * bottomBorder, tolerance: 0.01))
+        #expect(isClose(lying.minY - print.minY, unit * 0.0774, tolerance: 0.01))
+    }
+
+    @Test func theSquarePrintIsUprightWithItsWindowCentred() {
+        #expect(isClose(LookFrame.squarePrint.canvasAspect(forPhotoAspect: portrait), 3024.0 / 3840, tolerance: 1e-9))
+        #expect(isClose(LookFrame.squarePrint.canvasAspect(forPhotoAspect: landscape), 3024.0 / 3840, tolerance: 1e-9))
+        let canvas = CGSize(width: 390, height: 390.0 * 3840 / 3024)
+        let geometry = SquarePrintGeometry(canvas: canvas)
+        #expect(isClose(geometry.print.width, 390 * 0.8925, tolerance: 1e-6))
+        #expect(isClose(geometry.print.height, 390 * 0.8925 * 1.2007, tolerance: 1e-6))
+        let window = LookFrame.squarePrint.window(in: canvas, photoAspect: landscape)
+        #expect(isClose(window.width, window.height, tolerance: 1e-9))
+        #expect(isClose(window.width, 390 * 0.8925 * 0.8547, tolerance: 1e-6))
+        #expect(isClose(window.midX, geometry.print.midX, tolerance: 1e-6))
+        #expect(isClose(window.minY - geometry.print.minY, 390 * 0.8925 * 0.1204, tolerance: 1e-6))
+        #expect(geometry.print.maxY - window.maxY > window.minY - geometry.print.minY)
+        // A photo gets the same card every time, and the three cards are all used.
+        #expect(SquarePrintDesign.forPhoto(id: "s1") == SquarePrintDesign.forPhoto(id: "s1"))
+        #expect(Set((0..<60).map { SquarePrintDesign.forPhoto(id: "photo-\($0)") }).count == 3)
     }
 
     @Test func theFilmStripIsRealFilmAroundAThreeByTwoPicture() {
@@ -116,22 +153,28 @@ struct LookFrameTests {
         #expect(LookFrame.mediumFormat.pictureRatio == 5.0 / 4)
         #expect(LookFrame.square.pictureRatio == 1)
         #expect(LookFrame.fullFrame.pictureRatio == 3.0 / 2)
-        #expect(LookFrame.instantPrint.pictureRatio == 1)
-        #expect(LookFrame.instantPrint.baseHex == RSColor.printFrameHex)
+        #expect(LookFrame.instantPrint.pictureRatio == 4.0 / 3)
+        #expect(LookFrame.squarePrint.pictureRatio == 1)
+        #expect(LookFrame.instantPrint.baseHex == 0xFFFFFF)
+        #expect(LookFrame.squarePrint.baseHex == 0xFFFFFF)
         #expect(LookFrame.slideMount.baseHex == 0xFFFFFF)
         #expect(LookFrame.filmStrip.baseHex == 0x0B0B0B)
         #expect(CameraStyle.negative.pictureRatio == 3.0 / 2)
         #expect(CameraStyle.plastic35.pictureRatio == 3.0 / 2)
-        #expect(CameraStyle.film.pictureRatio == nil)
-        #expect(CameraStyle.instant.pictureRatio == 1)
+        #expect(CameraStyle.film.pictureRatio == 3.0 / 2)
+        #expect(CameraStyle.disposable.pictureRatio == nil)
+        #expect(CameraStyle.instant.pictureRatio == 4.0 / 3)
+        #expect(CameraStyle.instSquare.pictureRatio == 1)
     }
 
-    @Test func thePictureTurnsWithThePhotoExceptForTheSquareAndThePrint() {
+    @Test func thePictureTurnsWithThePhotoExceptForTheSquares() {
         #expect(isClose(LookFrame.filmStrip.pictureAspect(forPhotoAspect: portrait), 2.0 / 3, tolerance: 1e-9))
         #expect(isClose(LookFrame.filmStrip.pictureAspect(forPhotoAspect: landscape), 1.5, tolerance: 1e-9))
         #expect(isClose(LookFrame.mediumFormat.pictureAspect(forPhotoAspect: portrait), 0.8, tolerance: 1e-9))
         #expect(isClose(LookFrame.slideMount.pictureAspect(forPhotoAspect: landscape), 1.5, tolerance: 1e-9))
         #expect(isClose(LookFrame.square.pictureAspect(forPhotoAspect: landscape), 1, tolerance: 1e-9))
-        #expect(isClose(LookFrame.instantPrint.pictureAspect(forPhotoAspect: landscape), 1, tolerance: 1e-9))
+        #expect(isClose(LookFrame.squarePrint.pictureAspect(forPhotoAspect: landscape), 1, tolerance: 1e-9))
+        #expect(isClose(LookFrame.instantPrint.pictureAspect(forPhotoAspect: landscape), 4.0 / 3, tolerance: 1e-9))
+        #expect(isClose(LookFrame.instantPrint.pictureAspect(forPhotoAspect: portrait), 3.0 / 4, tolerance: 1e-9))
     }
 }

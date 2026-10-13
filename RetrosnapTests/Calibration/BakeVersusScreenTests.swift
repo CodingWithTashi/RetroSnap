@@ -9,7 +9,7 @@ import Testing
 /// must match the screen. Runs only on a machine that has `ref/`, which git ignores.
 @MainActor
 struct BakeVersusScreenTests {
-    @Test(.enabled(if: ReferencePairTests.hasPairs), arguments: [CameraStyle.negative, .plastic35, .slide, .mediumFormat, .tlr])
+    @Test(.enabled(if: ReferencePairTests.hasPairs), arguments: ReferencePairTests.fittedCameras)
     func bakesTheFirstSeedPhotoAsTheViewerShowsIt(camera: CameraStyle) throws {
         let renderer = try LookRenderer()
         // The first seed photo, as `-rsScreen viewer -rsCamera <id>` poses it.
@@ -18,7 +18,7 @@ struct BakeVersusScreenTests {
         let model = LookRenderModel(camera: camera, adjustments: .neutral, framed: true, stampEnabled: false)
         let layout = BakeLayout(source: original.extent.size, frame: model.frame)
         var artwork: CIImage?
-        if let frame = model.frame, frame != .instantPrint {
+        if let frame = model.frame {
             let size = layout.canvasPointSize
             let frameRenderer = ImageRenderer(
                 content: LookFrameView(frame: frame, size: size).frame(width: size.width, height: size.height)
@@ -42,27 +42,36 @@ struct BakeVersusScreenTests {
 }
 
 /// The reference inputs baked as the user would get them from the Share sheet: the full canvas with the frame,
-/// written small enough to hold against the reference app's screenshots (`tools/frames.py`). Runs only on a
-/// machine that has `ref/`, which git ignores.
+/// written small enough to hold against the reference app's screenshots and exports (`tools/frames.py`). Runs
+/// only on a machine that has `ref/`, which git ignores.
 @MainActor
 struct ReferenceExportTests {
     nonisolated static let inputs = ReferencePairTests.pairs.deletingLastPathComponent().appendingPathComponent("photo-input")
 
-    @Test(.enabled(if: ReferencePairTests.hasPairs), arguments: [CameraStyle.negative, .plastic35, .slide, .mediumFormat, .tlr])
-    func bakesBothReferencePicturesWithTheirCanvas(camera: CameraStyle) throws {
+    /// The reference pictures: the pair suffix, the file, when it was taken (its stamp), and the square print's
+    /// card the reference app happened to give it.
+    nonisolated static let pictures: [(suffix: String, file: String, taken: String, design: SquarePrintDesign)] = [
+        ("", "IMG_5821.JPG", "2026-10-08T17:00:00Z", .lightBlue),
+        ("-1", "IMG_5326.JPG", "2026-07-23T17:00:00Z", .whitePattern),
+        ("-2", "IMG_5646.JPG", "2026-08-21T17:00:00Z", .darkBlue),
+    ]
+
+    @Test(.enabled(if: ReferencePairTests.hasPairs), arguments: ReferencePairTests.fittedCameras)
+    func bakesEveryReferencePictureWithItsCanvas(camera: CameraStyle) throws {
         let renderer = try LookRenderer()
         let labeler = DayLabeler(clock: FixedClock.design)
-        for (suffix, file, taken) in [("", "input.JPG", "2026-10-08T12:32:00Z"), ("-1", "input_1.JPG", "2026-07-23T17:07:00Z")] {
-            let url = Self.inputs.appendingPathComponent(file)
+        for picture in Self.pictures {
+            let url = Self.inputs.appendingPathComponent(picture.file)
             let original = try #require(CIImage(contentsOf: url, options: [.applyOrientationProperty: true]))
             let model = LookRenderModel(camera: camera, adjustments: .neutral, framed: true, stampEnabled: true)
             let layout = BakeLayout(source: original.extent.size, frame: model.frame)
             let photoAspect = original.extent.width / original.extent.height
             var artwork: CIImage?
-            if let frame = model.frame, frame != .instantPrint, frame != .fullFrame {
+            if let frame = model.frame, frame != .fullFrame {
                 let size = layout.canvasPointSize
                 let frameRenderer = ImageRenderer(
-                    content: LookFrameView(frame: frame, size: size, photoAspect: photoAspect).frame(width: size.width, height: size.height)
+                    content: LookFrameView(frame: frame, size: size, photoAspect: photoAspect, design: picture.design)
+                        .frame(width: size.width, height: size.height)
                 )
                 frameRenderer.scale = layout.artworkScale
                 if let drawn = frameRenderer.cgImage {
@@ -75,7 +84,7 @@ struct ReferenceExportTests {
             var stamp: CIImage?
             if model.stamp != .none {
                 let size = layout.pointSize
-                let date = ISO8601DateFormatter().date(from: taken) ?? FixedClock.design.now
+                let date = ISO8601DateFormatter().date(from: picture.taken) ?? FixedClock.design.now
                 let stampRenderer = ImageRenderer(
                     content: PhotoStampView(text: labeler.stamp(for: date), kind: model.stamp, size: size)
                         .frame(width: size.width, height: size.height)
@@ -93,7 +102,7 @@ struct ReferenceExportTests {
             // Small enough to look at: 1200 px wide.
             let factor = 1200 / baked.extent.width
             let small = baked.transformed(by: CGAffineTransform(scaleX: factor, y: factor))
-            let output = ReferencePairTests.pairs.appendingPathComponent("export-\(camera.rawValue)\(suffix).png")
+            let output = ReferencePairTests.pairs.appendingPathComponent("export-\(camera.rawValue)\(picture.suffix).png")
             try renderer.context.writePNGRepresentation(
                 of: small, to: output, format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!
             )

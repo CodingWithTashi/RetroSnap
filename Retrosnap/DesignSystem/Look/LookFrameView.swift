@@ -10,13 +10,15 @@ struct LookFrameView: View {
     let size: CGSize
     /// The photo's own shape: which way the slide mount's window turns.
     var photoAspect: CGFloat = 3.0 / 4
+    /// Which of the square print's cards this photo gets.
+    var design: SquarePrintDesign = .lightBlue
 
     var body: some View {
         switch frame {
-        case .instantPrint, .fullFrame:
-            // Flat paper, or nothing at all: the base colour is the whole frame.
+        case .fullFrame:
+            // Nothing at all: the picture is the whole canvas.
             EmptyView()
-        case .filmStrip, .slideMount, .mediumFormat, .square:
+        case .filmStrip, .slideMount, .mediumFormat, .square, .instantPrint, .squarePrint:
             Canvas(rendersAsynchronously: false) { context, _ in
                 var context = context
                 switch frame {
@@ -32,7 +34,11 @@ struct LookFrameView: View {
                     SquareRebateArt(geometry: RebateGeometry.square(in: size)).draw(in: &context)
                 case .slideMount:
                     SlideMountArt(geometry: SlideMountGeometry(canvas: size, photoAspect: photoAspect)).draw(in: &context)
-                case .instantPrint, .fullFrame:
+                case .instantPrint:
+                    MiniPrintArt(geometry: MiniPrintGeometry(canvas: size)).draw(in: &context)
+                case .squarePrint:
+                    SquarePrintArt(geometry: SquarePrintGeometry(canvas: size), design: design).draw(in: &context)
+                case .fullFrame:
                     break
                 }
             }
@@ -314,5 +320,160 @@ private struct SlideMountArt {
                 startPoint: CGPoint(x: mount.minX, y: mount.minY), endPoint: CGPoint(x: mount.maxX, y: mount.maxY)
             )
         )
+    }
+}
+
+/// What both instant prints share: the print's shadow on the sheet, its faint outline, and the window's inner
+/// shadow where the picture sits a little below the frame. Measured from the reference app's exports: the
+/// shadow 0.009 of the print's width down and to the right, soft over 0.006; the corners rounded by 0.04.
+private enum PrintArt {
+    static func shadow(of print: CGRect, radius: CGFloat, in context: inout GraphicsContext) {
+        let offset = print.width * 0.009
+        var shade = context
+        shade.addFilter(.blur(radius: print.width * 0.006))
+        shade.fill(Path(roundedRect: print.offsetBy(dx: offset, dy: offset), cornerRadius: radius), with: .color(.black.opacity(0.22)))
+    }
+
+    static func outline(of print: CGRect, radius: CGFloat, in context: inout GraphicsContext) {
+        context.stroke(Path(roundedRect: print, cornerRadius: radius), with: .color(.black.opacity(0.07)), lineWidth: max(0.3, print.width * 0.0006))
+    }
+
+    /// The picture sits below the frame's edge: a thin dark line and a soft shadow fading in over the picture.
+    static func innerShadow(of window: CGRect, printWidth: CGFloat, in context: inout GraphicsContext) {
+        var inner = context
+        inner.clip(to: Path(window))
+        inner.stroke(Path(window), with: .color(.black.opacity(0.28)), lineWidth: max(0.6, printWidth * 0.0012))
+        for step in 1...6 {
+            let inset = CGFloat(step) * printWidth * 0.0022
+            inner.stroke(
+                Path(window.insetBy(dx: inset, dy: inset)), with: .color(.black.opacity(0.09 - 0.013 * Double(step))),
+                lineWidth: printWidth * 0.0024
+            )
+        }
+    }
+
+    /// The card with the window cut out, filled along the print from its top to its bottom with the stops
+    /// given as (fraction of the print's height, colour).
+    static func card(_ print: CGRect, window: CGRect, radius: CGFloat, from top: CGPoint, to bottom: CGPoint,
+                     stops: [(CGFloat, UInt32)], in context: inout GraphicsContext) {
+        var body = Path(roundedRect: print, cornerRadius: radius)
+        body.addRect(window)
+        context.fill(
+            body,
+            with: .linearGradient(
+                Gradient(stops: stops.map { Gradient.Stop(color: Color(hex: $0.1), location: $0.0) }),
+                startPoint: top, endPoint: bottom
+            ),
+            style: FillStyle(eoFill: true)
+        )
+    }
+}
+
+/// The mini instant print: cool white paper, a little darker beside the window's lower edge and brightest along
+/// the wide border's far edge, as the reference app lights it.
+private struct MiniPrintArt {
+    let geometry: MiniPrintGeometry
+
+    func draw(in context: inout GraphicsContext) {
+        let g = geometry
+        let print = g.print
+        let window = g.window
+        let radius = g.radius
+        PrintArt.shadow(of: print, radius: radius, in: &context)
+        // The paper's shading runs along the print from its (upright) top to its bottom.
+        let top = g.isLandscape ? CGPoint(x: print.minX, y: print.midY) : CGPoint(x: print.midX, y: print.minY)
+        let bottom = g.isLandscape ? CGPoint(x: print.maxX, y: print.midY) : CGPoint(x: print.midX, y: print.maxY)
+        PrintArt.card(
+            print, window: window, radius: radius, from: top, to: bottom,
+            stops: [(0, 0xF1F3F3), (0.45, 0xECEEEF), (0.80, 0xE4E9EA), (0.86, 0xF0F2F2), (1, 0xF9FBFA)], in: &context
+        )
+        PrintArt.outline(of: print, radius: radius, in: &context)
+        PrintArt.innerShadow(of: window, printWidth: min(print.width, print.height), in: &context)
+    }
+}
+
+/// The square print's card in one of the reference app's designs: a light blue that goes greener toward the
+/// bottom, a white card with cut-out shapes in blue, ochre, teal, black and pink, or a dark blue that goes from
+/// cyan at the top to indigo at the bottom.
+private struct SquarePrintArt {
+    let geometry: SquarePrintGeometry
+    let design: SquarePrintDesign
+
+    func draw(in context: inout GraphicsContext) {
+        let g = geometry
+        let print = g.print
+        let window = g.window
+        let radius = g.radius
+        PrintArt.shadow(of: print, radius: radius, in: &context)
+        let top = CGPoint(x: print.midX, y: print.minY)
+        let bottom = CGPoint(x: print.midX, y: print.maxY)
+        switch design {
+        case .lightBlue:
+            PrintArt.card(
+                print, window: window, radius: radius, from: top, to: bottom,
+                stops: [(0, 0x5FB5DA), (0.26, 0x53ACD4), (0.50, 0x54AACB), (0.74, 0x61AFBF), (0.86, 0x74BAC5), (1, 0x87CDD7)], in: &context
+            )
+            glint(print, window: window, radius: radius, opacity: 0.12, in: &context)
+        case .darkBlue:
+            PrintArt.card(
+                print, window: window, radius: radius, from: top, to: bottom,
+                stops: [(0, 0x4677AA), (0.26, 0x416DA2), (0.50, 0x4A5C95), (0.74, 0x4C4B88), (0.86, 0x525191), (1, 0x5B599F)], in: &context
+            )
+            glint(print, window: window, radius: radius, opacity: 0.08, in: &context)
+        case .whitePattern:
+            PrintArt.card(
+                print, window: window, radius: radius, from: top, to: bottom,
+                stops: [(0, 0xF1F3F2), (0.78, 0xF1F3F2), (0.80, 0xD6BEB7), (1, 0xE6CFC8)], in: &context
+            )
+            shapes(print, window: window, radius: radius, in: &context)
+        }
+        PrintArt.outline(of: print, radius: radius, in: &context)
+        PrintArt.innerShadow(of: window, printWidth: print.width, in: &context)
+    }
+
+    /// A little light on the top of the card.
+    private func glint(_ print: CGRect, window: CGRect, radius: CGFloat, opacity: Double, in context: inout GraphicsContext) {
+        var body = Path(roundedRect: print, cornerRadius: radius)
+        body.addRect(window)
+        context.fill(
+            body,
+            with: .radialGradient(
+                Gradient(colors: [.white.opacity(opacity), .clear]),
+                center: CGPoint(x: print.midX, y: print.minY), startRadius: 0, endRadius: print.width * 0.55
+            ),
+            style: FillStyle(eoFill: true)
+        )
+    }
+
+    /// The cut-out shapes of the white card, our own arrangement in the reference's colours: a blue blob at the
+    /// top left, an ochre one at the top right, teal shapes down the sides, a black one on the left, and a
+    /// cluster of black dots on the pink band.
+    private func shapes(_ print: CGRect, window: CGRect, radius: CGFloat, in context: inout GraphicsContext) {
+        var body = Path(roundedRect: print, cornerRadius: radius)
+        body.addRect(window)
+        var inner = context
+        inner.clip(to: body, style: FillStyle(eoFill: true))
+        let w = print.width
+        func blob(_ cx: CGFloat, _ cy: CGFloat, _ rx: CGFloat, _ ry: CGFloat, _ hex: UInt32, turn: Double = 0) {
+            var local = inner
+            local.translateBy(x: print.minX + cx * w, y: print.minY + cy * w)
+            local.rotate(by: .degrees(turn))
+            local.fill(Path(ellipseIn: CGRect(x: -rx * w, y: -ry * w, width: 2 * rx * w, height: 2 * ry * w)), with: .color(Color(hex: hex)))
+        }
+        blob(0.12, 0.0, 0.17, 0.10, 0x275FBA, turn: -12)
+        blob(0.86, 0.06, 0.09, 0.07, 0xD5971B, turn: 20)
+        blob(0.0, 0.36, 0.10, 0.15, 0xA8D8DC, turn: 10)
+        blob(1.0, 0.64, 0.08, 0.17, 0x81C4C9, turn: -8)
+        blob(0.01, 0.54, 0.055, 0.09, 0x343539, turn: 15)
+        blob(0.97, 0.26, 0.05, 0.06, 0xA8D8DC)
+        blob(0.06, 1.12, 0.08, 0.06, 0xE6BE3C, turn: -10)
+        blob(0.90, 1.16, 0.07, 0.05, 0x81C4C9, turn: 12)
+        for row in 0..<3 {
+            for column in 0..<4 {
+                let cx = 0.58 + CGFloat(column) * 0.045 + (row.isMultiple(of: 2) ? 0 : 0.022)
+                let cy = 1.06 + CGFloat(row) * 0.04
+                blob(cx, cy, 0.009, 0.009, 0x2B2B2E)
+            }
+        }
     }
 }

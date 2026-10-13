@@ -6,7 +6,7 @@
 # the Release device build. usage: tools/verify.sh <outdir> [camera ids...]
 set -u
 OUT=${1:?outdir}; shift
-CAMERAS=${@:-"negative plastic35 slide mediumFormat tlr"}
+CAMERAS=${@:-"negative plastic35 slide mediumFormat tlr film inst compactPro classicSLR instSquare"}
 ROOT=$(cd "$(dirname "$0")/.." && pwd); cd "$ROOT"; mkdir -p "$OUT"
 DEST='platform=iOS Simulator,name=Retrosnap 16e'
 step() { echo; echo "=== $1 ($(date +%H:%M:%S))"; }
@@ -33,7 +33,7 @@ shoot() { local name=$1; shift; xcrun simctl launch --terminate-running-process 
 for cam in ${=CAMERAS}; do
   xcrun simctl terminate booted com.retrosnap.vintagecamera 2>/dev/null
   venv/bin/python -I tools/seed_simulator.py $cam "$CONTAINER" >/dev/null
-  for pic in selfie dunes; do shoot result-$cam-$pic -rsLive 1 -rsScreen result -rsPhoto $pic; shoot viewer-$cam-$pic -rsLive 1 -rsScreen viewer -rsPhoto $pic; done
+  for pic in selfie dunes sign; do shoot result-$cam-$pic -rsLive 1 -rsScreen result -rsPhoto $pic; shoot viewer-$cam-$pic -rsLive 1 -rsScreen viewer -rsPhoto $pic; done
 done
 xcrun simctl terminate booted com.retrosnap.vintagecamera 2>/dev/null
 xcrun simctl privacy booted reset photos com.retrosnap.vintagecamera 2>/dev/null
@@ -43,9 +43,9 @@ for f in "$OUT"/before/*.png; do n=$(basename $f); echo "$n: $(compare -metric A
 step "calibration tests"
 xcodebuild test -project Retrosnap.xcodeproj -scheme Retrosnap -destination "$DEST" -only-testing:RetrosnapTests/ReferencePairTests -only-testing:RetrosnapTests/ReferenceExportTests -only-testing:RetrosnapTests/BakeVersusScreenTests -parallel-testing-enabled NO 2>&1 | grep -E "Test run|✘" | tail -4
 step "compare, grain, glow, face"
-for cam in ${=CAMERAS}; do for p in $cam $cam-1; do [ -f ref/pairs/$p-input.png ] && venv/bin/python -I tools/compare.py ref/pairs/$p | grep -E "^[a-zA-Z]|RetroSnap vs"; done; done
-for cam in ${=CAMERAS}; do for p in $cam $cam-1; do [ -f ref/pairs/$p-input.png ] && echo "$p: $(venv/bin/python -I tools/grain.py ref/pairs/$p 2>&1 | grep 'grain ratio' | sed 's/.*grey: //')"; done; done
-venv/bin/python -I tools/glow_grain.py $(for cam in ${=CAMERAS}; do for p in $cam $cam-1; do [ -f ref/pairs/$p-input.png ] && echo ref/pairs/$p; done; done)
+for cam in ${=CAMERAS}; do for p in $cam $cam-1 $cam-2; do [ -f ref/pairs/$p-input.png ] && venv/bin/python -I tools/compare.py ref/pairs/$p | grep -E "^[a-zA-Z]|RetroSnap vs"; done; done
+for cam in ${=CAMERAS}; do for p in $cam $cam-1 $cam-2; do [ -f ref/pairs/$p-input.png ] && echo "$p: $(venv/bin/python -I tools/grain.py ref/pairs/$p 2>&1 | grep 'grain ratio' | sed 's/.*grey: //')"; done; done
+venv/bin/python -I tools/glow_grain.py $(for cam in ${=CAMERAS}; do for p in $cam $cam-1 $cam-2; do [ -f ref/pairs/$p-input.png ] && echo ref/pairs/$p; done; done)
 for cam in ${=CAMERAS}; do venv/bin/python -I tools/face.py $cam ref/pairs/$cam.json --render | head -1; done
 step "screen vs bake"
 for cam in ${=CAMERAS}; do venv/bin/python -I tools/screen_vs_bake.py $cam "$OUT/after/viewer-$cam.png"; done

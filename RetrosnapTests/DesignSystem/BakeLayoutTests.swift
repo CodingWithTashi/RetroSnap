@@ -21,17 +21,29 @@ struct BakeLayoutTests {
         #expect(isClose(layout.pointSize.width, 390))
     }
 
-    @Test func anInstantPrintHasTheDesignsFrame() {
+    @Test func aMiniPrintKeepsTheWholePhotoInItsWindowOnItsSheet() {
         let layout = BakeLayout(source: CGSize(width: 3024, height: 4032), frame: .instantPrint)
-        // padding: 5.5% 5.5% 22% 5.5% of the print's width, on an 88:107 print.
-        let printWidth = layout.canvas.width
-        #expect(isClose(layout.canvas.height / printWidth, 107.0 / 88, tolerance: 0.001))
-        #expect(isClose(layout.photoOrigin.x / printWidth, 0.055, tolerance: 0.001))
-        #expect(isClose(layout.photoOrigin.y / printWidth, 0.22, tolerance: 0.001))
-        #expect(isClose(layout.crop.width / printWidth, 0.89, tolerance: 0.001))
-        let top = layout.canvas.height - layout.photoOrigin.y - layout.crop.height
-        #expect(isClose(top / printWidth, 0.055, tolerance: 0.001))
-        #expect(isClose(layout.scale, printWidth / 340))
+        // The 3:4 window takes the whole 3:4 photo; the sheet is 2:3 and the window 0.7597 of it wide.
+        #expect(layout.crop == CGRect(x: 0, y: 0, width: 3024, height: 4032))
+        #expect(isClose(layout.canvas.width / layout.canvas.height, 2.0 / 3, tolerance: 0.002))
+        #expect(isClose(layout.crop.width / layout.canvas.width, 0.8988 * 0.8452, tolerance: 0.002))
+        #expect(isClose(layout.photoOrigin.x / layout.canvas.width, 0.0439 + 0.0774 * 0.8988, tolerance: 0.002))
+        #expect(isClose(layout.pointSize.width, 390 * 0.8988 * 0.8452, tolerance: 0.5))
+        #expect(isClose(layout.canvasPointSize.width, 390, tolerance: 0.5))
+    }
+
+    @Test func aSquarePrintCropsTheSquareFromTheMiddle() {
+        let layout = BakeLayout(source: CGSize(width: 3024, height: 4032), frame: .squarePrint)
+        #expect(layout.crop.width == 3024)
+        #expect(layout.crop.height == 3024)
+        #expect(isClose(layout.crop.midY, 2016, tolerance: 1))
+        #expect(isClose(layout.canvas.width / layout.canvas.height, 3024.0 / 3840, tolerance: 0.002))
+        #expect(isClose(layout.crop.width / layout.canvas.width, 0.8925 * 0.8547, tolerance: 0.002))
+        #expect(isClose(layout.pointSize.width, 390 * 0.8925 * 0.8547, tolerance: 0.5))
+        let wide = BakeLayout(source: CGSize(width: 4032, height: 3024), frame: .squarePrint)
+        #expect(wide.crop.height == 3024)
+        #expect(wide.crop.width == 3024)
+        #expect(isClose(wide.canvas.width / wide.canvas.height, 3024.0 / 3840, tolerance: 0.002))
     }
 
     // MARK: Film canvases
@@ -137,18 +149,19 @@ struct BakeLayoutTests {
         #expect(layout.crop.width == 3024)
     }
 
-    @Test func theInstantPhotoUsesItsFullWidthAndTheMiddleOfItsHeight() {
-        let layout = BakeLayout(source: CGSize(width: 3024, height: 4032), frame: .instantPrint)
-        #expect(layout.crop.width == 3024)
-        #expect(layout.crop.height < 4032)
-        #expect(isClose(layout.crop.midY, 2016, tolerance: 1))
-        #expect(layout.crop.minX == 0)
+    @Test func aLandscapeInstantPhotoLiesOnItsSheetWhole() {
+        let layout = BakeLayout(source: CGSize(width: 4032, height: 3024), frame: .instantPrint)
+        #expect(layout.crop == CGRect(x: 0, y: 0, width: 4032, height: 3024))
+        #expect(isClose(layout.canvas.width / layout.canvas.height, 1.5, tolerance: 0.002))
+        // The sheet lies down: the window is 1.0129 of the sheet's short side wide, 0.1702 of it in.
+        #expect(isClose(layout.crop.width / layout.canvas.height, 0.8988 * 0.8452 * 4 / 3, tolerance: 0.002))
+        #expect(isClose(layout.photoOrigin.x / layout.canvas.height, 0.0528 + 0.1306 * 0.8988, tolerance: 0.002))
     }
 
-    @Test func aLandscapeInstantPhotoIsCroppedAtTheSidesInstead() {
-        let layout = BakeLayout(source: CGSize(width: 4032, height: 3024), frame: .instantPrint)
-        #expect(layout.crop.height == 3024)
-        #expect(layout.crop.width < 4032)
-        #expect(isClose(layout.crop.midX, 2016, tolerance: 1))
+    @Test func aWiderImportIsCroppedToTheMiniPrintsWindow() {
+        let layout = BakeLayout(source: CGSize(width: 4000, height: 2000), frame: .instantPrint)
+        #expect(layout.crop.height == 2000)
+        #expect(isClose(layout.crop.width, 2000 * 4 / 3, tolerance: 1))
+        #expect(isClose(layout.crop.midX, 2000, tolerance: 1))
     }
 }

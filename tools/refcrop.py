@@ -6,13 +6,14 @@ edge to the strongest luminance step within 60 px of it and writes the crop.
 
     venv/bin/python tools/refcrop.py <screenshot> <left> <top> <right> <bottom> <out.png> [--deskew]
 
+The crop keeps the screenshot's colour profile (Display P3 on an iPhone), which `fit.py` converts to sRGB.
 `--deskew` is for a canvas the reference app lays at an angle (the D Slide mount): the script measures the
 tilt of the picture's left and top edges, turns the screenshot straight about the rectangle's centre
 (bicubic), prints the angle, and then snaps and crops as usual.
 """
 import sys
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 
 
 def snap(profile, guess, window=60):
@@ -38,7 +39,10 @@ def tilt(lum, left, top, right, bottom, window=40):
 
 
 def main(path, left, top, right, bottom, out, deskew=False):
-    image = Image.open(path).convert("RGB")
+    # Upright, and with the picture's colour profile kept, so `fit.py` can convert the crop to sRGB.
+    opened = ImageOps.exif_transpose(Image.open(path))
+    icc = opened.info.get("icc_profile")
+    image = opened.convert("RGB")
     if deskew:
         angle = tilt(np.asarray(image).astype(np.float32).mean(axis=2), left, top, right, bottom)
         centre = ((left + right) / 2, (top + bottom) / 2)
@@ -59,7 +63,7 @@ def main(path, left, top, right, bottom, out, deskew=False):
     t, l = t + 1, l + 1
     w, h = r - l, b - t
     print(f"{path}: picture x {l}..{r} y {t}..{b} -> {w}x{h}, ratio {w / h:.4f}")
-    Image.fromarray(img[t:b, l:r].astype(np.uint8)).save(out)
+    Image.fromarray(img[t:b, l:r].astype(np.uint8)).save(out, icc_profile=icc)
 
 
 if __name__ == "__main__":

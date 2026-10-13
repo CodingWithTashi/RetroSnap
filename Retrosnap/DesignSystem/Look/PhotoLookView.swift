@@ -22,6 +22,8 @@ struct PhotoLookView: View {
     var magnification: CGFloat = 1
     /// The photo's own width over its height: which way a frame's window turns, and where a film's stamp lands.
     var photoAspect: CGFloat = 3.0 / 4
+    /// Which of the square print's cards the photo gets.
+    var frameDesign: SquarePrintDesign = .lightBlue
 
     var body: some View {
         GeometryReader { proxy in
@@ -33,7 +35,7 @@ struct PhotoLookView: View {
                     Color(hex: frame.baseHex)
                     photo(model, size: window.size)
                         .offset(x: window.minX, y: window.minY)
-                    LookFrameView(frame: frame, size: size, photoAspect: photoAspect)
+                    LookFrameView(frame: frame, size: size, photoAspect: photoAspect, design: frameDesign)
                 }
             } else {
                 photo(model, size: size)
@@ -44,7 +46,7 @@ struct PhotoLookView: View {
     /// Where the film's frame lies in an unframed box: the part the camera keeps, centred, the way the box is.
     /// A framed photo's box is the window itself.
     private func filmFrame(in size: CGSize) -> CGRect {
-        guard !framed, let frame = camera.look.frame, frame != .instantPrint else {
+        guard !framed, let frame = camera.look.frame else {
             return CGRect(origin: .zero, size: size)
         }
         let ratio = frame.pictureAspect(forPhotoAspect: size.width / size.height)
@@ -117,6 +119,7 @@ struct PhotoLookView: View {
                     text: stamp, kind: model.stamp, size: size, bottomInset: stampBottom, topInset: stampTop,
                     filmFrame: filmFrame(in: size)
                 )
+                .blendMode(model.stamp.isScreened ? .screen : .normal)
             }
             if let videoDuration {
                 videoBadge(model, duration: videoDuration, size: size)
@@ -166,7 +169,7 @@ extension PhotoLookView {
         self.init(
             image: photo.image, camera: photo.camera, adjustments: photo.adjustments, framed: framed,
             stamp: stamp, videoDuration: photo.videoDurationText, usesThumbnail: usesThumbnail,
-            photoAspect: photo.aspectRatio
+            photoAspect: photo.aspectRatio, frameDesign: SquarePrintDesign.forPhoto(id: photo.id)
         )
     }
 }

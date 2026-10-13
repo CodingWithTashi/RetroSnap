@@ -54,7 +54,7 @@ struct ViewerViewModelTests {
         #expect(vm.subtitle == "Camcorder")
         vm.swiped(.left)
         #expect(vm.title == "Yesterday")
-        #expect(vm.subtitle == "35mm Film")
+        #expect(vm.subtitle == "D Classic")
     }
 
     @Test func videosSaySoInTheSubtitle() {

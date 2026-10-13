@@ -56,14 +56,14 @@ struct FormattingTests {
     @Test func cameraStepsWrapAroundBothEnds() {
         #expect(CameraStyle.film.stepped(by: 1) == .disposable)
         #expect(CameraStyle.camcorder.stepped(by: 1) == .negative)
-        #expect(CameraStyle.tlr.stepped(by: 1) == .film)
-        #expect(CameraStyle.film.stepped(by: -1) == .tlr)
+        #expect(CameraStyle.instSquare.stepped(by: 1) == .film)
+        #expect(CameraStyle.film.stepped(by: -1) == .instSquare)
         #expect(CameraStyle.instant.stepped(by: -1) == .disposable)
     }
 
     @Test func stripSubtitleIsTheFirstSentence() {
-        #expect(CameraStyle.film.shortSummary == "Golden tones, fine grain and soft edges.")
+        #expect(CameraStyle.film.shortSummary == "True, gently warm colour and a red date in the corner.")
         #expect(CameraStyle.disposable.shortSummary == "Bright on-camera flash, warm grain, a little overexposed.")
-        #expect(CameraStyle.instant.shortSummary == "Soft, faded square prints in a white frame, like they just slid out of the camera.")
+        #expect(CameraStyle.instant.shortSummary == "Soft, cool pastels on a mini print in a white frame.")
     }
 }

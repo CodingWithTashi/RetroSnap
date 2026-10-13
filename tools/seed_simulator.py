@@ -6,7 +6,8 @@ the pictures the references were made from (the same path a user's import takes)
 Then launch with `-rsLive 1 -rsScreen result -rsPhoto selfie` (or `dunes`, or `-rsScreen viewer`) and screenshot.
 
 Writes Library/<id>.jpg (the input as it is, EXIF and profile kept), <id>-thumb.jpg, and library.json with
-two photos: 'selfie' (input.JPG) and 'dunes' (input_1.JPG), both posed as taken with the camera.
+three photos: 'selfie' (IMG_5821.JPG, the subway selfie), 'dunes' (IMG_5326.JPG) and 'sign' (IMG_5646.JPG, the
+street sign), all posed as taken with the camera.
 """
 import json, os, shutil, subprocess, sys
 from datetime import datetime, timezone
@@ -21,7 +22,8 @@ R = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ref", "photo
 lib = os.path.join(container, "Library", "Application Support", "Library")
 os.makedirs(lib, exist_ok=True)
 photos = []
-for pid, src, when in [("selfie", f"{R}/input.JPG", "2026-10-11T16:12:00Z"), ("dunes", f"{R}/input_1.JPG", "2026-10-11T16:11:00Z")]:
+for pid, src, when in [("selfie", f"{R}/IMG_5821.JPG", "2026-10-11T16:12:00Z"), ("dunes", f"{R}/IMG_5326.JPG", "2026-10-11T16:11:00Z"),
+                       ("sign", f"{R}/IMG_5646.JPG", "2026-10-11T16:10:00Z")]:
     shutil.copy2(src, os.path.join(lib, f"{pid}.jpg"))
     im = ImageOps.exif_transpose(Image.open(src))
     w, h = im.size

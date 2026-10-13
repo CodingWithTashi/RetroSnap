@@ -29,16 +29,17 @@ struct LookRendererTests {
         #expect(renderer.context.pixel(of: image, x: 0, y: 0).isClose(to: Pixel(red: 200, green: 120, blue: 40), tolerance: 1))
     }
 
-    @Test func filmRunsItsFilterChainThenItsTint() {
+    @Test func theDigicamRunsItsFilterChainThenItsTintAndFlash() {
+        // contrast 1.16, saturate 0.86, brightness 1.06; the tint overlay at 0.28 and the flash at 0.15 in the middle.
         let noGrain = PhotoAdjustments(intensity: 100, grain: 0)
-        let image = renderer.render(orange, model: model(.film, noGrain), scale: 1)
-        #expect(centre(image).isClose(to: Pixel(red: 237, green: 135, blue: 47)))
+        let image = renderer.render(orange, model: model(.digicam, noGrain), scale: 1)
+        #expect(centre(image).isClose(to: Pixel(red: 209, green: 133, blue: 62)))
     }
 
     @Test func effectStrengthBlendsTheLookWithTheOriginal() {
         let half = PhotoAdjustments(intensity: 50, grain: 0)
-        let image = renderer.render(orange, model: model(.film, half), scale: 1)
-        #expect(centre(image).isClose(to: Pixel(red: 220, green: 127, blue: 44)))
+        let image = renderer.render(orange, model: model(.digicam, half), scale: 1)
+        #expect(centre(image).isClose(to: Pixel(red: 204, green: 127, blue: 51)))
     }
 
     @Test func lightAndContrastAreTheCSSFilters() {
@@ -65,17 +66,17 @@ struct LookRendererTests {
     }
 
     @Test func theVignetteDarkensTheCorners() {
-        let image = renderer.render(orange, model: model(.film, PhotoAdjustments(intensity: 100, grain: 0)), scale: 1)
+        let image = renderer.render(orange, model: model(.negative, PhotoAdjustments(intensity: 100, grain: 0)), scale: 1)
         #expect(renderer.context.pixel(of: image, x: 0, y: 0).red < centre(image).red - 40)
     }
 
     @Test func theLookKeepsItsSizeOnABiggerPicture() {
         // At 3 pixels per point the centre is still far from the vignette, exactly as at 1.
         let big = CIImage.flat(red: 200.0 / 255, green: 120.0 / 255, blue: 40.0 / 255, width: 90, height: 120)
-        let image = renderer.render(big, model: model(.film, PhotoAdjustments(intensity: 100, grain: 0)), scale: 3)
+        let image = renderer.render(big, model: model(.digicam, PhotoAdjustments(intensity: 100, grain: 0)), scale: 3)
         #expect(image.extent == big.extent)
-        #expect(centre(image).isClose(to: Pixel(red: 237, green: 135, blue: 47)))
-        let small = renderer.render(orange, model: model(.film, PhotoAdjustments(intensity: 100, grain: 0)), scale: 1)
+        #expect(centre(image).isClose(to: Pixel(red: 209, green: 133, blue: 62)))
+        let small = renderer.render(orange, model: model(.digicam, PhotoAdjustments(intensity: 100, grain: 0)), scale: 1)
         #expect(renderer.context.pixel(of: image, x: 1, y: 1).isClose(to: renderer.context.pixel(of: small, x: 0, y: 0), tolerance: 6))
     }
 

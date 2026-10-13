@@ -49,6 +49,11 @@ struct PhotoDateTests {
         #expect(stamp.dateBack == "'26年 10月11日")
         let eighth = FixedClock.design.calendar.date(byAdding: .day, value: -3, to: FixedClock.design.now)!
         #expect(labeler.stamp(for: eighth).dateBack == "'26年 10月8日")
+        // The plain date back: month, day and year each in two places, with a tick before the year.
+        #expect(stamp.dateBackPlain == "10 11 '26")
+        #expect(labeler.stamp(for: eighth).dateBackPlain == "10  8 '26")
+        let july = FixedClock.design.calendar.date(from: DateComponents(year: 2026, month: 7, day: 23, hour: 12))!
+        #expect(labeler.stamp(for: july).dateBackPlain == " 7 23 '26")
     }
 
     @Test func theDotMatrixHasAGlyphForEveryMarkTheDateBackPrints() {

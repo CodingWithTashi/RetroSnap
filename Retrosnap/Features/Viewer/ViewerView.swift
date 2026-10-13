@@ -45,7 +45,6 @@ struct ViewerView: View {
             )
                 .environment(\.liveFrames, viewModel.movieFrames)
                 .aspectRatio(viewModel.displayAspect, contentMode: .fit)
-                .frame(maxWidth: viewModel.isInstant ? InstantPrint.viewerWidth : .infinity)
                 .id(photo.id)
                 .onTapGesture(perform: viewModel.photoTapped)
                 .accessibilityElement()

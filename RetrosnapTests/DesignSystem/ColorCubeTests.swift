@@ -50,6 +50,11 @@ struct ColorCubeTests {
         (.plastic35, 198.2, 121.0, 51.8),
         (.slide, 186.8, 116.0, 46.4),
         (.mediumFormat, 197.3, 112.0, 40.5),
+(.film, 196.4, 140.8, 43.2),
+        (.instant, 209.6, 143.1, 59.4),
+        (.compactPro, 220.8, 176.2, 92.6),
+        (.classicSLR, 214.7, 129.2, 42.2),
+        (.instSquare, 210.0, 147.3, 61.1),
     ])
     func everyFittedCameraShipsItsTable(camera: CameraStyle, red: Double, green: Double, blue: Double) throws {
         let name = try #require(camera.look.colorCube)
@@ -66,7 +71,7 @@ struct ColorCubeTests {
     }
 
     @Test func aCameraWithoutATableHasNone() {
-        #expect(CameraStyle.film.look.colorCube == nil)
+        #expect(CameraStyle.disposable.look.colorCube == nil)
         #expect(ColorCubes.cube(named: "no-such-table") == nil)
     }
 }

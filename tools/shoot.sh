@@ -22,8 +22,8 @@ shoot print-digi -rsScreen print -rsCamera digi
 shoot collage -rsScreen collage
 shoot settings -rsScreen settings
 shoot catalog -rsScreen catalog
-for c in film disp inst digi vhs; do shoot look-$c -rsScreen look -rsCamera $c; done
-for c in negative plastic35 slide mediumFormat tlr; do
+for c in disp digi vhs; do shoot look-$c -rsScreen look -rsCamera $c; done
+for c in negative plastic35 slide mediumFormat tlr film inst compactPro classicSLR instSquare; do
   shoot look-$c -rsScreen look -rsCamera $c
   shoot result-$c -rsScreen result -rsCamera $c
   shoot viewer-$c -rsScreen viewer -rsCamera $c

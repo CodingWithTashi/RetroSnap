@@ -7,12 +7,15 @@ nonisolated struct PhotoStampText: Hashable, Sendable {
     let date: String
     /// "'26年 10月8日": the year, month and day with their marks, as a Japanese date back prints them.
     let dateBack: String
+    /// "10  8 '26": the month, the day and the year, each in two places, as a 1990s date back prints them.
+    let dateBackPlain: String
     let tapeDate: String
     let tapeTime: String
 
-    init(date: String, dateBack: String = "", tapeDate: String, tapeTime: String) {
+    init(date: String, dateBack: String = "", dateBackPlain: String = "", tapeDate: String, tapeTime: String) {
         self.date = date
         self.dateBack = dateBack
+        self.dateBackPlain = dateBackPlain
         self.tapeDate = tapeDate
         self.tapeTime = tapeTime
     }

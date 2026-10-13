@@ -26,7 +26,9 @@ converted to sRGB first (an iPhone's photos and screenshots
 are Display P3), because that is the space the app's shaders work in. A pair over 150k samples is fitted on a
 fixed random subset.
 `--mask` keeps a date stamp out of the fit (a rectangle in reference pixels), `--inset` a mount's shadow (a
-fraction of the width, default 0.02).
+fraction of the width, default 0.02). `--samples n` fits on at most n samples per pair instead of 150k: a joint
+fit over three full-resolution pairs takes an hour at 150k and a quarter of that at 50k, for a few hundredths of
+a ΔE.
 
 Writes `<outdir>/<id>.json` (the numbers for `CameraLook`, with the ΔE2000 of the fit on each pair; the
 headline `deltaE_median` is the worst pair's) and `<outdir>/<id>-report.png` (input | fit | reference for each
@@ -152,8 +154,10 @@ def samples(pair_in, ref, inset, mask_rect):
     return a[keep], b[keep], uv[keep]
 
 
-def subsample(pair, limit=MAX_SAMPLES, seed=7):
-    """A fixed random subset of a pair's samples when it has more than `limit`."""
+def subsample(pair, limit=None, seed=7):
+    """A fixed random subset of a pair's samples when it has more than `limit` (`MAX_SAMPLES` by default, which
+    `--samples` lowers for a quicker fit)."""
+    limit = limit or MAX_SAMPLES
     A, B, UV = pair
     if len(A) <= limit:
         return pair
@@ -325,6 +329,10 @@ def parse_options(argv):
             i += 2
         elif flag == "--pair":
             pair_prefixes.append(argv[i + 1])
+            i += 2
+        elif flag == "--samples":
+            global MAX_SAMPLES
+            MAX_SAMPLES = int(argv[i + 1])
             i += 2
         else:
             i += 1

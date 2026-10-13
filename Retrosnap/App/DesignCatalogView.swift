@@ -11,7 +11,7 @@ struct DesignCatalogView: View {
         return arguments[index + 1]
     }
 
-    static let designStamp = PhotoStampText(date: "'26 10 11", dateBack: "'26年 10月11日", tapeDate: "OCT 11 2026", tapeTime: "4:12 PM")
+    static let designStamp = PhotoStampText(date: "'26 10 11", dateBack: "'26年 10月11日", dateBackPlain: "10 11 '26", tapeDate: "OCT 11 2026", tapeTime: "4:12 PM")
 
     var body: some View {
         if value("-rsScreen") == "look" {

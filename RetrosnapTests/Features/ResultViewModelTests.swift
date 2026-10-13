@@ -81,8 +81,8 @@ struct ResultViewModelTests {
     }
 
     @Test func metaLineNamesTheCameraAndWhen() {
-        #expect(make().metaText == "35mm Film · Just now")
-        #expect(make("s3").metaText == "Instant · Today")
+        #expect(make().metaText == "D Classic · Just now")
+        #expect(make("s3").metaText == "Inst C · Today")
         #expect(make("s10").metaText == "Camcorder · October 4")
         #expect(make("missing").metaText == "")
     }

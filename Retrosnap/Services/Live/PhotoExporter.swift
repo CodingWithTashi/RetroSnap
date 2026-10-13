@@ -220,7 +220,10 @@ final class PhotoExporter: PhotoExporting {
         let model = LookRenderModel(camera: photo.camera, adjustments: photo.adjustments, framed: true, stampEnabled: true)
         let layout = BakeLayout(source: original.extent.size, frame: model.frame)
         let stamp = stampImage(dayLabeler.stamp(for: photo.stampDate), kind: model.stamp, layout: layout)
-        let artwork = frameImage(model.frame, layout: layout, photoAspect: original.extent.width / original.extent.height)
+        let artwork = frameImage(
+            model.frame, layout: layout, photoAspect: original.extent.width / original.extent.height,
+            design: SquarePrintDesign.forPhoto(id: photo.id)
+        )
         let metadata = PhotoMetadata.properties(
             original: original.properties, capturedAt: photo.capturedAt, location: photo.location
         )
@@ -317,11 +320,12 @@ final class PhotoExporter: PhotoExporting {
     }
 
     /// The frame's artwork as the screen draws it, as a transparent picture exactly the size of the file.
-    private func frameImage(_ frame: LookFrame?, layout: BakeLayout, photoAspect: CGFloat) -> CIImage? {
-        guard let frame, frame != .instantPrint, frame != .fullFrame else { return nil }
+    private func frameImage(_ frame: LookFrame?, layout: BakeLayout, photoAspect: CGFloat, design: SquarePrintDesign) -> CIImage? {
+        guard let frame, frame != .fullFrame else { return nil }
         let size = layout.canvasPointSize
         let renderer = ImageRenderer(
-            content: LookFrameView(frame: frame, size: size, photoAspect: photoAspect).frame(width: size.width, height: size.height)
+            content: LookFrameView(frame: frame, size: size, photoAspect: photoAspect, design: design)
+                .frame(width: size.width, height: size.height)
         )
         renderer.scale = layout.artworkScale
         guard let drawn = renderer.cgImage else { return nil }
