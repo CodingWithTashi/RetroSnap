@@ -24,14 +24,13 @@ struct ReferencePairTests {
     ]
 
     /// The pairs a camera has: `<id>` for the picture it was first fitted on, then `<id>-1`, `<id>-2`, … for
-    /// each picture added since, as "Re-verifying a shipped batch with a new picture" names them.
+    /// each picture added since, as `tools/pairs.py` names them (a camera can skip a number: batch 1 has no
+    /// `-2`, the street sign, but has `-3` to `-6`, the refinement round's pictures).
     nonisolated static func pairNames(for camera: CameraStyle) -> [String] {
         let id = camera.rawValue
-        var names = [id]
-        while FileManager.default.fileExists(atPath: pairs.appendingPathComponent("\(id)-\(names.count)-input.png").path) {
-            names.append("\(id)-\(names.count)")
+        return [id] + (1...9).map { "\(id)-\($0)" }.filter {
+            FileManager.default.fileExists(atPath: pairs.appendingPathComponent("\($0)-input.png").path)
         }
-        return names
     }
 
     @Test(.enabled(if: hasPairs), arguments: fittedCameras)

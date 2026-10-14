@@ -15,6 +15,7 @@ neighbouring nodes. Writes `<outdir>/<id>.cube` (Adobe/Resolve text, red fastest
 """
 import json
 import os
+import re
 import sys
 import numpy as np
 from PIL import Image
@@ -141,13 +142,19 @@ def main(argv):
         ref = np.asarray(Image.open(prefix + "-reference.png").convert("RGB")).astype(np.float64) / 255
         own = json.load(open(prefix + ".json")) if os.path.exists(prefix + ".json") else {}
         h, w = ref.shape[:2]
-        window = WINDOW_POINTS[cam][0 if w >= h else 1]
+        # The camera is the pair's (a leave-one-out table is named `<id>-loo-<n>`).
+        camera = re.sub(r"-\d+$", "", name)
+        window = WINDOW_POINTS[camera][0 if w >= h else 1]
         if o["halation"]:
             t, r, a, tint = o["halation"]
             inp = with_halation(inp, t, a, TINTS[tint], r * (w / window))
         if o["blur"]:
             inp = np.stack([ndimage.gaussian_filter(inp[..., c], o["blur"] * (w / window), mode="nearest") for c in range(3)], -1)
         A, B, UV = samples(inp, ref, own.get("inset", 0.02), own.get("mask"))
+        # The pair is measured on these same 4x4 boxes (as `compare.py` box-filters a render), with the vignette
+        # put back; the full-size arrays are let go here, so seven 10-megapixel pairs fit in memory at once.
+        A_all_boxes, B_all_boxes, UV_all_boxes = A, B, UV
+        del inp, ref
         B = unvignette(B, UV, vig)
         A, B, UV = subsample((A, B, UV), 300_000)
         wt = np.full(len(A), weights[name] / (len(A) * total) * 1e5)
@@ -157,8 +164,8 @@ def main(argv):
             skin = ((lab[..., 0] > 35) & (lab[..., 0] < 85) & (lab[..., 1] > 4) & (lab[..., 1] < 30)
                     & (lab[..., 2] > 8) & (lab[..., 2] < 40) & (chroma > 10) & (chroma < 40))
             wt = wt * (1 + o["skin"] * skin)
-        data.append((name, A, B, UV, wt, inp, ref))
-        print(f"{cam}: pair {name} {w}x{h}, {len(A)} samples, weight {weights[name]}")
+        data.append((name, A, B, UV, wt, (A_all_boxes, B_all_boxes, UV_all_boxes), (w, h)))
+        print(f"{cam}: pair {name} {w}x{h}, {len(A)} samples, weight {weights[name]}", flush=True)
     A_all = np.concatenate([d[1] for d in data]); B_all = np.concatenate([d[2] for d in data]); W_all = np.concatenate([d[4] for d in data])
     T = trilinear_matrix(A_all, size)
     L = laplacian(size)
@@ -172,22 +179,17 @@ def main(argv):
     for c in range(3):
         rhs = T.T @ (W_all * B_all[:, c]) + lam_p * prior[:, c] + lam_s * (L.T @ (L @ prior[:, c]))
         cube[:, c] = np.clip(solver.solve(rhs), 0, 1)
-    # Measure on each pair, box-filtered like compare.py (the vignette put back).
+    # Measure on each pair's 4x4 boxes (inside its inset and mask, as compare.py measures a render), the vignette
+    # put back.
     results = {}
-    for name, A, B, UV, wt, inp, ref in data:
-        h, w = ref.shape[:2]
-        uv = np.stack([(np.arange(w) + 0.5)[None, :].repeat(h, 0) / w, (np.arange(h) + 0.5)[:, None].repeat(w, 1) / h], -1)
-        out = evaluate(cube, size, inp)
-        d = (uv - 0.5) / 0.70710678
+    for name, A, B, UV, wt, (A_boxes, B_boxes, UV_boxes), (w, h) in data:
+        out = evaluate(cube, size, A_boxes)
+        d = (UV_boxes - 0.5) / 0.70710678
         k = (0.9 * np.clip((np.hypot(d[..., 0], d[..., 1]) - 0.48) / 0.52, 0, 1) * vig)[..., None]
         out = out * (1 - k) + DARK * k
-        def box(a, n=4):
-            hh, ww = a.shape[0] // n, a.shape[1] // n
-            return a[: hh * n, : ww * n].reshape(hh, n, ww, n, 3).mean(axis=(1, 3))
-        m = int((0.06 if cam == "slide" else 0.02) * w) // 4
-        de = delta_e2000(srgb_to_lab(box(out))[m:-m or None, m:-m or None], srgb_to_lab(box(ref))[m:-m or None, m:-m or None])
+        de = delta_e2000(srgb_to_lab(out), srgb_to_lab(B_boxes))
         results[name] = {"deltaE_median": float(np.median(de)), "deltaE_p95": float(np.percentile(de, 95)), "deltaE_mean": float(de.mean())}
-        print(f"  {name}: table vs reference median {np.median(de):.2f} p95 {np.percentile(de, 95):.2f} mean {de.mean():.2f}")
+        print(f"  {name}: table vs reference median {np.median(de):.2f} p95 {np.percentile(de, 95):.2f} mean {de.mean():.2f}", flush=True)
     # Write the .cube (red fastest) and the JSON.
     rgb_cube = cube.reshape(size, size, size, 3)  # [r][g][b]
     with open(f"{outdir}/{cam}.cube", "w") as f:

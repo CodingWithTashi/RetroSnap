@@ -217,23 +217,33 @@ nonisolated struct RebateGeometry: Hashable, Sendable {
 }
 
 /// A square cardboard mount on a white light table, on a 3:4 canvas: the mount 0.81 of the canvas wide and
-/// centred, its 3:2 window centred in it and turned the way the picture is.
+/// centred, its 3:2 window centred in it and turned the way the picture is. The window measured over six of the
+/// reference app's screens is 0.67 of the mount's side along and 0.46 across (the refinement round, 13 October
+/// 2026; batch 1 had read 0.447 off one screen). The card is one of four designs (`SlideMountDesign`).
 nonisolated struct SlideMountGeometry: Hashable, Sendable {
     static let canvasAspect: CGFloat = 3.0 / 4
     static let tableHex: UInt32 = 0xFFFFFF
     static let greyCardHex: UInt32 = 0xBABAAB
     static let creamCardHex: UInt32 = 0xE9E0C9
     static let stripeHex: UInt32 = 0xE9D882
+    /// The printed cream card (sRGB, measured on two screens: 236, 229, 215) and its coral print.
+    static let printedCardHex: UInt32 = 0xECE5D7
+    static let printedInkHex: UInt32 = 0xE67A6A
+    /// The white plastic mount's body (225 grey) and the paper label across its top (230, 228, 225).
+    static let plasticHex: UInt32 = 0xE1E1E1
+    static let labelHex: UInt32 = 0xE6E4E1
     static let mountFraction: CGFloat = 0.81
-    static let windowLong: CGFloat = 0.667
-    static let windowShort: CGFloat = 0.447
+    static let windowLong: CGFloat = 0.67
+    static let windowShort: CGFloat = 0.46
 
     let canvas: CGSize
     let photoAspect: CGFloat
+    let design: SlideMountDesign
 
-    init(canvas: CGSize, photoAspect: CGFloat = 3.0 / 4) {
+    init(canvas: CGSize, photoAspect: CGFloat = 3.0 / 4, design: SlideMountDesign = .greyDimpled) {
         self.canvas = canvas
         self.photoAspect = photoAspect
+        self.design = design
     }
 
     var isLandscape: Bool {
@@ -255,9 +265,59 @@ nonisolated struct SlideMountGeometry: Hashable, Sendable {
         return CGRect(x: (canvas.width - size.width) / 2, y: (canvas.height - size.height) / 2, width: size.width, height: size.height)
     }
 
-    var cornerRadius: CGFloat { side * 0.008 }
+    /// The card's corners: the printed cream card is cut round (0.09 of its side, measured), the plastic mount
+    /// a little, the pressed cards hardly at all.
+    var cornerRadius: CGFloat {
+        switch design {
+        case .creamPrinted: side * 0.09
+        case .whitePlastic: side * 0.03
+        case .greyDimpled, .creamStriped: side * 0.008
+        }
+    }
+
     var windowRadius: CGFloat { side * 0.012 }
     var dimpleRadius: CGFloat { side * 0.026 }
+}
+
+/// The slide mount's card, as the reference app varies it from slide to slide: a grey card pressed with half-moon
+/// dimples, a cream card with yellow stripes, a cream card printed "this side towards screen" down its left side,
+/// and a white plastic mount with a paper label across the top (the last two seen in the refinement round). A photo
+/// gets one by its id, so a slide always comes out the same and the gallery varies as the reference app's does.
+nonisolated enum SlideMountDesign: Int, CaseIterable, Hashable, Sendable {
+    case greyDimpled
+    case creamStriped
+    case creamPrinted
+    case whitePlastic
+
+    /// The design for a photo id: a stable hash, so the same photo always gets the same card.
+    static func forPhoto(id: String) -> SlideMountDesign {
+        allCases[Int(FrameDesign.hash(id, salt: "slide") % UInt32(allCases.count))]
+    }
+}
+
+/// Which of the reference app's cards a photo's canvases get: the square print's and the slide mount's, each by
+/// a stable hash of the photo's id.
+nonisolated struct FrameDesign: Hashable, Sendable {
+    var square: SquarePrintDesign = .lightBlue
+    var slide: SlideMountDesign = .greyDimpled
+
+    init(square: SquarePrintDesign = .lightBlue, slide: SlideMountDesign = .greyDimpled) {
+        self.square = square
+        self.slide = slide
+    }
+
+    static func forPhoto(id: String) -> FrameDesign {
+        FrameDesign(square: SquarePrintDesign.forPhoto(id: id), slide: SlideMountDesign.forPhoto(id: id))
+    }
+
+    /// FNV-1a over the id and a salt, so the two cards vary independently.
+    static func hash(_ id: String, salt: String) -> UInt32 {
+        var hash: UInt32 = 2_166_136_261
+        for byte in (id + salt).utf8 {
+            hash = (hash ^ UInt32(byte)) &* 16_777_619
+        }
+        return hash
+    }
 }
 
 /// A mini instant print on its sheet, measured from the reference app's exports in units of the sheet's width
@@ -333,7 +393,7 @@ nonisolated struct MiniPrintGeometry: Hashable, Sendable {
 /// width (the canvas is 3024:3840, upright whichever way the photo is): the print 0.893 wide and 1.2007 times as
 /// tall as it is wide, 0.046 in from the left and 0.097 down from the top; its square window 0.855 of the print
 /// wide, 0.073 of the print in from each side and 0.120 from the top, leaving 0.226 below; the print's corners
-/// rounded by 0.04 of its width. The frame's design is one of three the reference app draws (`SquarePrintDesign`).
+/// rounded by 0.04 of its width. The frame's design is one of five the reference app draws (`SquarePrintDesign`).
 nonisolated struct SquarePrintGeometry: Hashable, Sendable {
     static let canvasAspect: CGFloat = 3024.0 / 3840
     static let printWidth: CGFloat = 0.8925
@@ -374,20 +434,19 @@ nonisolated struct SquarePrintGeometry: Hashable, Sendable {
     }
 }
 
-/// The square print's frame designs, as the reference app varies them from print to print: a light blue
-/// card, a white card with cut-out shapes, and a dark blue card. A photo gets one by its id, so a print always
-/// comes out the same and the gallery varies as the reference app's does.
+/// The square print's frame designs, as the reference app varies them from print to print: a light blue card,
+/// a white card with cut-out shapes, a dark blue card, a plain white card and a green one (the last two seen in
+/// the refinement round, 13 October 2026). A photo gets one by its id, so a print always comes out the same and
+/// the gallery varies as the reference app's does.
 nonisolated enum SquarePrintDesign: Int, CaseIterable, Hashable, Sendable {
     case lightBlue
     case whitePattern
     case darkBlue
+    case plainWhite
+    case green
 
     /// The design for a photo id: a stable hash, so the same photo always gets the same card.
     static func forPhoto(id: String) -> SquarePrintDesign {
-        var hash: UInt32 = 2_166_136_261
-        for byte in id.utf8 {
-            hash = (hash ^ UInt32(byte)) &* 16_777_619
-        }
-        return allCases[Int(hash % UInt32(allCases.count))]
+        allCases[Int(FrameDesign.hash(id, salt: "") % UInt32(allCases.count))]
     }
 }

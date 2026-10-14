@@ -45,16 +45,16 @@ struct ColorCubeTests {
     }
 
     @Test(arguments: [
-        (CameraStyle.tlr, 219.1, 106.5, 16.6),
-        (.negative, 215.5, 126.1, 43.9),
-        (.plastic35, 198.2, 121.0, 51.8),
-        (.slide, 186.8, 116.0, 46.4),
-        (.mediumFormat, 197.3, 112.0, 40.5),
-(.film, 196.4, 140.8, 43.2),
-        (.instant, 209.6, 143.1, 59.4),
-        (.compactPro, 220.8, 176.2, 92.6),
-        (.classicSLR, 214.7, 129.2, 42.2),
-        (.instSquare, 210.0, 147.3, 61.1),
+        (CameraStyle.tlr, 224.1, 102.7, 6.9),
+        (.negative, 222.6, 128.0, 42.9),
+        (.plastic35, 205.1, 112.2, 44.7),
+        (.slide, 192.2, 123.9, 54.7),
+        (.mediumFormat, 200.4, 106.8, 27.3),
+(.film, 198.9, 135.5, 41.3),
+        (.instant, 212.3, 135.8, 51.6),
+        (.compactPro, 218.4, 164.8, 48.4),
+        (.classicSLR, 212.1, 118.9, 25.8),
+        (.instSquare, 212.5, 139.4, 52.8),
     ])
     func everyFittedCameraShipsItsTable(camera: CameraStyle, red: Double, green: Double, blue: Double) throws {
         let name = try #require(camera.look.colorCube)

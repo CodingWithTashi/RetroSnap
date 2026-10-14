@@ -272,15 +272,18 @@ static float3 rs_overlays(float3 c, float2 p, float2 size, float4 tint, float4 w
         c = mix(c, rs_overlay(c, float3(grey)), coverage * fx2.y);
     }
 
-    // Film grain: gradient noise the size of a grain clump, strongest in the midtones, added to the picture.
-    // The colour amount mixes one pattern for all channels with a different pattern per channel.
+    // Film grain: gradient noise the size of a grain clump, added to the picture with the weight the reference
+    // app's exports measure by luminance (`tools/grain_profile.py`, 13 October 2026): full at a third of the way
+    // up, 0.5 in the deepest shadows, 0.2 at white, which 0.2 + 0.8 l^0.7 (1-l)^1.5 / 0.252 follows within 0.05
+    // in every band (4 l (1-l), the first shape, was a third too weak in the shadows and half again too strong
+    // in the highlights). The colour amount mixes one pattern for all channels with a different pattern per channel.
     if (film.y > 0.0) {
         float2 g = p / max(film.x, 0.05);
         float mono = rs_fractalNoise(g, 11u) * 2.0 - 1.0;
         float3 split = float3(rs_fractalNoise(g, 12u), rs_fractalNoise(g, 13u), rs_fractalNoise(g, 14u)) * 2.0 - 1.0;
         float3 noise = mix(float3(mono), split, film.z);
-        float l = dot(c, float3(0.2126, 0.7152, 0.0722));
-        float weight = 4.0 * l * (1.0 - l);
+        float l = clamp(dot(c, float3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
+        float weight = 0.2 + 0.8 * pow(l, 0.7) * pow(1.0 - l, 1.5) / 0.252;
         c = clamp(c + noise * (film.y * weight), 0.0, 1.0);
     }
 

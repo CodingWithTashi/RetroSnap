@@ -22,8 +22,8 @@ struct PhotoLookView: View {
     var magnification: CGFloat = 1
     /// The photo's own width over its height: which way a frame's window turns, and where a film's stamp lands.
     var photoAspect: CGFloat = 3.0 / 4
-    /// Which of the square print's cards the photo gets.
-    var frameDesign: SquarePrintDesign = .lightBlue
+    /// Which of the square print's and the slide mount's cards the photo gets.
+    var frameDesign = FrameDesign()
 
     var body: some View {
         GeometryReader { proxy in
@@ -169,7 +169,7 @@ extension PhotoLookView {
         self.init(
             image: photo.image, camera: photo.camera, adjustments: photo.adjustments, framed: framed,
             stamp: stamp, videoDuration: photo.videoDurationText, usesThumbnail: usesThumbnail,
-            photoAspect: photo.aspectRatio, frameDesign: SquarePrintDesign.forPhoto(id: photo.id)
+            photoAspect: photo.aspectRatio, frameDesign: FrameDesign.forPhoto(id: photo.id)
         )
     }
 }

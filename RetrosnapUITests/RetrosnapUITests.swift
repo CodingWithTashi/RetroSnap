@@ -313,21 +313,25 @@ final class RetrosnapUITests: XCTestCase {
         expectButton("Start recording")
     }
 
-    /// A probe for a phone: the look screen of two fitted cameras, screenshotted and kept in the result bundle,
+    /// A probe for a phone: the look screen of every fitted camera, screenshotted and kept in the result bundle,
     /// so the phone's own rendering can be measured against the simulator's and the bake (the calibration notes in
     /// `docs/camera-lineup.md`). On the simulator it only checks that the screens come up.
     func testLookScreensAreKeptAsScreenshotsForTheDeviceProbe() throws {
-        for camera in ["negative", "plastic35", "tlr"] {
-            let probe = XCUIApplication()
-            probe.launchArguments = ["-rsScreen", "look", "-rsCamera", camera]
-            probe.launch()
-            sleep(5)
-            let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-            attachment.name = "look-\(camera)"
-            attachment.lifetime = .keepAlways
-            add(attachment)
-            XCTAssertTrue(probe.state == .runningForeground)
-            probe.terminate()
+        // The look screen is the phone against the simulator (`tools/device_probe.py`); the viewer is the phone
+        // against the bake of the same photo (`tools/screen_vs_bake.py`), the export checked on a device.
+        for camera in ["negative", "plastic35", "slide", "mediumFormat", "tlr", "film", "inst", "compactPro", "classicSLR", "instSquare"] {
+            for screen in ["look", "viewer"] {
+                let probe = XCUIApplication()
+                probe.launchArguments = ["-rsScreen", screen, "-rsCamera", camera]
+                probe.launch()
+                sleep(5)
+                let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+                attachment.name = "\(screen)-\(camera)"
+                attachment.lifetime = .keepAlways
+                add(attachment)
+                XCTAssertTrue(probe.state == .runningForeground)
+                probe.terminate()
+            }
         }
     }
 }

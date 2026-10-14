@@ -131,9 +131,9 @@ extension LookRendererTests {
         // grain, no vignette in the middle, and no glow (the orange is below the halation threshold).
         let noGrain = PhotoAdjustments(intensity: 100, grain: 0)
         let tlr = renderer.render(orange, model: model(.tlr, noGrain), scale: 1)
-        #expect(centre(tlr).isClose(to: Pixel(red: 219, green: 107, blue: 17), tolerance: 2))
+        #expect(centre(tlr).isClose(to: Pixel(red: 224, green: 103, blue: 7), tolerance: 2))
         let negative = renderer.render(orange, model: model(.negative, noGrain), scale: 1)
-        #expect(centre(negative).isClose(to: Pixel(red: 216, green: 126, blue: 44), tolerance: 2))
+        #expect(centre(negative).isClose(to: Pixel(red: 223, green: 128, blue: 43), tolerance: 2))
     }
 
     @Test func filmGrainRoughensAFlatPicture() {

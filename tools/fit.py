@@ -250,17 +250,27 @@ def measure(p, pairs):
     return out
 
 
+def tile_pair(pair_in, ref):
+    """The pair shrunk to the report's tile size: a 10-megapixel pair through the hue terms wants gigabytes, and
+    the report is only a picture, so the full-size arrays are let go as soon as the samples are taken."""
+    h, w = ref.shape[:2]
+    tile_w = int(min(600, 700 * w / h))
+    tile_h = int(round(h * tile_w / w))
+    return tuple(
+        np.asarray(Image.fromarray((x * 255).round().astype(np.uint8)).resize((tile_w, tile_h), Image.LANCZOS)).astype(np.float64) / 255
+        for x in (pair_in, ref)
+    )
+
+
 def report(path, p, images, pairs, label):
-    """input | fit | reference for each pair, the curves, and the measured luminance response."""
+    """input | fit | reference for each pair (`images` holds the tiles from `tile_pair`), the curves, and the
+    measured luminance response."""
     tiles = []
-    for name, (pair_in, ref) in images.items():
-        h, w = ref.shape[:2]
-        tile_w = int(min(600, 700 * w / h))
-        tile_h = int(round(h * tile_w / w))
-        full_uv = np.stack([(np.arange(w) + 0.5)[None, :].repeat(h, 0) / w, (np.arange(h) + 0.5)[:, None].repeat(w, 1) / h], -1)
-        fit_full = ColourStage.apply(p, pair_in, full_uv)
-        row = [Image.fromarray((x * 255).round().astype(np.uint8)).resize((tile_w, tile_h), Image.LANCZOS)
-               for x in (pair_in, fit_full, ref)]
+    for name, (small_in, small_ref) in images.items():
+        tile_h, tile_w = small_ref.shape[:2]
+        uv = np.stack([(np.arange(tile_w) + 0.5)[None, :].repeat(tile_h, 0) / tile_w, (np.arange(tile_h) + 0.5)[:, None].repeat(tile_w, 1) / tile_h], -1)
+        fit_small = ColourStage.apply(p, small_in, uv)
+        row = [Image.fromarray((x * 255).round().astype(np.uint8)) for x in (small_in, fit_small, small_ref)]
         tiles.append((name, row, tile_w, tile_h))
     width = max(t[2] * 3 + 40 for t in tiles)
     width = max(width, 1840)
@@ -359,17 +369,19 @@ def main(argv):
             own = json.load(open(prefix + ".json")) if os.path.exists(prefix + ".json") else {}
             mask = setting(masks, name, own.get("mask"))
             inset = setting(insets, name, own.get("inset", 0.02))
-            images[name] = (pair_in, ref)
             pairs[name] = samples(pair_in, ref, inset, mask)
+            images[name] = tile_pair(pair_in, ref)
             alignments[name] = {k: own[k] for k in ("scale", "x0", "y0") if k in own} | {"mask": mask, "inset": inset}
-            print(f"{cam}: pair {name} {ref.shape[1]}x{ref.shape[0]}, inset {inset}, mask {mask}, {len(pairs[name][0])} samples")
+            print(f"{cam}: pair {name} {ref.shape[1]}x{ref.shape[0]}, inset {inset}, mask {mask}, {len(pairs[name][0])} samples", flush=True)
+            del pair_in, ref
     else:
         input_path, ref_path, outdir = argv[2:5]
         masks, insets, weights, reg, hue_reg, neutral, skin, _ = parse_options(argv[5:])
         mask, inset = masks.get(None), insets.get(None, 0.02)
         pair_in, ref, alignment = make_pair(cam, input_path, ref_path, outdir)
-        images = {cam: (pair_in, ref)}
         pairs = {cam: samples(pair_in, ref, inset, mask)}
+        images = {cam: tile_pair(pair_in, ref)}
+        del pair_in, ref
         alignments = {cam: alignment | {"mask": mask, "inset": inset}}
         print(f"  fitting on {len(pairs[cam][0])} pairs")
 

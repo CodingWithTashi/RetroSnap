@@ -10,8 +10,8 @@ struct LookFrameView: View {
     let size: CGSize
     /// The photo's own shape: which way the slide mount's window turns.
     var photoAspect: CGFloat = 3.0 / 4
-    /// Which of the square print's cards this photo gets.
-    var design: SquarePrintDesign = .lightBlue
+    /// Which of the square print's and the slide mount's cards this photo gets.
+    var design = FrameDesign()
 
     var body: some View {
         switch frame {
@@ -33,11 +33,11 @@ struct LookFrameView: View {
                 case .square:
                     SquareRebateArt(geometry: RebateGeometry.square(in: size)).draw(in: &context)
                 case .slideMount:
-                    SlideMountArt(geometry: SlideMountGeometry(canvas: size, photoAspect: photoAspect)).draw(in: &context)
+                    SlideMountArt(geometry: SlideMountGeometry(canvas: size, photoAspect: photoAspect, design: design.slide)).draw(in: &context)
                 case .instantPrint:
                     MiniPrintArt(geometry: MiniPrintGeometry(canvas: size)).draw(in: &context)
                 case .squarePrint:
-                    SquarePrintArt(geometry: SquarePrintGeometry(canvas: size), design: design).draw(in: &context)
+                    SquarePrintArt(geometry: SquarePrintGeometry(canvas: size), design: design.square).draw(in: &context)
                 case .fullFrame:
                     break
                 }
@@ -218,9 +218,10 @@ private struct SquareRebateArt {
     }
 }
 
-/// The cardboard mount on its light table: a grey card pressed with half-moon dimples for a landscape picture,
-/// a cream card with yellow stripes for a portrait one (the reference app uses both), the window cut out with the
-/// film in its shadow, and the mount's own soft shadow on the table.
+/// The cardboard mount on its light table in one of the reference app's designs (`SlideMountDesign`): a grey card
+/// pressed with half-moon dimples, a cream card with yellow stripes, a cream card printed "this side towards
+/// screen" down its left side, or a white plastic mount with a paper label across the top; the window cut out with
+/// the film in its shadow, and the mount's own soft shadow on the table.
 private struct SlideMountArt {
     let geometry: SlideMountGeometry
 
@@ -235,16 +236,22 @@ private struct SlideMountArt {
             context.fill(Path(roundedRect: rect, cornerRadius: g.cornerRadius + spread), with: .color(.black.opacity(0.022)))
         }
         // The card, with the window cut out.
-        let card = Color(hex: g.isLandscape ? SlideMountGeometry.greyCardHex : SlideMountGeometry.creamCardHex)
+        let hex: UInt32 = switch g.design {
+        case .greyDimpled: SlideMountGeometry.greyCardHex
+        case .creamStriped: SlideMountGeometry.creamCardHex
+        case .creamPrinted: SlideMountGeometry.printedCardHex
+        case .whitePlastic: SlideMountGeometry.plasticHex
+        }
         var body = Path(roundedRect: mount, cornerRadius: g.cornerRadius)
         body.addPath(Path(roundedRect: g.window, cornerRadius: g.windowRadius))
-        context.fill(body, with: .color(card), style: FillStyle(eoFill: true))
+        context.fill(body, with: .color(Color(hex: hex)), style: FillStyle(eoFill: true))
         var inner = context
         inner.clip(to: body, style: FillStyle(eoFill: true))
-        if g.isLandscape {
-            drawGreyCard(mount: mount, side: side, in: &inner)
-        } else {
-            drawStripedCard(mount: mount, side: side, in: &inner)
+        switch g.design {
+        case .greyDimpled: drawGreyCard(mount: mount, side: side, in: &inner)
+        case .creamStriped: drawStripedCard(mount: mount, side: side, in: &inner)
+        case .creamPrinted: drawPrintedCard(mount: mount, side: side, in: &inner)
+        case .whitePlastic: drawPlasticMount(mount: mount, side: side, in: &inner)
         }
         // Paper speckle: fixed pseudo-random flecks, so every drawing of the mount is the same.
         var seed: UInt32 = 0x9E37_79B9
@@ -252,7 +259,8 @@ private struct SlideMountArt {
             seed = seed &* 1_664_525 &+ 1_013_904_223
             return CGFloat(seed >> 8) / CGFloat(1 << 24)
         }
-        for index in 0..<420 {
+        let flecks = g.design == .whitePlastic ? 120 : 420
+        for index in 0..<flecks {
             let x = mount.minX + next() * mount.width
             let y = mount.minY + next() * mount.height
             let radius = side * (0.0012 + next() * 0.002)
@@ -320,6 +328,59 @@ private struct SlideMountArt {
                 startPoint: CGPoint(x: mount.minX, y: mount.minY), endPoint: CGPoint(x: mount.maxX, y: mount.maxY)
             )
         )
+    }
+
+    /// The printed card: "this side towards screen" in coral, reading upward along the left side, measured on
+    /// the reference app's screens as a run 0.53 of the side long centred 0.477 down, its letters 0.04 of the
+    /// side tall in a band 0.062 to 0.102 in from the left edge.
+    private func drawPrintedCard(mount: CGRect, side: CGFloat, in context: inout GraphicsContext) {
+        context.fill(
+            Path(mount),
+            with: .linearGradient(
+                Gradient(colors: [.white.opacity(0.08), .clear, .black.opacity(0.03)]),
+                startPoint: CGPoint(x: mount.minX, y: mount.minY), endPoint: CGPoint(x: mount.maxX, y: mount.maxY)
+            )
+        )
+        let trial = side * 0.05
+        let probe = context.resolve(Text(verbatim: "this side towards screen").font(.system(size: trial, weight: .regular)))
+        let measured = probe.measure(in: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)).width
+        let size = trial * (side * 0.528 / max(measured, 1))
+        let text = context.resolve(
+            Text(verbatim: "this side towards screen").font(.system(size: size, weight: .regular))
+                .foregroundColor(Color(hex: SlideMountGeometry.printedInkHex))
+        )
+        var local = context
+        local.translateBy(x: mount.minX + side * 0.082, y: mount.minY + side * 0.477)
+        local.rotate(by: .degrees(-90))
+        local.draw(text, at: .zero, anchor: .center)
+    }
+
+    /// The white plastic mount: a moulded rim (a light bevel, a dark line 0.017 in, a shallow groove at 0.03 to
+    /// 0.045 with a dark line at its inner edge), and the paper label across the top, from 0.045 to 0.26 of the side
+    /// down, with a soft lower edge. The body (225 grey) and the label (230, 228, 225) measure as the reference's.
+    private func drawPlasticMount(mount: CGRect, side: CGFloat, in context: inout GraphicsContext) {
+        let radius = side * 0.03
+        context.stroke(
+            Path(roundedRect: mount.insetBy(dx: side * 0.006, dy: side * 0.006), cornerRadius: radius),
+            with: .color(.white.opacity(0.7)), lineWidth: side * 0.012
+        )
+        context.stroke(
+            Path(roundedRect: mount.insetBy(dx: side * 0.017, dy: side * 0.017), cornerRadius: radius * 0.8),
+            with: .color(.black.opacity(0.2)), lineWidth: side * 0.003
+        )
+        context.stroke(
+            Path(roundedRect: mount.insetBy(dx: side * 0.038, dy: side * 0.038), cornerRadius: radius * 0.6),
+            with: .color(.black.opacity(0.08)), lineWidth: side * 0.012
+        )
+        context.stroke(
+            Path(roundedRect: mount.insetBy(dx: side * 0.045, dy: side * 0.045), cornerRadius: radius * 0.55),
+            with: .color(.black.opacity(0.13)), lineWidth: side * 0.003
+        )
+        let label = CGRect(x: mount.minX + side * 0.05, y: mount.minY + side * 0.045, width: side * 0.9, height: side * 0.215)
+        var shade = context
+        shade.addFilter(.blur(radius: side * 0.004))
+        shade.fill(Path(label.offsetBy(dx: 0, dy: side * 0.004)), with: .color(.black.opacity(0.08)))
+        context.fill(Path(label), with: .color(Color(hex: SlideMountGeometry.labelHex)))
     }
 }
 
@@ -393,8 +454,9 @@ private struct MiniPrintArt {
 }
 
 /// The square print's card in one of the reference app's designs: a light blue that goes greener toward the
-/// bottom, a white card with cut-out shapes in blue, ochre, teal, black and pink, or a dark blue that goes from
-/// cyan at the top to indigo at the bottom.
+/// bottom, a white card with cut-out shapes in blue, ochre, teal, black and pink, a dark blue that goes from
+/// cyan at the top to indigo at the bottom, a plain white card, or a green that goes from leaf green at the top to
+/// a lighter yellow-green at the bottom (the last two measured down the card on the reference app's exports).
 private struct SquarePrintArt {
     let geometry: SquarePrintGeometry
     let design: SquarePrintDesign
@@ -426,6 +488,18 @@ private struct SquarePrintArt {
                 stops: [(0, 0xF1F3F2), (0.78, 0xF1F3F2), (0.80, 0xD6BEB7), (1, 0xE6CFC8)], in: &context
             )
             shapes(print, window: window, radius: radius, in: &context)
+        case .plainWhite:
+            PrintArt.card(
+                print, window: window, radius: radius, from: top, to: bottom,
+                stops: [(0, 0xF1F2F4), (0.3, 0xEFF0F2), (0.5, 0xECEEF0), (0.7, 0xE7EBEC), (0.9, 0xF2F3F5), (1, 0xF4F5F6)], in: &context
+            )
+        case .green:
+            PrintArt.card(
+                print, window: window, radius: radius, from: top, to: bottom,
+                stops: [(0, 0x6AA56D), (0.26, 0x639E66), (0.40, 0x5D985C), (0.50, 0x619454), (0.60, 0x648F47), (0.70, 0x658F42),
+                        (0.80, 0x729A46), (0.90, 0x94B55B), (1, 0x9CBB62)], in: &context
+            )
+            glint(print, window: window, radius: radius, opacity: 0.08, in: &context)
         }
         PrintArt.outline(of: print, radius: radius, in: &context)
         PrintArt.innerShadow(of: window, printWidth: print.width, in: &context)

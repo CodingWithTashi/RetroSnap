@@ -84,11 +84,11 @@ struct BakeLayoutTests {
 
     @Test func aSlideSitsInTheMountsWindowOnAnUprightTable() {
         let layout = BakeLayout(source: CGSize(width: 3024, height: 4032), frame: .slideMount)
-        #expect(isClose(layout.crop.width / layout.crop.height, 0.447 / 0.667, tolerance: 0.002))
-        #expect(isClose(layout.pointSize.width, 390 * 0.81 * 0.447, tolerance: 0.5))
+        #expect(isClose(layout.crop.width / layout.crop.height, 0.46 / 0.67, tolerance: 0.002))
+        #expect(isClose(layout.pointSize.width, 390 * 0.81 * 0.46, tolerance: 0.5))
         #expect(isClose(layout.canvas.width / layout.canvas.height, 0.75, tolerance: 0.002))
         let wide = BakeLayout(source: CGSize(width: 4032, height: 3024), frame: .slideMount)
-        #expect(isClose(wide.crop.width / wide.crop.height, 0.667 / 0.447, tolerance: 0.002))
+        #expect(isClose(wide.crop.width / wide.crop.height, 0.67 / 0.46, tolerance: 0.002))
         #expect(isClose(wide.canvas.width / wide.canvas.height, 0.75, tolerance: 0.002))
     }
 

@@ -161,11 +161,11 @@ struct LookRenderModelTests {
         #expect(m.color?.matrix.count == 3)
         #expect(m.color?.curves.count == 3)
         #expect(m.colorCube == "negative")
-        #expect(isClose(m.color?.matrix[0][0] ?? 0, 1.0745))
-        #expect(isClose(m.vignetteOpacity, 0.510))
+        #expect(isClose(m.color?.matrix[0][0] ?? 0, 1.0439))
+        #expect(isClose(m.vignetteOpacity, 0.505))
         #expect(isClose(m.grainOpacity, 0))
         #expect(isClose(m.tintOpacity, 0))
-        #expect(m.halation?.radius == 2)
+        #expect(m.halation?.radius == 1.5)
         #expect(m.halation?.tintHex == 0xFFFFFF)
         #expect(m.soft == nil)
         #expect(model(.disposable).color == nil)
@@ -189,11 +189,11 @@ struct LookRenderModelTests {
         #expect(model(.disposable).filmGrain == nil)
     }
 
-    @Test func thePlasticCompactIsSharpWithNoSoftCorners() {
-        // Its reference export keeps 0.92 of the input's fine detail in the middle and 0.90 at the corners
-        // (`tools/grain.py` on the second picture), so the lens neither blurs nor falls off at the corners.
+    @Test func thePlasticCompactHasASlightBlurAndNoSoftCorners() {
+        // The refinement round measured 0.16 pt of blur in the middle of its seven reference exports and no
+        // more at the corners (`tools/softness.py`), so the lens is a touch soft and does not fall off.
         let m = model(.plastic35)
-        #expect(isClose(m.blurRadius, 0))
+        #expect(isClose(m.blurRadius, 0.16))
         #expect(m.soft == nil)
         #expect(m.halation != nil)
         #expect(m.stamp == .dateMatrix)

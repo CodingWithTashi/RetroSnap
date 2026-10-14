@@ -4,12 +4,17 @@ The screenshot shows the reference app's result screen: its canvas on a black (o
 with a banner and a close button below. Given a rough rectangle for the picture, the script snaps each
 edge to the strongest luminance step within 60 px of it and writes the crop.
 
-    venv/bin/python tools/refcrop.py <screenshot> <left> <top> <right> <bottom> <out.png> [--deskew]
+    venv/bin/python tools/refcrop.py <screenshot> <left> <top> <right> <bottom> <out.png> [--deskew | --angle <deg>] [--exact]
 
 The crop keeps the screenshot's colour profile (Display P3 on an iPhone), which `fit.py` converts to sRGB.
 `--deskew` is for a canvas the reference app lays at an angle (the D Slide mount): the script measures the
 tilt of the picture's left and top edges, turns the screenshot straight about the rectangle's centre
 (bicubic), prints the angle, and then snaps and crops as usual.
+`--angle` turns the screenshot straight by a given angle instead of measuring it on the picture's edges (a busy
+picture misleads the measurement; the mount's own straight edges give the angle: `tilt()` on the mount's rectangle).
+`--exact` cuts the rectangle as given, without snapping: for a dark picture against black film, which has no
+edge to snap to; the reference app lays a given input shape out the same way every time, so the rectangle
+measured on a bright picture (the snap on the grey wall) serves its dark pictures too.
 """
 import sys
 import numpy as np
@@ -38,18 +43,24 @@ def tilt(lum, left, top, right, bottom, window=40):
     return float(np.degrees((np.arctan(left_slope) - np.arctan(top_slope)) / 2))
 
 
-def main(path, left, top, right, bottom, out, deskew=False):
+def main(path, left, top, right, bottom, out, deskew=False, exact=False, angle=None):
     # Upright, and with the picture's colour profile kept, so `fit.py` can convert the crop to sRGB.
     opened = ImageOps.exif_transpose(Image.open(path))
     icc = opened.info.get("icc_profile")
     image = opened.convert("RGB")
-    if deskew:
-        angle = tilt(np.asarray(image).astype(np.float32).mean(axis=2), left, top, right, bottom)
+    if deskew or angle is not None:
+        if angle is None:
+            angle = tilt(np.asarray(image).astype(np.float32).mean(axis=2), left, top, right, bottom)
         centre = ((left + right) / 2, (top + bottom) / 2)
         image = image.rotate(-angle, resample=Image.BICUBIC, center=centre)
         print(f"{path}: picture tilted {angle:+.2f} degrees; turned straight about ({centre[0]:.0f}, {centre[1]:.0f})")
     img = np.asarray(image).astype(np.float32)
     lum = img.mean(axis=2)
+    if exact:
+        l, t, r, b = left, top, right, bottom
+        print(f"{path}: picture x {l}..{r} y {t}..{b} -> {r - l}x{b - t}, ratio {(r - l) / (b - t):.4f} (as given)")
+        Image.fromarray(img[t:b, l:r].astype(np.uint8)).save(out, icc_profile=icc)
+        return
     # Row and column profiles taken well inside the other axis's guess, so frame text does not count.
     inset_x = slice(left + (right - left) // 4, right - (right - left) // 4)
     inset_y = slice(top + (bottom - top) // 4, bottom - (bottom - top) // 4)
@@ -68,4 +79,6 @@ def main(path, left, top, right, bottom, out, deskew=False):
 
 if __name__ == "__main__":
     a = sys.argv
-    main(a[1], int(a[2]), int(a[3]), int(a[4]), int(a[5]), a[6], deskew="--deskew" in a[7:])
+    rest = a[7:]
+    angle = float(rest[rest.index("--angle") + 1]) if "--angle" in rest else None
+    main(a[1], int(a[2]), int(a[3]), int(a[4]), int(a[5]), a[6], deskew="--deskew" in rest, exact="--exact" in rest, angle=angle)

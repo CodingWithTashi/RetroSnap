@@ -48,12 +48,17 @@ struct BakeVersusScreenTests {
 struct ReferenceExportTests {
     nonisolated static let inputs = ReferencePairTests.pairs.deletingLastPathComponent().appendingPathComponent("photo-input")
 
-    /// The reference pictures: the pair suffix, the file, when it was taken (its stamp), and the square print's
-    /// card the reference app happened to give it.
-    nonisolated static let pictures: [(suffix: String, file: String, taken: String, design: SquarePrintDesign)] = [
-        ("", "IMG_5821.JPG", "2026-10-08T17:00:00Z", .lightBlue),
-        ("-1", "IMG_5326.JPG", "2026-07-23T17:00:00Z", .whitePattern),
-        ("-2", "IMG_5646.JPG", "2026-08-21T17:00:00Z", .darkBlue),
+    /// The reference pictures (`tools/pairs.py`): the pair suffix, the file, when it was taken (its stamp: the
+    /// generated pictures have no EXIF and were stamped with the day they were imported), and the square print's
+    /// and the slide mount's cards the reference app happened to give it.
+    nonisolated static let pictures: [(suffix: String, file: String, taken: String, design: FrameDesign)] = [
+        ("", "IMG_5821.JPG", "2026-10-08T17:00:00Z", FrameDesign(square: .lightBlue, slide: .greyDimpled)),
+        ("-1", "IMG_5326.JPG", "2026-07-23T17:00:00Z", FrameDesign(square: .whitePattern, slide: .creamStriped)),
+        ("-2", "IMG_5646.JPG", "2026-08-21T17:00:00Z", FrameDesign(square: .darkBlue, slide: .greyDimpled)),
+        ("-3", "gen_tungsten.jpg", "2026-10-13T17:00:00Z", FrameDesign(square: .plainWhite, slide: .creamPrinted)),
+        ("-4", "gen_backlit.jpg", "2026-10-13T17:00:00Z", FrameDesign(square: .green, slide: .whitePlastic)),
+        ("-5", "gen_market.jpg", "2026-10-13T17:00:00Z", FrameDesign(square: .plainWhite, slide: .creamPrinted)),
+        ("-6", "gen_wall.jpg", "2026-10-13T17:00:00Z", FrameDesign(square: .green, slide: .greyDimpled)),
     ]
 
     @Test(.enabled(if: ReferencePairTests.hasPairs), arguments: ReferencePairTests.fittedCameras)

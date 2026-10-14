@@ -222,7 +222,7 @@ final class PhotoExporter: PhotoExporting {
         let stamp = stampImage(dayLabeler.stamp(for: photo.stampDate), kind: model.stamp, layout: layout)
         let artwork = frameImage(
             model.frame, layout: layout, photoAspect: original.extent.width / original.extent.height,
-            design: SquarePrintDesign.forPhoto(id: photo.id)
+            design: FrameDesign.forPhoto(id: photo.id)
         )
         let metadata = PhotoMetadata.properties(
             original: original.properties, capturedAt: photo.capturedAt, location: photo.location
@@ -320,7 +320,7 @@ final class PhotoExporter: PhotoExporting {
     }
 
     /// The frame's artwork as the screen draws it, as a transparent picture exactly the size of the file.
-    private func frameImage(_ frame: LookFrame?, layout: BakeLayout, photoAspect: CGFloat, design: SquarePrintDesign) -> CIImage? {
+    private func frameImage(_ frame: LookFrame?, layout: BakeLayout, photoAspect: CGFloat, design: FrameDesign) -> CIImage? {
         guard let frame, frame != .fullFrame else { return nil }
         let size = layout.canvasPointSize
         let renderer = ImageRenderer(

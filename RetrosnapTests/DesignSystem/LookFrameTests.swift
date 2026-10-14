@@ -53,7 +53,11 @@ struct LookFrameTests {
         #expect(geometry.print.maxY - window.maxY > window.minY - geometry.print.minY)
         // A photo gets the same card every time, and the three cards are all used.
         #expect(SquarePrintDesign.forPhoto(id: "s1") == SquarePrintDesign.forPhoto(id: "s1"))
-        #expect(Set((0..<60).map { SquarePrintDesign.forPhoto(id: "photo-\($0)") }).count == 3)
+        #expect(Set((0..<60).map { SquarePrintDesign.forPhoto(id: "photo-\($0)") }).count == 5)
+        #expect(SlideMountDesign.forPhoto(id: "s1") == SlideMountDesign.forPhoto(id: "s1"))
+        #expect(Set((0..<60).map { SlideMountDesign.forPhoto(id: "photo-\($0)") }).count == 4)
+        let design = FrameDesign.forPhoto(id: "s1")
+        #expect(design.square == SquarePrintDesign.forPhoto(id: "s1") && design.slide == SlideMountDesign.forPhoto(id: "s1"))
     }
 
     @Test func theFilmStripIsRealFilmAroundAThreeByTwoPicture() {
@@ -131,12 +135,12 @@ struct LookFrameTests {
         #expect(isClose(mount.mount.midX, 195, tolerance: 1e-6))
         #expect(isClose(mount.mount.midY, 260, tolerance: 1e-6))
         let wide = LookFrame.slideMount.window(in: canvas, photoAspect: landscape)
-        #expect(isClose(wide.width, mount.side * 0.667, tolerance: 1e-6))
-        #expect(isClose(wide.height, mount.side * 0.447, tolerance: 1e-6))
+        #expect(isClose(wide.width, mount.side * 0.67, tolerance: 1e-6))
+        #expect(isClose(wide.height, mount.side * 0.46, tolerance: 1e-6))
         #expect(mount.mount.contains(wide))
         let tall = LookFrame.slideMount.window(in: canvas, photoAspect: portrait)
-        #expect(isClose(tall.width, mount.side * 0.447, tolerance: 1e-6))
-        #expect(isClose(tall.height, mount.side * 0.667, tolerance: 1e-6))
+        #expect(isClose(tall.width, mount.side * 0.46, tolerance: 1e-6))
+        #expect(isClose(tall.height, mount.side * 0.67, tolerance: 1e-6))
         #expect(isClose(tall.midX, wide.midX, tolerance: 1e-6))
     }
 

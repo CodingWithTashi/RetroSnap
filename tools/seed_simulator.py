@@ -5,13 +5,15 @@ the pictures the references were made from (the same path a user's import takes)
 
 Then launch with `-rsLive 1 -rsScreen result -rsPhoto selfie` (or `dunes`, or `-rsScreen viewer`) and screenshot.
 
-Writes Library/<id>.jpg (the input as it is, EXIF and profile kept), <id>-thumb.jpg, and library.json with
-three photos: 'selfie' (IMG_5821.JPG, the subway selfie), 'dunes' (IMG_5326.JPG) and 'sign' (IMG_5646.JPG, the
-street sign), all posed as taken with the camera.
+Writes Library/<id>.jpg (the input as it is, EXIF and profile kept), <id>-thumb.jpg, and library.json with the
+seven reference pictures of `tools/pairs.py` ('selfie', 'dunes', 'sign', 'tungsten', 'backlit', 'market', 'wall'),
+all posed as taken with the camera, newest first in the order the plan lists them.
 """
 import json, os, shutil, subprocess, sys
 from datetime import datetime, timezone
 from PIL import Image, ImageOps
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pairs import INPUTS
 
 def seconds(iso):
     """JSONEncoder's default date: seconds since 2001-01-01 UTC."""
@@ -22,8 +24,8 @@ R = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ref", "photo
 lib = os.path.join(container, "Library", "Application Support", "Library")
 os.makedirs(lib, exist_ok=True)
 photos = []
-for pid, src, when in [("selfie", f"{R}/IMG_5821.JPG", "2026-10-11T16:12:00Z"), ("dunes", f"{R}/IMG_5326.JPG", "2026-10-11T16:11:00Z"),
-                       ("sign", f"{R}/IMG_5646.JPG", "2026-10-11T16:10:00Z")]:
+for minute, (pid, file, _) in enumerate(INPUTS.values()):
+    src, when = f"{R}/{file}", f"2026-10-11T16:{12 - minute:02d}:00Z"
     shutil.copy2(src, os.path.join(lib, f"{pid}.jpg"))
     im = ImageOps.exif_transpose(Image.open(src))
     w, h = im.size

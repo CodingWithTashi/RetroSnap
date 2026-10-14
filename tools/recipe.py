@@ -33,7 +33,7 @@ def main(argv):
     fits = " and ".join(f"{p['deltaE_median']:.1f}" for p in fit["pairs"])
     tables = " and ".join(f"{p['deltaE_median']:.1f}" for p in lut["pairs"]) if lut else "no table yet"
     lines = [f"        case .{opts['--case']}:",
-             f"            // {opts['--name']}: fit --reg {fit['reg']:g} on its three pictures ({fits}); the table {tables}."]
+             f"            // {opts['--name']}: fit --reg {fit['reg']:g} on its {len(fit['pairs'])} pictures ({fits}); the table {tables}."]
     args = []
     if opts["--blur"]:
         args.append(f"blurRadius: {float(opts['--blur']):.2f}")

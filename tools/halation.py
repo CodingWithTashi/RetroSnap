@@ -32,7 +32,7 @@ TINTS = {"white": (1.0, 1.0, 1.0), "cool": (0.88, 0.94, 1.0), "warm": (1.0, 0.54
 WINDOW_POINTS = {
     "negative": (390 * 36 / 38, 390 * 24 / 31.96),
     "plastic35": (390.0, 390.0),
-    "slide": (390 * 0.81 * 0.667, 390 * 0.81 * 0.447),
+    "slide": (390 * 0.81 * 0.67, 390 * 0.81 * 0.46),
     "mediumFormat": (1.25 * 390 / 1.325, 390 / 1.135),
     "tlr": (390 / 1.086, 390 / 1.086),
     # Batch 2: the bare 3:2 crop is the whole canvas; the mini print's window on its 2:3 sheet (lying down the
@@ -66,9 +66,19 @@ def glow_of(photo, threshold, amount, tint):
     return np.clip(np.asarray(tint)[None, None, :] * (k * k * amount)[..., None], 0, 1)
 
 
-def with_halation(photo, threshold, amount, tint, sigma):
-    glow = glow_of(photo, threshold, amount, tint)
-    blurred = np.stack([ndimage.gaussian_filter(glow[..., c], sigma, mode="nearest") for c in range(3)], -1)
+def spread_of(photo, threshold, sigma):
+    """The glow's shape for one threshold and radius: the blurred k², which every amount and tint then scales.
+    The clip in `glow_of` never bites while amount and tint are at most 1, and the blur is linear, so this is
+    the same glow computed once per (threshold, radius) instead of once per setting."""
+    lum = photo @ LUMA
+    k = np.clip((lum - threshold) / max(1 - threshold, 0.001), 0, 1)
+    return ndimage.gaussian_filter(k * k, sigma, mode="nearest")
+
+
+def with_halation(photo, threshold, amount, tint, sigma, spread=None):
+    if spread is None:
+        spread = spread_of(photo, threshold, sigma)
+    blurred = spread[..., None] * (np.asarray(tint) * amount)[None, None, :]
     return photo + blurred - photo * blurred
 
 
@@ -123,10 +133,17 @@ def main(argv):
               f"dL {d[near][:, 0].mean():+.2f} da {d[near][:, 1].mean():+.2f} db {d[near][:, 2].mean():+.2f} off the colour-only fit "
               f"(n {near.sum()}); colour-only mean ΔE {delta_e2000(srgb_to_lab(box(plain)[m // 4: -(m // 4) or None, m // 4: -(m // 4) or None]), lab_ref).mean():.3f}")
 
+    spreads = {}  # (threshold, radius) -> the glow's shape per pair, shared by the amounts and tints of the grid's inner loops
+
     def score(threshold, amount, tint, radius):
         total = 0.0
+        if spreads.get("key") != (threshold, radius):
+            spreads.clear()
+            spreads["key"] = (threshold, radius)
+            for name, inp, ref, uv, scale, m, lab_ref, near in pairs:
+                spreads[name] = spread_of(inp, threshold, radius * scale)
         for name, inp, ref, uv, scale, m, lab_ref, near in pairs:
-            out = ColourStage.apply(p, blurred(with_halation(inp, threshold, amount, TINTS[tint], radius * scale), blur * scale), uv)
+            out = ColourStage.apply(p, blurred(with_halation(inp, threshold, amount, TINTS[tint], radius * scale, spreads[name]), blur * scale), uv)
             de = delta_e2000(srgb_to_lab(box(out)[m // 4: -(m // 4) or None, m // 4: -(m // 4) or None]), lab_ref)
             total += de.mean()
         return total / len(pairs)

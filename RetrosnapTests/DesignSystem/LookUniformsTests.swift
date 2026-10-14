@@ -53,9 +53,9 @@ struct LookUniformsTests {
         let stage = try! #require(uniforms(.negative).colorStage)
         #expect(stage.count == 18)
         // The matrix rows with their offsets.
-        #expect(isClose(stage[0].x, 1.0745))
-        #expect(isClose(stage[0].w, -0.0188))
-        #expect(isClose(stage[2].z, 1.0919))
+        #expect(isClose(stage[0].x, 1.0439))
+        #expect(isClose(stage[0].w, 0.0318))
+        #expect(isClose(stage[2].z, 0.9999))
         // Red: values at knots 0-3, then knots 4-5 and the first two tangents, then the last four tangents.
         let red = CameraStyle.negative.look.color!.curves[0]
         let tangents = LookUniforms.tangents(of: red)
@@ -112,7 +112,7 @@ struct LookUniformsTests {
         #expect(isClose(negative.filmGrain.x, 0.8))
         #expect(isClose(negative.filmGrain.y, 0.065))
         #expect(isClose(negative.filmGrain.z, 0.15))
-        #expect(isClose(negative.halation.x, 0.6))
+        #expect(isClose(negative.halation.x, 0.5))
         #expect(isClose(negative.halation.y, 0.4))
         #expect(isClose(negative.halationTint.x, 1))
         #expect(isClose(negative.halationTint.y, 1))
@@ -121,8 +121,8 @@ struct LookUniformsTests {
         #expect(isClose(plastic.soft.x, 0))
         #expect(isClose(plastic.soft.y, 1))
         #expect(isClose(plastic.soft.z, 0))
-        #expect(isClose(plastic.halation.x, 0.6))
-        #expect(isClose(plastic.halation.y, 0.25))
+        #expect(isClose(plastic.halation.x, 0.4))
+        #expect(isClose(plastic.halation.y, 0.15))
     }
 
     @Test func layerStrengthsComeFromTheRenderModel() {
