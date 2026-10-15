@@ -38,7 +38,7 @@ final class EditViewModel {
     }
 
     var isInstant: Bool {
-        photo?.isInstantPrint ?? false
+        photo?.camera.isInstantPrint ?? false
     }
 
     /// The preview's box: width over height.

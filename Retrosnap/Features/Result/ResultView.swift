@@ -72,7 +72,7 @@ struct ResultView: View {
         let width: CGFloat = isInstant ? 296 : 312
         return ZStack {
             if let photo = viewModel.photo {
-                PhotoLookView(photo: photo, framed: !photo.isVideo, stamp: viewModel.stamp)
+                PhotoLookView(photo: photo, framed: true, stamp: viewModel.stamp)
             }
             if let progress = viewModel.processingProgress {
                 processingCover(progress)

@@ -40,7 +40,7 @@ struct ViewerView: View {
     private var photo: some View {
         if let photo = viewModel.photo, let picture = viewModel.picture {
             PhotoLookView(
-                image: picture, camera: photo.camera, adjustments: photo.adjustments, framed: !photo.isVideo,
+                image: picture, camera: photo.camera, adjustments: photo.adjustments, framed: true,
                 stamp: viewModel.stamp, videoDuration: viewModel.badgeText, photoAspect: photo.aspectRatio,
                 frameDesign: FrameDesign.forPhoto(id: photo.id)
             )

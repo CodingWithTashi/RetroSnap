@@ -161,6 +161,7 @@ Those four stages are the screen. Pictures that leave the app are drawn a second
 - `LookUniforms` turns a `LookRenderModel` into the numbers both entries take, built once per drawing, and decides the colour pass under the table (`colorPass`); each side checks for itself that the table loads.
 - `BakeArtwork` draws a baked file's stamp and frame artwork with the screen's own views (`PhotoStampView`, `LookFrameView`), for `PhotoExporter` and the calibration tests alike.
 - `BakeLayout` sizes a baked file so that grain, scanlines and stamps, which are measured in points, come out as they look on the design's 390pt-wide screen.
+- A clip is shown and baked on its camera's canvas as a photo is, but `PhotoExporter.bakeClip` first shrinks the frames so that the canvas has no more pixels than the recording (a slide mount around a 1080p clip would otherwise be 11 MP, more than H.264 takes), and evens the size for the encoder.
 
 A change to a function's signature in `RetroLook.metal` needs the matching change in `LookShaders` and in `LookRenderer`. A change to the layers or their order needs it in `PhotoLookView` and in `LookRenderer.render`.
 

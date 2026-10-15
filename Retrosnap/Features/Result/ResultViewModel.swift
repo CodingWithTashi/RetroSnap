@@ -79,7 +79,7 @@ final class ResultViewModel {
     }
 
     var isInstant: Bool {
-        photo?.isInstantPrint ?? false
+        photo?.camera.isInstantPrint ?? false
     }
 
     /// The print's width over its height.

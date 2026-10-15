@@ -239,27 +239,51 @@ final class PhotoExporter: PhotoExporting {
         )
     }
 
-    /// The clip as it leaves the app: every frame through the look, in a movie in the temporary folder.
+    /// The clip as it leaves the app: every frame through the look and on its camera's canvas, as a photo is
+    /// baked, in a movie in the temporary folder.
     /// Nil when it has no movie or the movie cannot be read. `progress` follows the bake while it runs.
     func bakeClip(_ photo: Photo) async -> URL? {
         guard let renderer, let videoFile = photo.videoFile else { return nil }
         let asset = AVURLAsset(url: folder.url(for: videoFile))
-        // A clip plays in the open, without the Instant print's frame.
-        let model = LookRenderModel(camera: photo.camera, adjustments: photo.adjustments, framed: false, stampEnabled: true)
+        let model = LookRenderModel(camera: photo.camera, adjustments: photo.adjustments, framed: true, stampEnabled: true)
         progress[photo.id] = 0
         defer { progress[photo.id] = nil }
         do {
-            guard let size = try await asset.uprightVideoSize() else { return nil }
-            let layout = BakeLayout(source: size, frame: nil)
+            guard let recorded = try await asset.uprightVideoSize() else { return nil }
+            // The canvas gets no more pixels than the clip has, so the movie bakes about as fast and is about as big as
+            // the recording: a slide mount keeping every pixel of a 1080p clip would be 11 megapixels, more than H.264
+            // takes. The frames are made smaller first, then laid out as a photo is.
+            let shrink = Self.clipShrink(recorded, frame: model.frame)
+            let size = CGSize(width: (recorded.width * shrink).rounded(), height: (recorded.height * shrink).rounded())
+            let layout = BakeLayout(source: size, frame: model.frame)
             let stamp = BakeArtwork.stamp(dayLabeler.stamp(for: photo.stampDate), kind: model.stamp, layout: layout)
+            let artwork = BakeArtwork.frame(
+                model.frame, layout: layout, photoAspect: size.width / size.height,
+                design: FrameDesign.forPhoto(id: photo.id)
+            )
+            let paper = CIColor(hex: model.paperHex)
+            // Video is encoded in pairs of pixels: a canvas an odd number of pixels across loses its last column or row.
+            let movieFrame = CGRect(
+                x: 0, y: 0,
+                width: (layout.canvas.width / 2).rounded(.down) * 2, height: (layout.canvas.height / 2).rounded(.down) * 2
+            )
 
             let composition = try await AVMutableVideoComposition.videoComposition(with: asset) { request in
-                let frame = request.sourceImage
-                request.finish(
-                    with: renderer.render(frame, model: model, scale: layout.scale, stamp: stamp).cropped(to: frame.extent),
-                    context: renderer.context
+                var frame = request.sourceImage
+                if shrink < 1 {
+                    let scale = size.height / recorded.height
+                    frame = frame.clampedToExtent()
+                        .applyingFilter("CILanczosScaleTransform", parameters: [
+                            kCIInputScaleKey: scale, kCIInputAspectRatioKey: size.width / recorded.width / scale,
+                        ])
+                        .cropped(to: CGRect(origin: .zero, size: size))
+                }
+                let picture = renderer.picture(
+                    from: frame, model: model, layout: layout, stamp: stamp, paper: paper, artwork: artwork
                 )
+                request.finish(with: picture.cropped(to: movieFrame), context: renderer.context)
             }
+            composition.renderSize = movieFrame.size
             // A file of its own for every bake: the same clip can be baked for Photos and for sharing at once.
             let movie = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString)-baked.mov")
             guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else {
@@ -288,6 +312,13 @@ final class PhotoExporter: PhotoExporting {
             Self.log.error("A clip could not be baked: \(error.localizedDescription)")
             return nil
         }
+    }
+
+    /// How much smaller a clip's frames are made so that its canvas has no more pixels than the clip, but for
+    /// rounding: 1 when it fits.
+    nonisolated static func clipShrink(_ size: CGSize, frame: LookFrame?) -> CGFloat {
+        let canvas = BakeLayout(source: size, frame: frame).canvas
+        return min(1, (size.width * size.height / (canvas.width * canvas.height)).squareRoot())
     }
 
     /// The untouched picture, upright.

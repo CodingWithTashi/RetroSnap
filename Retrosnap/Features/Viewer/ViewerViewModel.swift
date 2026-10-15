@@ -51,7 +51,7 @@ final class ViewerViewModel {
     }
 
     var isInstant: Bool {
-        photo?.isInstantPrint ?? false
+        photo?.camera.isInstantPrint ?? false
     }
 
     /// The photo's box: width over height.

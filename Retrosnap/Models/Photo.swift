@@ -40,11 +40,8 @@ nonisolated struct Photo: Identifiable, Hashable, Sendable {
     /// The width over the height of the box a screen gives this photo: the camera's own canvas (the Instant
     /// print's paper, a film strip, a slide mount, a rebate, or the film's crop), or the picture's own shape.
     var displayAspect: CGFloat {
-        isVideo ? aspectRatio : camera.look.frame?.canvasAspect(forPhotoAspect: aspectRatio) ?? aspectRatio
+        camera.look.frame?.canvasAspect(forPhotoAspect: aspectRatio) ?? aspectRatio
     }
-
-    /// Shown as the mini instant print (CameraStyle.isInstantPrint).
-    var isInstantPrint: Bool { camera.isInstantPrint && !isVideo }
 
     /// The date a camera stamps on the picture: when it was taken.
     var stampDate: Date {

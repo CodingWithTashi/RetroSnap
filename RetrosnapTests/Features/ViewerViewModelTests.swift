@@ -209,11 +209,12 @@ struct ViewerViewModelTests {
         #expect(make("taken").stamp?.date == "'26 10 08")
     }
 
-    @Test func aClipIsShownWholeNotAsAnInstantPrint() {
+    @Test func aClipIsShownOnItsCamerasCanvasAsAPhotoIs() {
         world.photos.add(world.photo("instClip", camera: .instant, video: 5))
-        let vm = make("instClip")
-        #expect(!vm.isInstant)
-        #expect(vm.displayAspect == Photo.cameraAspect)
-        #expect(make("s3").displayAspect != Photo.cameraAspect)
+        world.photos.add(world.photo("instShot", camera: .instant))
+        let clip = make("instClip")
+        #expect(clip.isInstant)
+        #expect(clip.displayAspect == make("instShot").displayAspect)
+        #expect(clip.displayAspect != Photo.cameraAspect)
     }
 }

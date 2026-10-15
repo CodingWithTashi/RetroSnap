@@ -275,7 +275,8 @@ final class PhotoExporterTests {
     }
 
     @Test func aClipIsBakedUprightAtItsOwnSizeAndLength() async throws {
-        let baked = try #require(await exporter.bakeClip(try await clip(.film)))
+        // The Camcorder has no canvas, so the movie keeps the clip's own size.
+        let baked = try #require(await exporter.bakeClip(try await clip(.camcorder)))
         defer { try? FileManager.default.removeItem(at: baked) }
         let asset = AVURLAsset(url: baked)
         let track = try #require(try await asset.loadTracks(withMediaType: .video).first)
@@ -299,6 +300,49 @@ final class PhotoExporterTests {
             // The Digicam's chain, tint and flash on the fixtures' orange; video compression costs a few levels.
             #expect(centre.isClose(to: Pixel(red: 209, green: 133, blue: 62), tolerance: 12))
         }
+    }
+
+    @Test func aClipIsBakedOnItsCamerasCanvasAsAPhotoIs() async throws {
+        let baked = try #require(await exporter.bakeClip(try await clip(.instant)))
+        defer { try? FileManager.default.removeItem(at: baked) }
+        var still = try shot(.instant, width: 240, height: 320)
+        still.adjustments = PhotoAdjustments(intensity: 100, grain: 0)
+        let picture = try #require(await exporter.bake(still))
+        let photo = try #require(CIImage(data: picture))
+
+        let generator = AVAssetImageGenerator(asset: AVURLAsset(url: baked))
+        generator.appliesPreferredTrackTransform = true
+        let frame = try await generator.image(at: CMTime(seconds: 0.5, preferredTimescale: 600)).image
+        // The photo's canvas, with no more pixels than the clip has but for rounding.
+        #expect(frame.width * frame.height <= 240 * 320 * 101 / 100)
+        #expect(abs(CGFloat(frame.width) / CGFloat(frame.height) - photo.extent.width / photo.extent.height) < 0.01)
+
+        // The print's wide bottom border under the picture, and the picture's centre, at the same places in both;
+        // video compression costs a few levels.
+        let layout = BakeLayout(source: CGSize(width: 240, height: 320), frame: .instantPrint)
+        let window = LookFrame.instantPrint.window(in: layout.canvasPointSize)
+        let image = CIImage(cgImage: frame)
+        let ratio = CGFloat(frame.width) / photo.extent.width
+        for (x, y) in [(window.midX, window.maxY + 40), (window.midX, window.midY)] {
+            let column = x * layout.scale, row = y * layout.scale
+            let expected = renderer.context.pixel(of: photo, x: Int(column), y: Int(row))
+            let found = renderer.context.pixel(of: image, x: Int(column * ratio), y: Int(row * ratio))
+            #expect(found.isClose(to: expected, tolerance: 12), "\(found) at (\(column), \(row)), the photo has \(expected)")
+        }
+    }
+
+    @Test func noCanvasMakesAClipBiggerThanItWasRecorded() {
+        let recorded = CGSize(width: 1080, height: 1920)
+        let frames: [LookFrame] = [.instantPrint, .squarePrint, .filmStrip, .slideMount, .mediumFormat, .square, .fullFrame]
+        for frame in frames {
+            let shrink = PhotoExporter.clipShrink(recorded, frame: frame)
+            let source = CGSize(width: (recorded.width * shrink).rounded(), height: (recorded.height * shrink).rounded())
+            let canvas = BakeLayout(source: source, frame: frame).canvas
+            #expect(canvas.width * canvas.height <= recorded.width * recorded.height * 1.01, "\(frame): \(canvas)")
+        }
+        // A clip with no canvas, or one that is only the film's crop, keeps every pixel.
+        #expect(PhotoExporter.clipShrink(recorded, frame: nil) == 1)
+        #expect(PhotoExporter.clipShrink(recorded, frame: .fullFrame) == 1)
     }
 
     @Test func whenAndWhereAClipWasTakenTravelWithIt() async throws {
