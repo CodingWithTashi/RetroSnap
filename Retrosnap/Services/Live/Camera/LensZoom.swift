@@ -4,7 +4,7 @@ import Foundation
 /// counts from its widest one, so on a phone with an ultra-wide the main lens sits at 2 and is shown as 1×.
 nonisolated struct LensZoom: Hashable, Sendable {
     /// The furthest the app zooms in, as shown. Past this the picture is only being enlarged.
-    static let furthest = 10.0
+    private static let furthest = 10.0
 
     /// A shown number is the camera's own times this.
     let multiplier: Double

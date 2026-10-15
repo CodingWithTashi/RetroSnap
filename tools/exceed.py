@@ -28,17 +28,13 @@ from scipy import ndimage
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from colour import delta_e2000, srgb_to_lab  # noqa: E402
 from pairs import INPUTS, PAIRS, input_path, recipe, suffix_of  # noqa: E402
+from images import box  # noqa: E402
 
 R = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ref", "pairs")
 
 
 def load(p):
     return np.asarray(Image.open(p).convert("RGB")).astype(float)
-
-
-def box(a, n=4):
-    h, w = a.shape[0] // n, a.shape[1] // n
-    return a[: h * n, : w * n].reshape(h, n, w, n, 3).mean(axis=(1, 3))
 
 
 def clipping(cams):

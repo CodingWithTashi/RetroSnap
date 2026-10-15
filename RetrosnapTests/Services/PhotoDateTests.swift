@@ -31,37 +31,14 @@ struct PhotoDateTests {
             kCGImagePropertyExifDateTimeOriginal: "2026:10:08 12:32:41",
             kCGImagePropertyExifOffsetTimeOriginal: "+02:00",
         ]
-        let date = PhotoImporter.takenAt(of: [kCGImagePropertyExifDictionary: exif])
+        let date = PhotoMetadata.takenAt(of: [kCGImagePropertyExifDictionary: exif])
         var components = DateComponents()
         components.year = 2026; components.month = 10; components.day = 8; components.hour = 10; components.minute = 32; components.second = 41
         var utc = Calendar(identifier: .gregorian)
         utc.timeZone = TimeZone(secondsFromGMT: 0)!
         #expect(date == utc.date(from: components))
-        #expect(PhotoImporter.takenAt(of: [:]) == nil)
+        #expect(PhotoMetadata.takenAt(of: [:]) == nil)
         #expect(TimeZone(iso8601: "-07:00")?.secondsFromGMT() == -7 * 3600)
         #expect(TimeZone(iso8601: "bogus") == nil)
-    }
-
-    @Test func theDateBackWritesTheYearMonthAndDayWithTheirMarks() {
-        let labeler = DayLabeler(clock: FixedClock.design)
-        let stamp = labeler.stamp(for: FixedClock.design.now)
-        #expect(stamp.date == "'26 10 11")
-        #expect(stamp.dateBack == "'26年 10月11日")
-        let eighth = FixedClock.design.calendar.date(byAdding: .day, value: -3, to: FixedClock.design.now)!
-        #expect(labeler.stamp(for: eighth).dateBack == "'26年 10月8日")
-        // The plain date back: month, day and year each in two places, with a tick before the year.
-        #expect(stamp.dateBackPlain == "10 11 '26")
-        #expect(labeler.stamp(for: eighth).dateBackPlain == "10  8 '26")
-        let july = FixedClock.design.calendar.date(from: DateComponents(year: 2026, month: 7, day: 23, hour: 12))!
-        #expect(labeler.stamp(for: july).dateBackPlain == " 7 23 '26")
-    }
-
-    @Test func theDotMatrixHasAGlyphForEveryMarkTheDateBackPrints() {
-        for character in "0123456789'年月日 " {
-            let glyph = DotMatrixFont.glyph(for: character)
-            #expect(glyph.rows.count == 7)
-            #expect(glyph.rows.allSatisfy { $0.count == glyph.width })
-        }
-        #expect(DotMatrixFont.glyphs(for: "'26年 10月8日").count == 10)
     }
 }

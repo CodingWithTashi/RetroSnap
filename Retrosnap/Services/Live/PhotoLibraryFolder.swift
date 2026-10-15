@@ -55,10 +55,17 @@ nonisolated struct PhotoLibraryFolder: Hashable, Sendable {
         do {
             try FileManager.default.moveItem(at: recording, to: url(for: videoFile))
         } catch {
-            poster.fileNames.forEach { try? FileManager.default.removeItem(at: url(for: $0)) }
+            removeFiles(named: poster.fileNames)
             throw error
         }
         return (poster, videoFile)
+    }
+
+    /// Deletes these files from the folder; one that is already gone is skipped.
+    func removeFiles(named names: some Sequence<String>) {
+        for name in names {
+            try? FileManager.default.removeItem(at: url(for: name))
+        }
     }
 
     private static func thumbnail(of original: Data) throws -> Data {

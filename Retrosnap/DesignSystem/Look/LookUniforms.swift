@@ -37,6 +37,8 @@ nonisolated struct LookUniforms: Hashable, Sendable {
     /// The length of the filter chain in the shader.
     static let operationCount = 5
 
+    /// The camera's colour table by name. Each renderer loads it its own way and draws `colorPass` when there is none or it does not load.
+    let colorCube: String?
     let operations: [Operation]
     let tint: Color
     let warm: Color
@@ -60,7 +62,26 @@ nonisolated struct LookUniforms: Hashable, Sendable {
     /// Softness: inner, outer, strength.
     let soft: Vector
 
+    /// The colour layer when no table is drawn: the fitted stage as the shader's eighteen vectors, else the design's filter chain.
+    enum ColorPass: Hashable, Sendable {
+        case stage([Vector])
+        case chain([Operation])
+    }
+
+    var colorPass: ColorPass { colorStage.map(ColorPass.stage) ?? .chain(operations) }
+
+    /// `fx` in `RetroLook.metal`: the flash, fade, colour bleed and scanline strengths, in the shader's order.
+    var effects: Vector { Vector(x: flash, y: fade, z: chroma, w: scan) }
+
+    /// Film grain when there is none: clump size 1, no amount.
+    private static let noFilmGrain = Vector(x: 1, y: 0, z: 0, w: 0)
+    /// Halation when there is none: threshold 1, no amount.
+    private static let noHalation = Vector(x: 1, y: 0, z: 0, w: 0)
+    /// Softness when there is none: inner 0, outer 1, no strength.
+    private static let noSoftness = Vector(x: 0, y: 1, z: 0, w: 0)
+
     init(_ model: LookRenderModel) {
+        colorCube = model.colorCube
         operations = Self.operations(model.filters)
         tint = Color(hex: model.tintHex, opacity: model.tintOpacity)
         warm = Color(hex: model.warmHex, opacity: model.warmOpacity)
@@ -73,11 +94,11 @@ nonisolated struct LookUniforms: Hashable, Sendable {
         brightness = model.brightness
         contrast = model.contrast
         colorStage = model.color.map(Self.vectors)
-        filmGrain = model.filmGrain.map { Vector(x: $0.size, y: $0.amount, z: $0.color, w: 0) } ?? Vector(x: 1, y: 0, z: 0, w: 0)
-        halation = model.halation.map { Vector(x: $0.threshold, y: $0.amount, z: 0, w: 0) } ?? Vector(x: 1, y: 0, z: 0, w: 0)
+        filmGrain = model.filmGrain.map { Vector(x: $0.size, y: $0.amount, z: $0.color, w: 0) } ?? Self.noFilmGrain
+        halation = model.halation.map { Vector(x: $0.threshold, y: $0.amount, z: 0, w: 0) } ?? Self.noHalation
         let glow = Color(hex: model.halation?.tintHex ?? 0, opacity: 1)
         halationTint = Vector(x: glow.red, y: glow.green, z: glow.blue, w: 1)
-        soft = model.soft.map { Vector(x: $0.inner, y: $0.outer, z: $0.strength, w: 0) } ?? Vector(x: 0, y: 1, z: 0, w: 0)
+        soft = model.soft.map { Vector(x: $0.inner, y: $0.outer, z: $0.strength, w: 0) } ?? Self.noSoftness
     }
 
     /// A filter chain as exactly `operationCount` steps, padded with steps that do nothing.

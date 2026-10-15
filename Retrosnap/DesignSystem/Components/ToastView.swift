@@ -22,7 +22,7 @@ struct ToastView: View {
         .frame(height: 44)
         .background {
             Capsule().fill(.ultraThinMaterial)
-            Capsule().fill(Color(hex: 0x26231F, opacity: 0.92))
+            Capsule().fill(RSColor.raised(0.92))
         }
         .compositingGroup()
         .shadow(color: .black.opacity(0.4), radius: 15, y: 10)
@@ -53,6 +53,6 @@ struct BannerView: View {
         }
         .padding(.leading, 16)
         .padding([.trailing, .vertical], 12)
-        .glass(cornerRadius: 20, tint: RSColor.glass(0.72))
+        .glass(cornerRadius: RSRadius.group, tint: RSColor.glass(0.72))
     }
 }

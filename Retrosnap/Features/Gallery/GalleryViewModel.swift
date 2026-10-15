@@ -56,7 +56,7 @@ final class GalleryViewModel {
         isEmpty
     }
 
-    func accessibilityLabel(for photo: Photo) -> String {
+    func photoLabel(for photo: Photo) -> String {
         let name = photo.isCollage ? "Collage" : "\(photo.camera.name) \(photo.isVideo ? "video" : "photo")"
         return "\(name), \(dayLabeler.label(for: photo.capturedAt))"
     }
@@ -91,21 +91,12 @@ final class GalleryViewModel {
     /// Opens the Photos picker. The pick goes to the develop screen on the camera the app is set to.
     func addTapped() {
         guard !importer.isImporting else { return }
-        let camera = settings.lastCamera
-        importer.pick { [weak self, importer] outcome in
-            switch outcome {
-            case .imported(var draft):
-                guard let self else {
-                    importer.discard(draft)
-                    return
-                }
-                draft.camera = camera
-                router.push(.develop(draft))
-            case .failed:
-                self?.toasts.show(DevelopViewModel.importFailedText)
-            case .cancelled:
-                break
-            }
+        importer.pickDraft(on: settings.lastCamera) { [weak self] draft in
+            guard let self else { return false }
+            router.push(.develop(draft))
+            return true
+        } failed: { [weak self] in
+            self?.toasts.show(ImportOutcome.failureText)
         }
     }
 }

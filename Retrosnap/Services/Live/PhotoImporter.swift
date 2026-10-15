@@ -71,12 +71,14 @@ final class PhotoImporter: NSObject, PhotoImporting, PHPickerViewControllerDeleg
     }
 
     func discard(_ draft: Photo) {
-        let urls = draft.fileNames.map(folder.url(for:))
-        Task.detached {
-            for url in urls {
-                try? FileManager.default.removeItem(at: url)
-            }
+        Task { [folder] in
+            await Self.remove(draft.fileNames, from: folder)
         }
+    }
+
+    @concurrent
+    private nonisolated static func remove(_ names: [String], from folder: PhotoLibraryFolder) async {
+        folder.removeFiles(named: names)
     }
 
     // MARK: Filing the pick
@@ -101,7 +103,7 @@ final class PhotoImporter: NSObject, PhotoImporting, PHPickerViewControllerDeleg
             let header = properties(of: original)
             return .imported(Photo(
                 id: id, image: image, camera: .film, capturedAt: now, isJustCaptured: true,
-                pixelSize: pixelSize(of: header), takenAt: takenAt(of: header)
+                pixelSize: pixelSize(of: header), takenAt: PhotoMetadata.takenAt(of: header)
             ))
         } catch {
             log.error("A picture could not be brought in: \(error.localizedDescription)")
@@ -116,11 +118,8 @@ final class PhotoImporter: NSObject, PhotoImporting, PHPickerViewControllerDeleg
         do {
             let asset = AVURLAsset(url: copy)
             let seconds = try await asset.load(.duration).seconds
-            var pixelSize: PixelSize?
-            if let track = try await asset.loadTracks(withMediaType: .video).first {
-                let (size, transform) = try await track.load(.naturalSize, .preferredTransform)
-                let upright = CGRect(origin: .zero, size: size).applying(transform).size
-                pixelSize = PixelSize(width: Int(abs(upright.width).rounded()), height: Int(abs(upright.height).rounded()))
+            let pixelSize = try await asset.uprightVideoSize().map {
+                PixelSize(width: Int($0.width.rounded()), height: Int($0.height.rounded()))
             }
             let filed = try await folder.storeClip(movieAt: copy, id: id)
             return .imported(Photo(
@@ -173,35 +172,5 @@ final class PhotoImporter: NSObject, PhotoImporting, PHPickerViewControllerDeleg
             .flatMap(CGImagePropertyOrientation.init(rawValue:)) ?? .up
         let isSideways = [.left, .right, .leftMirrored, .rightMirrored].contains(orientation)
         return isSideways ? PixelSize(width: height, height: width) : PixelSize(width: width, height: height)
-    }
-
-    /// When the picture was taken, as its EXIF says ("2026:10:08 12:32:41", with the zone when it is there).
-    nonisolated static func takenAt(of properties: [CFString: Any]) -> Date? {
-        guard let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any],
-              let text = exif[kCGImagePropertyExifDateTimeOriginal] as? String
-        else { return nil }
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
-        if let offset = exif[kCGImagePropertyExifOffsetTimeOriginal] as? String,
-           let zone = TimeZone(iso8601: offset) {
-            formatter.timeZone = zone
-        } else {
-            formatter.timeZone = .current
-        }
-        return formatter.date(from: text)
-    }
-}
-
-
-extension TimeZone {
-    /// A zone from an EXIF offset such as "+02:00" or "-07:00".
-    nonisolated init?(iso8601 offset: String) {
-        let trimmed = offset.trimmingCharacters(in: .whitespaces)
-        guard trimmed.count == 6, let sign = trimmed.first, sign == "+" || sign == "-",
-              let hours = Int(trimmed.dropFirst().prefix(2)), let minutes = Int(trimmed.suffix(2))
-        else { return nil }
-        let seconds = (hours * 3600 + minutes * 60) * (sign == "-" ? -1 : 1)
-        self.init(secondsFromGMT: seconds)
     }
 }

@@ -13,8 +13,8 @@ struct RetrosnapApp: App {
             case .app(let dependencies):
                 RootView(app: dependencies)
             #if DEBUG
-            case .designCatalog(let arguments):
-                DesignCatalogView(arguments: arguments)
+            case .designCatalog(let scenario):
+                DesignCatalogView(scenario: scenario)
                     .preferredColorScheme(.dark)
             #endif
             }
@@ -26,7 +26,7 @@ private enum Launch {
     case unitTests
     case app(AppDependencies)
     #if DEBUG
-    case designCatalog([String])
+    case designCatalog(LaunchScenario)
     #endif
 
     static var current: Launch {
@@ -37,7 +37,7 @@ private enum Launch {
         #if DEBUG
         let scenario = LaunchScenario(arguments: process.arguments)
         if scenario.screen == .catalog || scenario.screen == .look {
-            return .designCatalog(process.arguments)
+            return .designCatalog(scenario)
         }
         return .app(AppDependencies(scenario: scenario))
         #else

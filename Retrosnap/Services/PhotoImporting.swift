@@ -22,3 +22,26 @@ protocol PhotoImporting: AnyObject {
     /// Removes the files of a pick that is not going to be kept.
     func discard(_ draft: Photo)
 }
+
+extension ImportOutcome {
+    /// What the user is told when a pick could not be read.
+    nonisolated static let failureText = "Couldn’t open that photo or video"
+}
+
+extension PhotoImporting {
+    /// Shows the picker; the pick arrives posed on `camera`. `accept` takes it and says whether it was kept;
+    /// a draft it turns down has its files removed. `failed` runs when the pick could not be read.
+    func pickDraft(on camera: CameraStyle, accept: @escaping @MainActor (Photo) -> Bool, failed: @escaping @MainActor () -> Void) {
+        pick { [self] outcome in
+            switch outcome {
+            case .imported(var draft):
+                draft.camera = camera
+                if !accept(draft) { discard(draft) }
+            case .failed:
+                failed()
+            case .cancelled:
+                break
+            }
+        }
+    }
+}

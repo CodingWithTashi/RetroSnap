@@ -30,18 +30,18 @@ final class AppDependencies {
     /// Starting states other than the ordinary ones, for the design's static boards. An ordinary launch has none.
     struct Boards {
         var camera = CameraViewModel.Preset()
-        var isProcessing = false
+        var isPosedProcessing = false
         var tool = EditTool.effect
         var editPreset: PhotoAdjustments?
-        var collageStep = 1
+        var collageStep = CollageStep.layout
         var collagePicks: [Photo.ID] = []
     }
 
-    let config: AppConfig
+    private let config: AppConfig
     let services: Services
-    let scheduler: any Scheduling
-    let saver: PhotosSaver
-    let feedback: FeedbackCenter
+    private let scheduler: any Scheduling
+    private let saver: PhotosSaver
+    private let feedback: FeedbackCenter
     let router: AppRouter
     let toasts: ToastCenter
     let dayLabeler: DayLabeler
@@ -95,7 +95,7 @@ final class AppDependencies {
         ResultViewModel(
             photoID: photoID, photos: services.photos, saver: saver, sharing: services.sharing,
             importer: services.importer, router: router, toasts: toasts, scheduler: scheduler, dayLabeler: dayLabeler,
-            isProcessing: boards.isProcessing
+            isPosedProcessing: boards.isPosedProcessing
         )
     }
 

@@ -6,14 +6,12 @@ import Testing
 final class DiskPhotoStoreTests {
     private static let undoWindow = Duration.seconds(4)
 
-    private let folder = PhotoLibraryFolder(
-        url: FileManager.default.temporaryDirectory.appendingPathComponent("DiskPhotoStoreTests-\(UUID().uuidString)")
-    )
+    private let folder = PhotoLibraryFolder.temporary(for: "DiskPhotoStoreTests")
     private let scheduler = ManualScheduler()
     private let clock = FixedClock.design
 
     deinit {
-        try? FileManager.default.removeItem(at: folder.url)
+        folder.removeFromDisk()
     }
 
     /// A store as the next launch would create it.
@@ -22,7 +20,7 @@ final class DiskPhotoStoreTests {
     }
 
     private func photo(_ id: String, camera: CameraStyle = .film) -> Photo {
-        Photo(id: id, image: .photo(1011), camera: camera, capturedAt: clock.now)
+        Photo.fixture(id, camera: camera, at: clock.now)
     }
 
     /// A shot with its original and thumbnail on disk, as the camera leaves it.
@@ -71,13 +69,13 @@ final class DiskPhotoStoreTests {
         var clip = photo("v", camera: .camcorder)
         clip.videoSeconds = 24
         clip.videoFile = "v.mov"
-        clip.location = PhotoLocation(latitude: 27.7172, longitude: 85.324, altitude: 1400)
+        clip.location = .kathmandu
         store.add(clip)
 
         let saved = relaunched().photo(id: "v")
         #expect(saved?.videoSeconds == 24)
         #expect(saved?.videoFile == "v.mov")
-        #expect(saved?.location == PhotoLocation(latitude: 27.7172, longitude: 85.324, altitude: 1400))
+        #expect(saved?.location == .kathmandu)
     }
 
     @Test func aCollageIsRememberedAsOne() {

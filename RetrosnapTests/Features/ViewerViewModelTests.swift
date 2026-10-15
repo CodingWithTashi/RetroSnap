@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import Retrosnap
 
@@ -9,7 +10,7 @@ struct ViewerViewModelTests {
         ViewerViewModel(
             photoID: id, photos: world.photos, player: world.clipPlayer, sharing: sharing ?? world.sharing,
             router: world.router, toasts: world.toasts,
-            dayLabeler: DayLabeler(clock: world.clock)
+            dayLabeler: world.dayLabeler
         )
     }
 
@@ -27,6 +28,10 @@ struct ViewerViewModelTests {
         #expect(vm.title == "Today")
         #expect(vm.subtitle == "Disposable")
         #expect(!vm.isInstant)
+    }
+
+    @Test func theTileIsDescribedByItsCameraAndDay() {
+        #expect(make().photoLabel == "Disposable, Today")
     }
 
     @Test func swipingLeftGoesToTheNextPhotoAndRightGoesBack() {
@@ -195,5 +200,20 @@ struct ViewerViewModelTests {
     @Test func stampUsesThePhotosDate() {
         #expect(make("s1").stamp?.date == "'26 10 11")
         #expect(make("s5").stamp?.date == "'26 10 10")
+    }
+
+    @Test func stampShowsTheDateTheFileSaysItWasTaken() {
+        var photo = world.photo("taken")
+        photo.takenAt = photo.capturedAt.addingTimeInterval(-3 * 86_400)
+        world.photos.add(photo)
+        #expect(make("taken").stamp?.date == "'26 10 08")
+    }
+
+    @Test func aClipIsShownWholeNotAsAnInstantPrint() {
+        world.photos.add(world.photo("instClip", camera: .instant, video: 5))
+        let vm = make("instClip")
+        #expect(!vm.isInstant)
+        #expect(vm.displayAspect == Photo.cameraAspect)
+        #expect(make("s3").displayAspect != Photo.cameraAspect)
     }
 }

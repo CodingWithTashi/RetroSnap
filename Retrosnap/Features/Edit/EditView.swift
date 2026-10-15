@@ -89,7 +89,8 @@ struct EditView: View {
             if let photo = viewModel.photo {
                 PhotoLookView(
                     image: photo.image, camera: photo.camera, adjustments: viewModel.displayed,
-                    framed: true, stamp: viewModel.stamp, photoAspect: photo.aspectRatio
+                    framed: true, stamp: viewModel.stamp, photoAspect: photo.aspectRatio,
+                    frameDesign: FrameDesign.forPhoto(id: photo.id)
                 )
             }
             if viewModel.isComparing {

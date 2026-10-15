@@ -29,16 +29,22 @@ nonisolated struct Photo: Identifiable, Hashable, Sendable {
         videoSeconds != nil
     }
 
+    /// The shape of the camera's own pictures: 3:4, width over height.
+    static let cameraAspect: CGFloat = 3.0 / 4
+
     /// The picture's width over its height: the camera's 3:4, or the picture's own shape when it was brought in.
     var aspectRatio: CGFloat {
-        pixelSize?.aspectRatio ?? 3.0 / 4.0
+        pixelSize?.aspectRatio ?? Self.cameraAspect
     }
 
     /// The width over the height of the box a screen gives this photo: the camera's own canvas (the Instant
     /// print's paper, a film strip, a slide mount, a rebate, or the film's crop), or the picture's own shape.
     var displayAspect: CGFloat {
-        camera.look.frame?.canvasAspect(forPhotoAspect: aspectRatio) ?? aspectRatio
+        isVideo ? aspectRatio : camera.look.frame?.canvasAspect(forPhotoAspect: aspectRatio) ?? aspectRatio
     }
+
+    /// Shown as the mini instant print (CameraStyle.isInstantPrint).
+    var isInstantPrint: Bool { camera.isInstantPrint && !isVideo }
 
     /// The date a camera stamps on the picture: when it was taken.
     var stampDate: Date {

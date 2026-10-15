@@ -49,7 +49,7 @@ final class UserDefaultsSettingsStore: SettingsStoring {
         locationOnPhotos = defaults.bool(forKey: Key.locationOnPhotos)
         versionText = appVersion.map { "Version \($0)" } ?? ""
         printer = defaults.data(forKey: Key.printer).flatMap { try? JSONDecoder().decode(SavedPrinter.self, from: $0) }
-        lastCamera = defaults.string(forKey: Key.lastCamera).flatMap(CameraStyle.init(rawValue:)) ?? .film
+        lastCamera = defaults.string(forKey: Key.lastCamera).flatMap(CameraStyle.init(rawValue:)) ?? .default
         flash = defaults.string(forKey: Key.flash).flatMap(FlashMode.init(rawValue:)) ?? .auto
         isTimerOn = defaults.bool(forKey: Key.isTimerOn)
         hasCompletedOnboarding = defaults.bool(forKey: Key.hasCompletedOnboarding)

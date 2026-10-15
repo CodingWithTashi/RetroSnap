@@ -44,7 +44,11 @@ final class DiskPhotoStore: PhotoStoring {
             list = PhotoList()
             // Set aside, the index is not written over by the next save, and while it is there no later
             // launch takes its photos for leftovers.
-            try? files.moveItem(at: folder.indexURL, to: folder.url(for: Self.unreadableIndexFileName))
+            do {
+                try files.moveItem(at: folder.indexURL, to: folder.url(for: Self.unreadableIndexFileName))
+            } catch {
+                Self.log.error("The unreadable index could not be set aside: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -96,9 +100,7 @@ final class DiskPhotoStore: PhotoStoring {
 
     private func removeFiles(of photo: Photo) {
         pendingRemovals[photo.id] = nil
-        for name in photo.fileNames {
-            try? FileManager.default.removeItem(at: folder.url(for: name))
-        }
+        folder.removeFiles(named: photo.fileNames)
     }
 
     /// Clears what a delete or a capture left behind when the app closed before it finished.
@@ -106,9 +108,7 @@ final class DiskPhotoStore: PhotoStoring {
         let files = FileManager.default
         guard !files.fileExists(atPath: folder.url(for: Self.unreadableIndexFileName).path) else { return }
         let owned = Set(list.photos.flatMap(\.fileNames)).union([PhotoLibraryFolder.indexFileName])
-        let present = (try? FileManager.default.contentsOfDirectory(atPath: folder.url.path)) ?? []
-        for name in present where !owned.contains(name) {
-            try? FileManager.default.removeItem(at: folder.url(for: name))
-        }
+        let present = (try? files.contentsOfDirectory(atPath: folder.url.path)) ?? []
+        folder.removeFiles(named: present.filter { !owned.contains($0) })
     }
 }

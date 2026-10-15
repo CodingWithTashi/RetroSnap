@@ -9,7 +9,7 @@ final class PhotoImageLoader {
     nonisolated static let maxPixelSize = 2048
 
     /// How much decoded picture the cache keeps: some sixteen full photos, or a long gallery of thumbnails.
-    nonisolated static let cacheLimit = 200 * 1024 * 1024
+    private nonisolated static let cacheLimit = 200 * 1024 * 1024
 
     private let folder: PhotoLibraryFolder
     private let cache = NSCache<NSString, CGImage>()

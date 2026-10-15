@@ -206,4 +206,10 @@ struct LookRenderModelTests {
         #expect(isClose(m.tintOpacity, 0))
         #expect(m.stamp == .none)
     }
+
+    @Test func aBakedPictureLiesOnItsCanvasElseOnThePrintFramesPaper() {
+        #expect(model(.negative, framed: true).paperHex == LookFrame.filmStrip.baseHex)
+        #expect(model(.negative).paperHex == RSColor.printFrameHex)
+        #expect(model(.disposable, framed: true).paperHex == RSColor.printFrameHex)
+    }
 }

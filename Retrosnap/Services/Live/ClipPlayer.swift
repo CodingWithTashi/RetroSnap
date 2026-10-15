@@ -1,7 +1,6 @@
 import AVFoundation
 import Foundation
 import Observation
-import VideoToolbox
 
 /// Plays a clip from the library. The sound goes out as usual; the pictures are handed to the feed one by one.
 @Observable
@@ -90,9 +89,7 @@ final class ClipPlayer: ClipPlaying {
         guard let output, output.hasNewPixelBuffer(forItemTime: time),
               let buffer = output.copyPixelBuffer(forItemTime: time, itemTimeForDisplay: nil)
         else { return }
-        var image: CGImage?
-        VTCreateCGImageFromCVPixelBuffer(buffer, options: nil, imageOut: &image)
-        if let image {
+        if let image = buffer.cgImage {
             frames.show(image)
         }
     }

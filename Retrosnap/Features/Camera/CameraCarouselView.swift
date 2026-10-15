@@ -4,7 +4,6 @@ import SwiftUI
 struct CameraCarouselView: View {
     let viewModel: CameraViewModel
     let stamp: PhotoStampText
-    let onClose: () -> Void
     @Environment(\.designLayout) private var layout
     /// The card at the carousel's leading edge. Set to the selected camera's as the carousel appears, so that
     /// card is in view; set then rather than at first, because the position is only taken once there is a size.
@@ -13,14 +12,14 @@ struct CameraCarouselView: View {
     var body: some View {
         VStack(spacing: 0) {
             ScreenHeader(title: "Cameras") {
-                CircleIconButton(icon: .close, label: "Close", action: onClose)
+                CircleIconButton(icon: .close, label: "Close", action: viewModel.closeCarouselTapped)
             } trailing: {
-                Color.clear.frame(width: 44, height: 44)
+                HeaderSpacer()
             }
             .padding(.horizontal, 16)
 
             ScrollView(.horizontal) {
-                HStack(alignment: .top, spacing: 14) {
+                LazyHStack(alignment: .top, spacing: 14) {
                     ForEach(CameraStyle.allCases) { camera in
                         card(camera)
                     }
@@ -82,17 +81,12 @@ struct CameraCarouselView: View {
             .padding(.top, 14)
             .padding(.bottom, 22)
             .frame(width: 314, alignment: .leading)
-            .background(Color(hex: camera.cardTintHex), in: RoundedRectangle(cornerRadius: 28))
-            .overlay {
-                RoundedRectangle(cornerRadius: 30.5)
-                    .strokeBorder(RSColor.amber, lineWidth: 2.5)
-                    .padding(-2.5)
-                    .opacity(isSelected ? 1 : 0)
-            }
-            .contentShape(RoundedRectangle(cornerRadius: 28))
+            .background(Color(hex: camera.cardTintHex), in: RoundedRectangle(cornerRadius: RSRadius.sheet))
+            .selectionRing(cornerRadius: RSRadius.sheet, isSelected: isSelected)
+            .contentShape(RoundedRectangle(cornerRadius: RSRadius.sheet))
         }
         .buttonStyle(PressScaleStyle(scale: 0.98))
-        .accessibilityLabel("\(camera.name). \(camera.summary)\(isSelected ? " Selected." : "")")
+        .accessibilityLabel(camera.cardAccessibilityLabel(isSelected: isSelected))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

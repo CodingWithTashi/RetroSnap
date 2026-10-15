@@ -7,8 +7,6 @@ import Observation
 final class DevelopViewModel {
     /// The result opens once the flash is over, as it does after a shot.
     static let reviewDelay = CameraViewModel.reviewDelay
-    /// What the user is told when a pick could not be read.
-    static let importFailedText = "Couldn’t open that photo or video"
 
     private(set) var draft: Photo
     private(set) var isStripOpen = false
@@ -95,10 +93,6 @@ final class DevelopViewModel {
 
     // MARK: VoiceOver labels
 
-    var chipLabel: String {
-        "Camera: \(style.name). Change camera"
-    }
-
     var shutterLabel: String {
         isVideo ? "Develop video" : "Develop photo"
     }
@@ -161,7 +155,7 @@ final class DevelopViewModel {
     /// Swiping left goes to the next camera, right to the previous one, wrapping at the ends.
     func pictureSwiped(_ direction: SwipeDirection) {
         guard !isDeveloping else { return }
-        pick(style.stepped(by: direction == .left ? 1 : -1))
+        pick(style.stepped(by: direction.step))
     }
 
     func pick(_ newStyle: CameraStyle) {
@@ -213,21 +207,13 @@ final class DevelopViewModel {
         guard !isDeveloping, !importer.isImporting else { return }
         player.stop()
         let current = draft
-        importer.pick { [weak self, importer] outcome in
-            switch outcome {
-            case .imported(var next):
-                guard let self else {
-                    importer.discard(next)
-                    return
-                }
-                next.camera = current.camera
-                importer.discard(current)
-                draft = next
-            case .failed:
-                self?.toasts.show(Self.importFailedText)
-            case .cancelled:
-                break
-            }
+        importer.pickDraft(on: current.camera) { [weak self] next in
+            guard let self else { return false }
+            importer.discard(current)
+            draft = next
+            return true
+        } failed: { [weak self] in
+            self?.toasts.show(ImportOutcome.failureText)
         }
     }
 
@@ -236,3 +222,5 @@ final class DevelopViewModel {
         player.stop()
     }
 }
+
+extension DevelopViewModel: CameraChoosing {}

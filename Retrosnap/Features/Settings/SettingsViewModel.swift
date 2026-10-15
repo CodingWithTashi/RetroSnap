@@ -58,6 +58,10 @@ final class SettingsViewModel {
         self.openLink = openLink
         self.router = router
         self.toasts = toasts
+    }
+
+    /// The screen is on show: measure the storage it lists.
+    func appeared() {
         storage.refresh()
     }
 

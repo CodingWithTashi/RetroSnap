@@ -6,7 +6,7 @@ import Observation
 final class PrintViewModel {
     static let copyRange = 1...20
 
-    let photoID: Photo.ID
+    private let photoID: Photo.ID
     private(set) var size = PrintSize.fourBySix
     private(set) var copies = 1
     private(set) var hasBorder = true
@@ -62,6 +62,14 @@ final class PrintViewModel {
 
     var paperName: String {
         printing.paperName
+    }
+
+    var previewLabel: String {
+        "Print preview, \(size.label)"
+    }
+
+    var copiesLabel: String {
+        "\(copies) copies"
     }
 
     var actionTitle: String {

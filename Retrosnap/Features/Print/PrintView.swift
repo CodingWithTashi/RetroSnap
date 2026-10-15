@@ -28,7 +28,7 @@ struct PrintView: View {
             ScreenHeader(title: "Print") {
                 QuietButton(title: "Cancel", style: .body, horizontalPadding: 12, action: viewModel.cancelTapped)
             } trailing: {
-                Color.clear.frame(width: 72, height: 44)
+                HeaderSpacer(width: 72)
             }
             .padding(.horizontal, 12)
             .padding(.top, layout.top(54))
@@ -47,7 +47,8 @@ struct PrintView: View {
         ZStack {
             if let photo = viewModel.photo {
                 PhotoLookView(
-                    image: photo.image, camera: photo.camera, adjustments: photo.adjustments, stamp: viewModel.stamp
+                    image: photo.image, camera: photo.camera, adjustments: photo.adjustments, stamp: viewModel.stamp,
+                    photoAspect: photo.aspectRatio
                 )
                 .padding(viewModel.paperPadding)
             }
@@ -59,7 +60,7 @@ struct PrintView: View {
         .animation(RSMotion.paper, value: viewModel.size)
         .animation(RSMotion.paper, value: viewModel.hasBorder)
         .accessibilityElement()
-        .accessibilityLabel("Print preview, \(viewModel.size.label)")
+        .accessibilityLabel(viewModel.previewLabel)
     }
 
     private var options: some View {
@@ -83,7 +84,7 @@ struct PrintView: View {
                     Text("\(viewModel.copies)")
                         .rsText(.body.tabularDigits())
                         .frame(width: 32)
-                        .accessibilityLabel("\(viewModel.copies) copies")
+                        .accessibilityLabel(viewModel.copiesLabel)
                     stepButton("+", label: "More copies", action: viewModel.increaseCopies)
                 }
             }
@@ -122,7 +123,7 @@ struct PrintView: View {
             }
         }
         .foregroundStyle(RSColor.paper)
-        .background(RSColor.surface, in: RoundedRectangle(cornerRadius: 20))
+        .background(RSColor.surface, in: RoundedRectangle(cornerRadius: RSRadius.group))
     }
 
     private var divider: some View {

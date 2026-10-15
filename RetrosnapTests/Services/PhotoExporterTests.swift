@@ -7,9 +7,7 @@ import Testing
 
 @MainActor
 final class PhotoExporterTests {
-    private let folder = PhotoLibraryFolder(
-        url: FileManager.default.temporaryDirectory.appendingPathComponent("PhotoExporterTests-\(UUID().uuidString)")
-    )
+    private let folder = PhotoLibraryFolder.temporary(for: "PhotoExporterTests")
     private let clock = FixedClock.design
     private let renderer: LookRenderer
     private let exporter: PhotoExporter
@@ -20,7 +18,7 @@ final class PhotoExporterTests {
     }
 
     deinit {
-        try? FileManager.default.removeItem(at: folder.url)
+        folder.removeFromDisk()
     }
 
     /// A shot filed in the library from a flat orange original.
@@ -82,7 +80,7 @@ final class PhotoExporterTests {
 
     @Test func thePlaceItWasTakenIsWrittenIntoTheFile() async throws {
         var photo = try shot(.film)
-        photo.location = PhotoLocation(latitude: 27.7172, longitude: 85.324, altitude: 1400)
+        photo.location = .kathmandu
         let baked = try #require(await exporter.bake(photo))
         let gps = try #require(describe(baked)?.properties[kCGImagePropertyGPSDictionary] as? [CFString: Any])
         let latitude = try #require(gps[kCGImagePropertyGPSLatitude] as? Double)
@@ -305,7 +303,7 @@ final class PhotoExporterTests {
 
     @Test func whenAndWhereAClipWasTakenTravelWithIt() async throws {
         var photo = try await clip(.camcorder)
-        photo.location = PhotoLocation(latitude: 27.7172, longitude: 85.324, altitude: 1400)
+        photo.location = .kathmandu
         let baked = try #require(await exporter.bakeClip(photo))
         defer { try? FileManager.default.removeItem(at: baked) }
         let metadata = try await AVURLAsset(url: baked).load(.metadata)

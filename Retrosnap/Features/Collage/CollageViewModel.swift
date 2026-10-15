@@ -35,7 +35,7 @@ final class CollageViewModel {
         router: AppRouter,
         toasts: ToastCenter,
         feedback: FeedbackCenter,
-        startStep: Int = 1,
+        startStep: CollageStep = .layout,
         boardPicks: [Photo.ID] = []
     ) {
         self.photos = photos
@@ -45,9 +45,8 @@ final class CollageViewModel {
         self.router = router
         self.toasts = toasts
         self.feedback = feedback
-        let start = CollageStep(rawValue: startStep) ?? .layout
-        step = start
-        if start != .layout {
+        step = startStep
+        if startStep != .layout {
             pickedIDs = boardPicks.filter { photos.photo(id: $0) != nil }
         } else if let seed = seedID.flatMap(photos.photo(id:)), !seed.isVideo {
             // The photo you came from is already chosen. Clips cannot go in a collage.
@@ -89,6 +88,10 @@ final class CollageViewModel {
 
     // MARK: Step 1
 
+    func templateLabel(for template: CollageTemplate) -> String {
+        "\(template.label), \(template.photoCount) photos"
+    }
+
     func select(_ newTemplate: CollageTemplate) {
         template = newTemplate
         pickedIDs = Array(pickedIDs.prefix(newTemplate.photoCount))
@@ -104,6 +107,10 @@ final class CollageViewModel {
     /// 1-based position of a picked photo, nil if it is not picked.
     func pickNumber(for id: Photo.ID) -> Int? {
         pickedIDs.firstIndex(of: id).map { $0 + 1 }
+    }
+
+    func pickLabel(for photo: Photo) -> String {
+        "\(photo.camera.name) photo\(pickNumber(for: photo.id) == nil ? "" : ", selected")"
     }
 
     func togglePick(_ id: Photo.ID) {
@@ -122,6 +129,10 @@ final class CollageViewModel {
 
     var hint: String {
         swapSelection == nil ? "Tap two photos to swap them" : "Now tap where it should go"
+    }
+
+    func cellLabel(for index: Int) -> String {
+        "Photo \(index + 1)"
     }
 
     /// The first tap marks a photo, the second swaps the two.

@@ -37,6 +37,8 @@ nonisolated struct LaunchScenario: Equatable, Sendable {
         case fresh
     }
 
+    private static let defaults = AppConfig()
+
     var screen: Screen?
     var variant: Variant?
     var camera: CameraStyle?
@@ -46,8 +48,8 @@ nonisolated struct LaunchScenario: Equatable, Sendable {
     var tool: EditTool?
     var editPreset: PhotoAdjustments?
     var photoID: Photo.ID?
-    var selector = CameraSelectorStyle.strip
-    var reviewRule = CaptureReviewRule.first
+    var selector = Self.defaults.selector
+    var reviewRule = Self.defaults.reviewRule
     /// Skip onboarding and open on the camera with no prompts.
     var isReturningUser = false
     /// Run the live services, for checking in the simulator what otherwise needs a device.
@@ -75,8 +77,8 @@ nonisolated struct LaunchScenario: Equatable, Sendable {
         tool = value("-rsTool").flatMap(EditTool.init(rawValue:))
         editPreset = value("-rsEdit").map(Self.adjustments(from:))
         photoID = value("-rsPhoto")
-        selector = value("-rsSelector").flatMap(CameraSelectorStyle.init(rawValue:)) ?? .strip
-        reviewRule = value("-rsAfterCapture").flatMap(CaptureReviewRule.init(rawValue:)) ?? .first
+        selector = value("-rsSelector").flatMap(CameraSelectorStyle.init(rawValue:)) ?? Self.defaults.selector
+        reviewRule = value("-rsAfterCapture").flatMap(CaptureReviewRule.init(rawValue:)) ?? Self.defaults.reviewRule
         isReturningUser = value("-rsScenario") == "returning"
         liveData = value("-rsLive").flatMap(LiveData.init(rawValue:))
         isScripted = arguments.contains { $0.hasPrefix("-rs") }
@@ -89,6 +91,11 @@ nonisolated struct LaunchScenario: Equatable, Sendable {
 
     var config: AppConfig {
         AppConfig(selector: selector, reviewRule: reviewRule)
+    }
+
+    /// Where the app opens, without what is stacked on it.
+    var root: AppRouter.Root {
+        navigation(firstPhotoID: nil).root
     }
 
     /// Where the app opens: the root and what is stacked on the camera.

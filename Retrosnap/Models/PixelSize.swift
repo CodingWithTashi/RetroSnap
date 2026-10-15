@@ -8,7 +8,7 @@ nonisolated struct PixelSize: Hashable, Sendable, Codable {
 
     /// Width over height.
     var aspectRatio: CGFloat {
-        guard width > 0, height > 0 else { return 3.0 / 4.0 }
+        guard width > 0, height > 0 else { return Photo.cameraAspect }
         return CGFloat(width) / CGFloat(height)
     }
 }

@@ -75,7 +75,7 @@ struct ChoiceChip: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.18), value: isSelected)
+        .animation(RSMotion.choice, value: isSelected)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

@@ -32,7 +32,7 @@ struct SettingsView: View {
                                 }
                         }
                     }
-                    .background(RSColor.surface, in: RoundedRectangle(cornerRadius: 20))
+                    .background(RSColor.surface, in: RoundedRectangle(cornerRadius: RSRadius.group))
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
                 }
@@ -51,6 +51,7 @@ struct SettingsView: View {
         .scrollIndicators(.hidden)
         .background(RSColor.ink)
         .ignoresSafeArea()
+        .onAppear(perform: viewModel.appeared)
     }
 
     @ViewBuilder

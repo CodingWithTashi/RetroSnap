@@ -8,7 +8,7 @@ struct EditViewModelTests {
     private func make(_ id: Photo.ID = "s1", tool: EditTool = .effect, preset: PhotoAdjustments? = nil) -> EditViewModel {
         EditViewModel(
             photoID: id, photos: world.photos, router: world.router, toasts: world.toasts,
-            dayLabeler: DayLabeler(clock: world.clock), tool: tool, preset: preset
+            dayLabeler: world.dayLabeler, tool: tool, preset: preset
         )
     }
 

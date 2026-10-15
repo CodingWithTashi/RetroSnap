@@ -56,3 +56,15 @@ struct PhotoActionRow: View {
         .accessibilityLabel(action.label)
     }
 }
+
+private extension PhotoAction {
+    var icon: RSIcon {
+        switch self {
+        case .share: .share
+        case .edit: .sliders
+        case .print: .printer
+        case .collage: .collage
+        case .delete: .trash
+        }
+    }
+}

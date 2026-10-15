@@ -1,20 +1,5 @@
 import SwiftUI
 
-/// 8pt grid.
-enum RSSpacing {
-    static let xs: CGFloat = 8
-    static let sm: CGFloat = 16
-    static let md: CGFloat = 24
-    static let lg: CGFloat = 32
-    static let xl: CGFloat = 48
-}
-
-enum RSRadius {
-    static let card: CGFloat = 16
-    static let group: CGFloat = 20
-    static let sheet: CGFloat = 28
-}
-
 /// Motion runs 200 to 300ms on a soft spring; the curves are the prototype's cubic-beziers.
 nonisolated enum RSMotion {
     /// Camera look cross-fade.
@@ -28,6 +13,8 @@ nonisolated enum RSMotion {
     /// Toggle knob.
     static let knob = Animation.timingCurve(0.3, 1.3, 0.5, 1, duration: 0.22)
     static let selection = Animation.easeInOut(duration: 0.2)
+    /// A choice chip or a collage template turning selected.
+    static let choice = Animation.easeInOut(duration: 0.18)
     static let press = Animation.easeInOut(duration: 0.12)
     static let paper = Animation.timingCurve(0.3, 1.2, 0.5, 1, duration: 0.26)
     static let toast = Animation.timingCurve(0.3, 1.3, 0.5, 1, duration: 0.22)

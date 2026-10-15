@@ -49,8 +49,8 @@ struct LookUniformsTests {
         #expect(isClose(uniforms(.disposable).soft.z, 0))
     }
 
-    @Test func theColourStageIsPackedAsEighteenVectors() {
-        let stage = try! #require(uniforms(.negative).colorStage)
+    @Test func theColourStageIsPackedAsEighteenVectors() throws {
+        let stage = try #require(uniforms(.negative).colorStage)
         #expect(stage.count == 18)
         // The matrix rows with their offsets.
         #expect(isClose(stage[0].x, 1.0439))
@@ -140,5 +140,13 @@ struct LookUniformsTests {
         let light = uniforms(.film, edited)
         #expect(isClose(light.brightness, 1.2))
         #expect(isClose(light.contrast, 0.9))
+    }
+
+    @Test func theColourPassIsTheStageWhenThereIsOneElseTheChain() {
+        guard case .stage(let vectors) = uniforms(.negative).colorPass else { Issue.record("135 NE has a colour stage"); return }
+        #expect(vectors.count == 18)
+        guard case .chain(let steps) = uniforms(.camcorder).colorPass else { Issue.record("the camcorder draws its chain"); return }
+        #expect(steps.map(\.kind) == [2, 3, 4, 0, 0])
+        #expect(uniforms(.negative).colorCube == "negative" && uniforms(.camcorder).colorCube == nil)
     }
 }

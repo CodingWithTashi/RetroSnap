@@ -112,6 +112,56 @@ struct CircleIconButton: View {
     }
 }
 
+/// A round glass button over the viewfinder: flash and timer on the camera, cancel and choose another on the
+/// develop screen.
+struct GlassIconButton<Badge: View>: View {
+    let icon: RSIcon
+    let label: String
+    var iconSize: CGFloat = 22
+    var lineWidth: CGFloat = 1.8
+    var iconColor: Color = RSColor.paper
+    let action: () -> Void
+    /// In the corner, outside the icon's colour.
+    let badge: Badge
+
+    init(
+        icon: RSIcon, label: String, iconSize: CGFloat = 22, lineWidth: CGFloat = 1.8, iconColor: Color = RSColor.paper,
+        action: @escaping () -> Void, @ViewBuilder badge: () -> Badge
+    ) {
+        self.icon = icon
+        self.label = label
+        self.iconSize = iconSize
+        self.lineWidth = lineWidth
+        self.iconColor = iconColor
+        self.action = action
+        self.badge = badge()
+    }
+
+    var body: some View {
+        Button(action: action) {
+            RSIconView(icon, size: iconSize, lineWidth: lineWidth)
+                .foregroundStyle(iconColor)
+                .frame(width: 44, height: 44)
+                .overlay(alignment: .bottomTrailing) { badge }
+                .glass(cornerRadius: 22)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+}
+
+extension GlassIconButton where Badge == EmptyView {
+    init(
+        icon: RSIcon, label: String, iconSize: CGFloat = 22, lineWidth: CGFloat = 1.8, iconColor: Color = RSColor.paper,
+        action: @escaping () -> Void
+    ) {
+        self.init(
+            icon: icon, label: label, iconSize: iconSize, lineWidth: lineWidth, iconColor: iconColor, action: action
+        ) { EmptyView() }
+    }
+}
+
 /// Small pill button on paper: toast actions and banner actions.
 struct PaperPillButton: View {
     let title: String

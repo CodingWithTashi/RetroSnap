@@ -4,7 +4,7 @@ import Observation
 /// One photo full screen, with swiping to its neighbours. A clip plays in place when it is tapped.
 @Observable
 final class ViewerViewModel {
-    private(set) var currentID: Photo.ID
+    private var currentID: Photo.ID
 
     @ObservationIgnored private let photos: any PhotoStoring
     @ObservationIgnored private let player: any ClipPlaying
@@ -39,6 +39,11 @@ final class ViewerViewModel {
         photo.map { dayLabeler.label(for: $0.capturedAt) } ?? ""
     }
 
+    /// "Disposable, Today"
+    var photoLabel: String {
+        "\(subtitle), \(title)"
+    }
+
     var subtitle: String {
         guard let photo else { return "" }
         guard !photo.isCollage else { return "Collage" }
@@ -46,16 +51,16 @@ final class ViewerViewModel {
     }
 
     var isInstant: Bool {
-        photo?.camera == .instant
+        photo?.isInstantPrint ?? false
     }
 
     /// The photo's box: width over height.
     var displayAspect: CGFloat {
-        photo?.displayAspect ?? 3.0 / 4.0
+        photo?.displayAspect ?? Photo.cameraAspect
     }
 
     var stamp: PhotoStampText? {
-        photo.map { dayLabeler.stamp(for: $0.capturedAt) }
+        photo.map { dayLabeler.stamp(for: $0.stampDate) }
     }
 
     // MARK: Playing a clip
@@ -97,7 +102,7 @@ final class ViewerViewModel {
     func swiped(_ direction: SwipeDirection) {
         let all = photos.photos
         guard let index = all.firstIndex(where: { $0.id == currentID }) else { return }
-        let target = index + (direction == .left ? 1 : -1)
+        let target = index + direction.step
         guard all.indices.contains(target) else { return }
         player.stop()
         currentID = all[target].id
@@ -113,18 +118,14 @@ final class ViewerViewModel {
         switch action {
         case .share:
             photo.map(sharing.share)
-        case .edit:
-            router.push(.edit(currentID))
-        case .print:
-            router.push(.print(currentID))
-        case .collage:
-            router.push(.collage(seed: currentID))
+        case .edit, .print, .collage:
+            if let route = action.route(for: currentID) {
+                router.push(route)
+            }
         case .delete:
             guard let deleted = photos.delete(id: currentID) else { return }
             router.returnToGallery()
-            toasts.show("Photo deleted", actionTitle: "Undo") { [photos] in
-                photos.restore(deleted)
-            }
+            toasts.showDeleted(deleted, restoringInto: photos)
         }
     }
 }

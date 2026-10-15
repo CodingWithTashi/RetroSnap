@@ -1,108 +1,6 @@
 import SwiftUI
 
-// The controls the camera screen and the develop screen share: the picture under the look, the chip that names
-// the camera, the strip of camera cards, and the shutter's flash.
-
-/// The look over what the lens sees, or over a pick from the library, filling its box. A camera whose picture
-/// is not the whole box (Instant shoots square, a film strip 2:3) has the rest dimmed.
-struct ViewfinderPicture: View {
-    let image: PhotoImage
-    let camera: CameraStyle
-    let stamp: PhotoStampText
-    /// Enlarges a still scene standing in for a zoomed lens.
-    var magnification: CGFloat = 1
-    /// The play badge and clip length over a clip that is not running.
-    var videoDuration: String?
-
-    var body: some View {
-        ZStack {
-            PhotoLookView(
-                image: image, camera: camera, stamp: stamp, stampBottom: 0.27, stampTop: 0.17,
-                videoDuration: videoDuration, magnification: magnification
-            )
-            .id(camera)
-            .transition(.opacity)
-
-            GeometryReader { proxy in
-                let size = proxy.size
-                let ratio = Self.pictureRatio(of: camera, in: size)
-                let vertical = max(0, (size.height - size.width / ratio) / 2)
-                let horizontal = max(0, (size.width - size.height * ratio) / 2)
-                let dim = Color(hex: 0x0A0908, opacity: 0.72)
-                VStack(spacing: 0) {
-                    dim.frame(height: vertical)
-                    Spacer(minLength: 0)
-                    dim.frame(height: vertical)
-                }
-                HStack(spacing: 0) {
-                    dim.frame(width: horizontal)
-                    Spacer(minLength: 0)
-                    dim.frame(width: horizontal)
-                }
-            }
-            .opacity(camera.pictureRatio != nil ? 1 : 0)
-        }
-        .animation(RSMotion.crossFade, value: camera)
-    }
-
-    /// The width over the height of the camera's picture in this box: the film's frame the way the box is, as
-    /// `LookFrame.pictureAspect(forPhotoAspect:)` turns it; the Instant print and the square stay as they are.
-    private static func pictureRatio(of camera: CameraStyle, in box: CGSize) -> CGFloat {
-        camera.look.frame?.pictureAspect(forPhotoAspect: box.width / max(1, box.height)) ?? 1
-    }
-}
-
-/// The dark gradients at the top and the bottom of the viewfinder that the controls sit on.
-struct ViewfinderScrims: View {
-    var body: some View {
-        VStack(spacing: 0) {
-            LinearGradient(colors: [.black.opacity(0.55), .black.opacity(0)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 150)
-            Spacer(minLength: 0)
-            LinearGradient(colors: [.black.opacity(0), .black.opacity(0.72)], startPoint: .top, endPoint: .bottom)
-                .frame(height: 330)
-        }
-        .allowsHitTesting(false)
-    }
-}
-
-/// A round glass button over the viewfinder: flash, timer, and on the develop screen cancel and choose another.
-struct GlassIconButton: View {
-    let icon: RSIcon
-    let label: String
-    var iconSize: CGFloat = 22
-    var lineWidth: CGFloat = 1.8
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            RSIconView(icon, size: iconSize, lineWidth: lineWidth)
-                .foregroundStyle(RSColor.paper)
-                .frame(width: 44, height: 44)
-                .glass(cornerRadius: 22)
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
-    }
-}
-
-/// The 240ms white flash the shutter sets off.
-struct ShutterFlash: View {
-    let trigger: Int
-
-    var body: some View {
-        Color.clear
-            .keyframeAnimator(initialValue: 0.0, trigger: trigger) { _, flash in
-                Color.white.opacity(flash)
-            } keyframes: { _ in
-                MoveKeyframe(0.92)
-                CubicKeyframe(0, duration: RSMotion.flashDuration)
-            }
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-    }
-}
+// The camera chooser the camera and develop screens share: the chip that names the camera, the strip of camera cards, and the name shown briefly on a change.
 
 // MARK: - Camera chip and strip
 
@@ -179,7 +77,7 @@ struct CameraStrip: View {
 
             ScrollViewReader { proxy in
                 ScrollView(.horizontal) {
-                    HStack(spacing: 10) {
+                    LazyHStack(spacing: 10) {
                         ForEach(CameraStyle.allCases) { camera in
                             CameraCard(camera: camera, isSelected: camera == style) {
                                 onPick(camera)
@@ -190,6 +88,8 @@ struct CameraStrip: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 2)
                 }
+                // A lazy stack takes all the height it is offered; the strip is as tall as its cards.
+                .fixedSize(horizontal: false, vertical: true)
                 .scrollIndicators(.hidden)
                 // The strip is longer than the screen: the selected card is brought into view, moving no
                 // further than it has to, so a card that is already in view leaves the strip where it is.
@@ -202,8 +102,8 @@ struct CameraStrip: View {
         }
         .padding(.top, 16)
         .padding(.bottom, 14)
-        .glass(cornerRadius: 28, tint: RSColor.ink(0.74), visibility: visible ? 1 : 0)
-        .clipShape(RoundedRectangle(cornerRadius: 28))
+        .glass(cornerRadius: RSRadius.sheet, tint: RSColor.ink(0.74), visibility: visible ? 1 : 0)
+        .clipShape(RoundedRectangle(cornerRadius: RSRadius.sheet))
         .background {
             if isFirstRun {
                 FirstRunGlow()
@@ -222,7 +122,7 @@ struct CameraStrip: View {
 private struct FirstRunGlow: View {
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 28)
+            RoundedRectangle(cornerRadius: RSRadius.sheet)
                 .fill(RSColor.amber.opacity(0.18))
                 .blur(radius: 20)
             RoundedRectangle(cornerRadius: 29.5)
@@ -233,14 +133,14 @@ private struct FirstRunGlow: View {
         .mask {
             Rectangle()
                 .padding(-80)
-                .overlay { RoundedRectangle(cornerRadius: 28).blendMode(.destinationOut) }
+                .overlay { RoundedRectangle(cornerRadius: RSRadius.sheet).blendMode(.destinationOut) }
                 .compositingGroup()
         }
         .allowsHitTesting(false)
     }
 }
 
-struct CameraCard: View {
+private struct CameraCard: View {
     let camera: CameraStyle
     let isSelected: Bool
     let action: () -> Void
@@ -253,7 +153,7 @@ struct CameraCard: View {
                     .overlay(alignment: .bottom) {
                         Color(hex: camera.accentHex).frame(height: 4)
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .clipShape(RoundedRectangle(cornerRadius: RSRadius.card))
                     .overlay(alignment: .topTrailing) {
                         if isSelected {
                             RSIconView(.check, size: 13, lineWidth: 3.2)
@@ -263,12 +163,7 @@ struct CameraCard: View {
                                 .padding(6)
                         }
                     }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 18.5)
-                            .strokeBorder(RSColor.amber, lineWidth: 2.5)
-                            .padding(-2.5)
-                            .opacity(isSelected ? 1 : 0)
-                    }
+                    .selectionRing(cornerRadius: RSRadius.card, isSelected: isSelected)
                 Text(camera.name)
                     .rsText(.chip)
                     .foregroundStyle(isSelected ? RSColor.paper : RSColor.tertiaryText)
@@ -279,7 +174,7 @@ struct CameraCard: View {
         }
         .buttonStyle(PressScaleStyle(scale: 0.95))
         .animation(RSMotion.selection, value: isSelected)
-        .accessibilityLabel("\(camera.name). \(camera.summary)\(isSelected ? " Selected." : "")")
+        .accessibilityLabel(camera.cardAccessibilityLabel(isSelected: isSelected))
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

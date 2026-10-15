@@ -61,6 +61,13 @@ final class CameraViewModel {
     @ObservationIgnored private var pinchStart: Double?
     private var dismissedBanners: Set<CameraBanner> = []
 
+    /// A shot's turn on the result screen: it opens once the photo has landed, and no sooner than the
+    /// fly-in the shutter started is over.
+    private final class Review {
+        var photoID: Photo.ID?
+        var hasFlownIn = false
+    }
+
     init(
         config: AppConfig,
         photos: any PhotoStoring,
@@ -103,8 +110,15 @@ final class CameraViewModel {
         }
     }
 
-    // MARK: Derived state
+    /// What the camera is asked for right now, tagged with the place while "Location on photos" is on.
+    private var shot: Shot {
+        Shot(style: style, facing: facing, flash: flash, location: settings.locationOnPhotos ? location.current : nil)
+    }
+}
 
+// MARK: - Derived state
+
+extension CameraViewModel {
     var block: CameraBlock? {
         switch camera.availability {
         case .ready: nil
@@ -168,45 +182,24 @@ final class CameraViewModel {
     }
 
     var bannerContent: CameraNotice? {
-        switch banner {
-        case .library:
-            CameraNotice(
-                title: "Saving inside RetroSnap only",
-                message: "Allow Photos access to also save to your library.",
-                actionTitle: "Allow"
-            )
-        case .storage:
-            CameraNotice(
-                title: "Your phone is almost full",
-                message: "About \(storage.photosLeft) photos left. Free up space to keep shooting.",
-                actionTitle: "Manage"
-            )
-        case nil:
-            nil
-        }
+        // Free space is read only by the banner that shows it.
+        guard let banner else { return nil }
+        return banner.notice(photosLeft: banner == .storage ? storage.photosLeft : 0)
     }
 
     var blockContent: CameraNotice? {
-        switch block {
-        case .denied:
-            CameraNotice(
-                title: "Camera access is off",
-                message: "Turn on Camera for RetroSnap in\nSettings to start shooting.",
-                actionTitle: "Open Settings"
-            )
-        case .busy:
-            CameraNotice(
-                title: "Camera is busy",
-                message: "Another app is using the camera.\nClose it, then try again.",
-                actionTitle: "Try again"
-            )
-        case nil:
-            nil
-        }
+        block?.notice
     }
 
-    // MARK: VoiceOver labels
+    /// The badge on the self-timer button: the countdown's length.
+    var timerBadge: String {
+        "\(Self.countdownStart)s"
+    }
+}
 
+// MARK: - VoiceOver labels
+
+extension CameraViewModel {
     var flashLabel: String {
         "Flash: \(flash.rawValue)"
     }
@@ -223,16 +216,22 @@ final class CameraViewModel {
         }
     }
 
-    var chipLabel: String {
-        "Camera: \(style.name). Change camera"
-    }
-
     var zoomLabel: String {
         "Zoom: \(zoomTitle)"
     }
 
-    // MARK: Choosing a camera
+    var viewfinderLabel: String {
+        "Viewfinder, \(style.name)"
+    }
 
+    var recordingLabel: String {
+        "Recording, \(recordingClock)"
+    }
+}
+
+// MARK: - Choosing a camera
+
+extension CameraViewModel: CameraChoosing {
     func chipTapped() {
         guard block == nil, !isRecording else { return }
         feedback.haptic(.tick)
@@ -257,7 +256,7 @@ final class CameraViewModel {
     /// Swiping left goes to the next camera, right to the previous one, wrapping at the ends.
     func viewfinderSwiped(_ direction: SwipeDirection) {
         guard block == nil else { return }
-        pick(style.stepped(by: direction == .left ? 1 : -1))
+        pick(style.stepped(by: direction.step))
     }
 
     func pick(_ newStyle: CameraStyle) {
@@ -276,13 +275,19 @@ final class CameraViewModel {
         router.returnToCamera()
     }
 
+    func closeCarouselTapped() {
+        router.returnToCamera()
+    }
+
     private func endFirstRun() {
         isFirstRun = false
         settings.hasSeenCameraIntro = true
     }
+}
 
-    // MARK: Zoom
+// MARK: - Zoom
 
+extension CameraViewModel {
     var zoomTitle: String {
         camera.zoom.title
     }
@@ -326,9 +331,11 @@ final class CameraViewModel {
     func viewfinderPinchEnded() {
         pinchStart = nil
     }
+}
 
-    // MARK: Top controls
+// MARK: - Top controls
 
+extension CameraViewModel {
     func flashTapped() {
         feedback.haptic(.tick)
         flash = flash.next
@@ -362,9 +369,11 @@ final class CameraViewModel {
         facing = facing.flipped
         camera.start(facing: facing, mode: mode)
     }
+}
 
-    // MARK: Running the camera
+// MARK: - Running the camera
 
+extension CameraViewModel {
     /// The camera screen is on screen.
     func appeared() {
         camera.start(facing: facing, mode: mode)
@@ -385,9 +394,11 @@ final class CameraViewModel {
         permissions.refresh()
         storage.refresh()
     }
+}
 
-    // MARK: Shutter
+// MARK: - Shutter
 
+extension CameraViewModel {
     /// A finger has come down on the shutter; the tap follows when it lifts.
     func shutterPressed() {
         prepareFeedback()
@@ -441,13 +452,6 @@ final class CameraViewModel {
         }
     }
 
-    /// A shot's turn on the result screen: it opens once the photo has landed, and no sooner than the
-    /// fly-in the shutter started is over.
-    private final class Review {
-        var photoID: Photo.ID?
-        var hasFlownIn = false
-    }
-
     /// Starts this shot's review if the rule asks for one, replacing whatever an earlier shot left.
     private func startReview() -> Review? {
         reviewWork?.cancel()
@@ -464,11 +468,6 @@ final class CameraViewModel {
             self?.showIfReady(review)
         }
         return review
-    }
-
-    /// What the camera is asked for right now, tagged with the place while "Location on photos" is on.
-    private var shot: Shot {
-        Shot(style: style, facing: facing, flash: flash, location: settings.locationOnPhotos ? location.current : nil)
     }
 
     /// The camera has delivered the photo, or given up on it.
@@ -530,9 +529,11 @@ final class CameraViewModel {
         storage.refresh()
         router.showResult(clip.id)
     }
+}
 
-    // MARK: Leaving the camera
+// MARK: - Leaving the camera
 
+extension CameraViewModel {
     func galleryTapped() {
         guard !isRecording else { return }
         cancelPendingWork()
@@ -547,9 +548,11 @@ final class CameraViewModel {
         reviewWork = nil
         review = nil
     }
+}
 
-    // MARK: Banners and blocked states
+// MARK: - Banners and blocked states
 
+extension CameraViewModel {
     func bannerActionTapped() {
         switch banner {
         case .library:

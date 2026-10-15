@@ -58,3 +58,12 @@ final class ToastCenter {
         current = nil
     }
 }
+
+extension ToastCenter {
+    /// "Photo deleted · Undo": Undo puts the photo back where it was.
+    func showDeleted(_ deleted: DeletedPhoto, restoringInto photos: any PhotoStoring) {
+        show("Photo deleted", actionTitle: "Undo") {
+            photos.restore(deleted)
+        }
+    }
+}

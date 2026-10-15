@@ -13,6 +13,11 @@ struct OnboardingViewModelTests {
         viewModel = OnboardingViewModel(router: router, permissions: permissions, settings: settings)
     }
 
+    @Test func theCameraStepCountsTheLineup() {
+        #expect(CameraStyle.allCases.count == 13)
+        #expect(viewModel.chooseCameraDetail == "13 looks. One tap to switch.")
+    }
+
     @Test func continueWalksWelcomeThenHowItWorksThenCameraPermission() {
         viewModel.continueTapped()
         #expect(router.root == .onboarding(.howItWorks))

@@ -29,8 +29,8 @@ struct ViewerView: View {
         .gesture(
             DragGesture(minimumDistance: 20)
                 .onEnded { value in
-                    guard abs(value.translation.width) > 40 else { return }
-                    viewModel.swiped(value.translation.width < 0 ? .left : .right)
+                    guard let direction = SwipeDirection(translation: value.translation.width) else { return }
+                    viewModel.swiped(direction)
                 }
         )
         .ignoresSafeArea()
@@ -40,17 +40,18 @@ struct ViewerView: View {
     private var photo: some View {
         if let photo = viewModel.photo, let picture = viewModel.picture {
             PhotoLookView(
-                image: picture, camera: photo.camera, adjustments: photo.adjustments, framed: true,
-                stamp: viewModel.stamp, videoDuration: viewModel.badgeText, photoAspect: photo.aspectRatio
+                image: picture, camera: photo.camera, adjustments: photo.adjustments, framed: !photo.isVideo,
+                stamp: viewModel.stamp, videoDuration: viewModel.badgeText, photoAspect: photo.aspectRatio,
+                frameDesign: FrameDesign.forPhoto(id: photo.id)
             )
                 .environment(\.liveFrames, viewModel.movieFrames)
                 .aspectRatio(viewModel.displayAspect, contentMode: .fit)
                 .id(photo.id)
                 .onTapGesture(perform: viewModel.photoTapped)
                 .accessibilityElement()
-                .accessibilityLabel("\(viewModel.subtitle), \(viewModel.title)")
+                .accessibilityLabel(viewModel.photoLabel)
                 .accessibilityAdjustableAction { direction in
-                    viewModel.swiped(direction == .increment ? .left : .right)
+                    viewModel.swiped(SwipeDirection(direction))
                 }
         }
     }
@@ -70,7 +71,7 @@ struct ViewerView: View {
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
-            Color.clear.frame(width: 44, height: 44)
+            HeaderSpacer()
         }
         .frame(height: 44)
     }

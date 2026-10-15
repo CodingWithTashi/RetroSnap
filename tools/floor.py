@@ -18,17 +18,9 @@ from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from colour import delta_e2000, srgb_to_lab  # noqa: E402
 from pairs import INPUTS, camera_of, pairs as pairs_of, suffix_of  # noqa: E402
+from images import box, load_rgb as load  # noqa: E402
 
 R = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ref", "pairs")
-
-
-def load(p):
-    return np.asarray(Image.open(p).convert("RGB")).astype(float) / 255
-
-
-def box(a, n=4):
-    h, w = a.shape[0] // n, a.shape[1] // n
-    return a[: h * n, : w * n].reshape(h, n, w, n, 3).mean(axis=(1, 3))
 
 
 def floor_of(pair, nodes=33):

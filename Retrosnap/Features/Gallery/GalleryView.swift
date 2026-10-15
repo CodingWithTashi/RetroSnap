@@ -36,13 +36,13 @@ struct GalleryView: View {
                                     viewModel.open(photo)
                                 } label: {
                                     RSColor.surface
-                                        .aspectRatio(3.0 / 4.0, contentMode: .fit)
+                                        .aspectRatio(Photo.cameraAspect, contentMode: .fit)
                                         .overlay { PhotoLookView(photo: photo, usesThumbnail: true) }
                                         .clipShape(RoundedRectangle(cornerRadius: 4))
                                         .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
-                                .accessibilityLabel(viewModel.accessibilityLabel(for: photo))
+                                .accessibilityLabel(viewModel.photoLabel(for: photo))
                             }
                         }
                         .padding(.horizontal, 3)
@@ -121,7 +121,7 @@ struct GalleryView: View {
             .padding(.leading, 18)
             .padding(.trailing, 22)
             .frame(height: 52)
-            .background(primary ? RSColor.amber : Color(hex: 0x26231F, opacity: 0.92), in: Capsule())
+            .background(primary ? RSColor.amber : RSColor.raised(0.92), in: Capsule())
             .contentShape(Capsule())
         }
         .buttonStyle(PressScaleStyle())

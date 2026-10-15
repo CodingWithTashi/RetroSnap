@@ -2,7 +2,6 @@ import AVFoundation
 import CoreGraphics
 import Foundation
 import os
-import VideoToolbox
 
 /// A photo as the camera delivered it.
 nonisolated struct CapturedPhoto: Sendable {
@@ -65,7 +64,7 @@ actor CaptureSession {
     func run(_ device: AVCaptureDevice, for mode: CaptureMode, previewAngle: CGFloat) throws -> CameraZoom {
         self.previewAngle = previewAngle
         let isSameCamera = input?.device.uniqueID == device.uniqueID
-        try configure(device, for: mode)
+        try configure(device, for: mode, isSameCamera: isSameCamera)
         // Again now that the mode's format is in place, in case it could not be told before.
         quickenPhotos()
 
@@ -90,6 +89,8 @@ actor CaptureSession {
         session.stopRunning()
     }
 
+    // MARK: Zoom
+
     /// Zooms the camera in use to a shown number, as far as it can go.
     func setZoom(_ factor: Double, smoothly: Bool) {
         zoomFactor = lens.cameraFactor(showing: factor)
@@ -97,18 +98,19 @@ actor CaptureSession {
     }
 
     private func applyZoom(smoothly: Bool) {
-        guard let device = input?.device, (try? device.lockForConfiguration()) != nil else { return }
-        defer { device.unlockForConfiguration() }
-        let factor = min(
-            max(CGFloat(zoomFactor), device.minAvailableVideoZoomFactor), device.maxAvailableVideoZoomFactor
-        )
-        if smoothly {
-            device.ramp(toVideoZoomFactor: factor, withRate: Self.zoomGlideRate)
-        } else {
-            if device.isRampingVideoZoom {
-                device.cancelVideoZoomRamp()
+        guard let device = input?.device else { return }
+        device.withLockedConfiguration {
+            let factor = min(
+                max(CGFloat(zoomFactor), device.minAvailableVideoZoomFactor), device.maxAvailableVideoZoomFactor
+            )
+            if smoothly {
+                device.ramp(toVideoZoomFactor: factor, withRate: Self.zoomGlideRate)
+            } else {
+                if device.isRampingVideoZoom {
+                    device.cancelVideoZoomRamp()
+                }
+                device.videoZoomFactor = factor
             }
-            device.videoZoomFactor = factor
         }
     }
 
@@ -122,20 +124,22 @@ actor CaptureSession {
         )
     }
 
+    // MARK: Preview angle
+
     /// Turns the viewfinder's frames so they stay upright as the interface rotates.
     func setPreviewAngle(_ angle: CGFloat) {
         previewAngle = angle
         applyPreviewAngle()
     }
 
+    // MARK: Photos
+
     /// - Parameter rotationAngle: How far to turn the photo so that it is level however the device is held.
     func capturePhoto(flash: FlashMode, rotationAngle: CGFloat) async throws -> CapturedPhoto {
         guard session.isRunning, let connection = photoOutput.connection(with: .video) else {
             throw Failure.cannotUseCamera
         }
-        if connection.isVideoRotationAngleSupported(rotationAngle) {
-            connection.videoRotationAngle = rotationAngle
-        }
+        connection.setRotationIfSupported(rotationAngle)
 
         let usesHEVC = photoOutput.availablePhotoCodecTypes.contains(.hevc)
         let settings = usesHEVC
@@ -167,9 +171,7 @@ actor CaptureSession {
         guard session.isRunning, session.outputs.contains(movieOutput), !movieOutput.isRecording else {
             throw Failure.cannotUseCamera
         }
-        if let connection = movieOutput.connection(with: .video), connection.isVideoRotationAngleSupported(rotationAngle) {
-            connection.videoRotationAngle = rotationAngle
-        }
+        movieOutput.connection(with: .video)?.setRotationIfSupported(rotationAngle)
         setTorch(light)
         let recording = Recording()
         self.recording = recording
@@ -191,15 +193,13 @@ actor CaptureSession {
     private func setTorch(_ light: FlashMode) {
         guard let device = input?.device, device.hasTorch else { return }
         let torch = AVCaptureDevice.TorchMode(light)
-        guard device.isTorchModeSupported(torch), (try? device.lockForConfiguration()) != nil else { return }
-        device.torchMode = torch
-        device.unlockForConfiguration()
+        guard device.isTorchModeSupported(torch) else { return }
+        device.withLockedConfiguration { device.torchMode = torch }
     }
 
     // MARK: Configuration
 
-    private func configure(_ device: AVCaptureDevice, for mode: CaptureMode) throws {
-        let isSameCamera = input?.device.uniqueID == device.uniqueID
+    private func configure(_ device: AVCaptureDevice, for mode: CaptureMode, isSameCamera: Bool) throws {
         guard !isSameCamera || self.mode != mode else {
             applyPreviewAngle()
             return
@@ -293,10 +293,26 @@ actor CaptureSession {
     }
 
     private func applyPreviewAngle() {
-        guard let connection = frameOutput.connection(with: .video),
-              connection.isVideoRotationAngleSupported(previewAngle)
-        else { return }
-        connection.videoRotationAngle = previewAngle
+        frameOutput.connection(with: .video)?.setRotationIfSupported(previewAngle)
+    }
+}
+
+// MARK: - Bridging
+
+private extension AVCaptureConnection {
+    nonisolated func setRotationIfSupported(_ angle: CGFloat) {
+        if isVideoRotationAngleSupported(angle) {
+            videoRotationAngle = angle
+        }
+    }
+}
+
+private extension AVCaptureDevice {
+    /// Runs the change with the device locked for configuration; does nothing when it cannot be locked.
+    nonisolated func withLockedConfiguration(_ change: () -> Void) {
+        guard (try? lockForConfiguration()) != nil else { return }
+        defer { unlockForConfiguration() }
+        change()
     }
 }
 
@@ -319,6 +335,8 @@ private extension AVCaptureDevice.TorchMode {
         }
     }
 }
+
+// MARK: - Delegates
 
 /// Waits for a recording to be written out. The movie can be finished before anyone asks for it
 /// (the system may stop it), or asked for before it is finished; either order ends the same way.
@@ -373,9 +391,7 @@ private nonisolated final class FrameRelay: NSObject, AVCaptureVideoDataOutputSa
         _ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection
     ) {
         guard let buffer = sampleBuffer.imageBuffer else { return }
-        var image: CGImage?
-        VTCreateCGImageFromCVPixelBuffer(buffer, options: nil, imageOut: &image)
-        if let image {
+        if let image = buffer.cgImage {
             onFrame(image)
         }
     }

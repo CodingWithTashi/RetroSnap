@@ -44,6 +44,7 @@ from scipy import ndimage, optimize
 
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from colour import ColourStage, HUE_SECTORS, KNOT_X, curve, delta_e2000, srgb_to_lab  # noqa: E402
+from images import load_srgb  # noqa: E402
 
 BOX = 4
 # A pair larger than this is fitted on a fixed random subset: the fit does not get better past it, only slower.
@@ -54,14 +55,7 @@ def load(path):
     """A picture upright, as sRGB in 0...1. A picture tagged with another profile (an iPhone photo and its
     screenshots are Display P3) is converted, because the app's shaders work on sRGB values: fitting on the
     tagged values as if they were sRGB would make every saturated colour come out duller on a phone."""
-    image = ImageOps.exif_transpose(Image.open(path))
-    icc = image.info.get("icc_profile")
-    image = image.convert("RGB")
-    if icc:
-        profile = ImageCms.ImageCmsProfile(io.BytesIO(icc))
-        if "sRGB" not in (ImageCms.getProfileDescription(profile) or ""):
-            image = ImageCms.profileToProfile(image, profile, ImageCms.createProfile("sRGB"), outputMode="RGB")
-    return np.asarray(image).astype(np.float64) / 255
+    return load_srgb(path) / 255
 
 
 def save(path, rgb):

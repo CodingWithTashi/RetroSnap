@@ -9,7 +9,7 @@ struct PrintViewModelTests {
     private func make(printing: (any PhotoPrinting)? = nil) -> PrintViewModel {
         PrintViewModel(
             photoID: "s1", photos: world.photos, printing: printing ?? world.printing, router: world.router,
-            toasts: world.toasts, feedback: world.feedback, dayLabeler: DayLabeler(clock: world.clock)
+            toasts: world.toasts, feedback: world.feedback, dayLabeler: world.dayLabeler
         )
     }
 
@@ -22,6 +22,14 @@ struct PrintViewModelTests {
         #expect(vm.actionTitle == "Print")
         #expect(vm.paperSize == CGSize(width: 240, height: 360))
         #expect(vm.paperPadding == 14)
+    }
+
+    @Test func previewAndCopiesDescribeThemselvesForVoiceOver() {
+        let vm = make()
+        #expect(vm.previewLabel == "Print preview, 4×6")
+        #expect(vm.copiesLabel == "1 copies")
+        vm.increaseCopies()
+        #expect(vm.copiesLabel == "2 copies")
     }
 
     @Test func sizesMatchTheDesign() {

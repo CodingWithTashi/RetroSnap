@@ -125,7 +125,7 @@ struct LookRendererTests {
 // MARK: Fitted cameras
 
 extension LookRendererTests {
-    /// The colour stage on a flat orange gives what `tools/colour.py` computes for the same recipe.
+    /// The colour table on a flat orange gives what `tools/lut.py` computes for the same table.
     @Test func aFittedCameraRunsItsColourTable() {
         // The fixtures' orange through each camera's table (`tools/lut.py` gives the same numbers), with no
         // grain, no vignette in the middle, and no glow (the orange is below the halation threshold).

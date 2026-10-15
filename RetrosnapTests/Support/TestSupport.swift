@@ -1,31 +1,6 @@
 import Foundation
 @testable import Retrosnap
 
-/// Records feedback instead of buzzing or clicking.
-@MainActor
-final class FeedbackSpy: FeedbackProviding {
-    private(set) var haptics: [HapticKind] = []
-    private(set) var clicks = 0
-    private(set) var hapticPrepareCount = 0
-    private(set) var clickPrepareCount = 0
-
-    func prepareHaptics() {
-        hapticPrepareCount += 1
-    }
-
-    func prepareClick() {
-        clickPrepareCount += 1
-    }
-
-    func haptic(_ kind: HapticKind) {
-        haptics.append(kind)
-    }
-
-    func shutterClick() {
-        clicks += 1
-    }
-}
-
 /// A fully mocked app for view-model tests: virtual time, in-memory services, a camera router.
 @MainActor
 struct TestWorld {
@@ -45,6 +20,7 @@ struct TestWorld {
     let printing = MockPhotoPrinter()
     let importer = ImporterSpy()
     let saver: PhotosSaver
+    let dayLabeler: DayLabeler
     let router: AppRouter
     let toasts: ToastCenter
     /// Stands in for the system share sheet by naming it, as the prototype does.
@@ -58,10 +34,19 @@ struct TestWorld {
         toasts = ToastCenter(scheduler: scheduler)
         saver = PhotosSaver(exporter: exporter, permissions: permissions, settings: settings, toasts: toasts)
         sharing = MockPhotoSharer(toasts: toasts)
+        dayLabeler = DayLabeler(clock: clock)
     }
 
     func photo(_ id: String, camera: CameraStyle = .film, video seconds: Int? = nil) -> Photo {
-        Photo(id: id, image: .photo(1011), camera: camera, capturedAt: clock.now, videoSeconds: seconds)
+        Photo.fixture(id, camera: camera, at: clock.now, video: seconds)
+    }
+
+    /// A saver on this world's services, with Photos access as given and this world's exporter unless another is.
+    func makeSaver(access: PhotoLibraryAccess, exporter: (any PhotoExporting)? = nil) -> PhotosSaver {
+        PhotosSaver(
+            exporter: exporter ?? self.exporter, permissions: MockPermissionService(photoLibraryAccess: access),
+            settings: settings, toasts: toasts
+        )
     }
 
     /// A pick from the library as the importer hands it over: filed, not yet in the library, on no camera in particular.

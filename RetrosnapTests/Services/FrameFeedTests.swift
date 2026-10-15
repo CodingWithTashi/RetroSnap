@@ -8,11 +8,7 @@ struct FrameFeedTests {
 
     /// A one-pixel picture; each call makes a different object.
     private func frame() -> CGImage {
-        let context = CGContext(
-            data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 0,
-            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
-        )!
-        return context.makeImage()!
+        makeCGImage(width: 1, height: 1)
     }
 
     /// Lets the main actor run what a submitted frame queued on it.

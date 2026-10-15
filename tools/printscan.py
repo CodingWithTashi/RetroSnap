@@ -17,16 +17,8 @@ import numpy as np
 from PIL import Image, ImageCms, ImageOps
 from scipy import ndimage
 
-
-def load(path):
-    image = ImageOps.exif_transpose(Image.open(path))
-    icc = image.info.get("icc_profile")
-    image = image.convert("RGB")
-    if icc:
-        profile = ImageCms.ImageCmsProfile(io.BytesIO(icc))
-        if "sRGB" not in (ImageCms.getProfileDescription(profile) or ""):
-            image = ImageCms.profileToProfile(image, profile, ImageCms.createProfile("sRGB"), outputMode="RGB")
-    return np.asarray(image).astype(np.float64)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from images import load_srgb as load  # noqa: E402
 
 
 def first_below(profile, value, start, step):

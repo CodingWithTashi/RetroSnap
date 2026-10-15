@@ -4,7 +4,7 @@ import Observation
 /// Five sliders, one at a time, over a draft that is saved on Done and dropped on Cancel.
 @Observable
 final class EditViewModel {
-    let photoID: Photo.ID
+    private let photoID: Photo.ID
     private(set) var draft: PhotoAdjustments
     private(set) var tool: EditTool
     /// The photo is being held down to show the original.
@@ -38,12 +38,12 @@ final class EditViewModel {
     }
 
     var isInstant: Bool {
-        photo?.camera == .instant
+        photo?.isInstantPrint ?? false
     }
 
     /// The preview's box: width over height.
     var displayAspect: CGFloat {
-        photo?.displayAspect ?? 3.0 / 4.0
+        photo?.displayAspect ?? Photo.cameraAspect
     }
 
     var stamp: PhotoStampText? {

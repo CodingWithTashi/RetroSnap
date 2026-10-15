@@ -12,7 +12,7 @@ struct OnboardingView: View {
             case .welcome:
                 WelcomeView(stamp: stamp, onContinue: viewModel.continueTapped)
             case .howItWorks:
-                HowItWorksView(stamp: stamp, onContinue: viewModel.continueTapped)
+                HowItWorksView(stamp: stamp, chooseCameraDetail: viewModel.chooseCameraDetail, onContinue: viewModel.continueTapped)
             case .cameraPermission, .photosPermission:
                 PermissionView(
                     content: viewModel.permission(for: step),
@@ -26,7 +26,7 @@ struct OnboardingView: View {
     }
 }
 
-struct WelcomeView: View {
+private struct WelcomeView: View {
     let stamp: PhotoStampText
     let onContinue: () -> Void
     @Environment(\.designLayout) private var layout
@@ -68,7 +68,7 @@ struct WelcomeView: View {
 }
 
 /// The amber lens mark beside the wordmark.
-struct LogoMark: View {
+private struct LogoMark: View {
     var body: some View {
         Circle()
             .fill(RSColor.amber)
@@ -81,8 +81,9 @@ struct LogoMark: View {
     }
 }
 
-struct HowItWorksView: View {
+private struct HowItWorksView: View {
     let stamp: PhotoStampText
+    let chooseCameraDetail: String
     let onContinue: () -> Void
     @Environment(\.designLayout) private var layout
 
@@ -97,7 +98,7 @@ struct HowItWorksView: View {
             .accessibilityAddTraits(.isHeader)
 
             VStack(spacing: 14) {
-                StepCard(number: 1, title: "Choose a camera", detail: "Five looks. One tap to switch.") {
+                StepCard(number: 1, title: "Choose a camera", detail: chooseCameraDetail) {
                     cameraGrid
                 }
                 StepCard(number: 2, title: "Take a photo", detail: "What you see is what you get.") {
@@ -160,7 +161,7 @@ private struct StepCard<Thumbnail: View>: View {
         HStack(spacing: 16) {
             thumbnail
                 .frame(width: 104, height: 104)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .clipShape(RoundedRectangle(cornerRadius: RSRadius.card))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 Text("Step \(number)")
@@ -181,7 +182,7 @@ private struct StepCard<Thumbnail: View>: View {
     }
 }
 
-struct PermissionView: View {
+private struct PermissionView: View {
     let content: PermissionContent
     let onAllow: () -> Void
     let onNotNow: () -> Void

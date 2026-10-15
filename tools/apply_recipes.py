@@ -77,7 +77,7 @@ def main(argv):
         comment = (f"            // {NAMES[cam]}: refitted 13 October 2026 on its {len(fit['pairs'])} pictures ({setting}: {fits}); the table "
                    f"(prior {lut['prior']:g}, smooth {lut['smooth']:g}, skin {lut['skin']:g}) {tables}; held-out median gap {refine['loo_median_gap']:+.2f}.")
         block = re.sub(r"            // .*\n", comment + "\n", block, count=1)
-        source = source[:start] + block + "\n" + source[end:]
+        source = source[:start] + block + source[end:]
         shutil.copy(os.path.join(R, cam + ".cube"), os.path.join(ROOT, "Retrosnap", "Resources", "Looks", cam + ".cube"))
         cube, size = read_cube(os.path.join(R, cam + ".cube"))
         pins[cam] = evaluate(cube, size, np.array([[200, 120, 40]]) / 255)[0] * 255

@@ -17,17 +17,9 @@ from PIL import Image, ImageOps
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from colour import ColourStage, delta_e2000, srgb_to_lab  # noqa: E402
 from pairs import FACE_LIGHTNESS, FACE_REGION, INPUTS, PAIRS, alignment_of, input_path, region_in_pair, suffix_of  # noqa: E402
+from images import box, load_rgb as load  # noqa: E402
 
 R = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ref", "pairs")
-
-
-def load(p):
-    return np.asarray(Image.open(p).convert("RGB")).astype(float) / 255
-
-
-def box(a, n=4):
-    h, w = a.shape[0] // n, a.shape[1] // n
-    return a[: h * n, : w * n].reshape(h, n, w, n, 3).mean(axis=(1, 3))
 
 
 def face_mask(pair, A):

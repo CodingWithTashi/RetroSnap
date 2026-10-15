@@ -20,10 +20,10 @@ extension AppDependencies {
                 recordedSeconds: scenario.variant == .recording ? 12 : nil,
                 isPosed: scenario.variant == .capture
             ),
-            isProcessing: scenario.variant == .processing,
+            isPosedProcessing: scenario.variant == .processing,
             tool: scenario.tool ?? .effect,
             editPreset: scenario.editPreset,
-            collageStep: scenario.collageStep,
+            collageStep: CollageStep(rawValue: scenario.collageStep) ?? .layout,
             collagePicks: SeedData.arrangeBoardPicks
         )
 
@@ -91,11 +91,11 @@ extension AppDependencies.Services {
         }
 
         // A scenario that opens past onboarding behaves as if both prompts were answered.
-        let startsInApp = scenario.navigation(firstPhotoID: nil).root == .camera
+        let startsInApp = scenario.root == .camera
         let access: PhotoLibraryAccess = scenario.variant == .libDenied ? .denied : (startsInApp ? .granted : .notDetermined)
 
         let settings = InMemorySettingsStore()
-        settings.lastCamera = scenario.camera ?? .film
+        settings.lastCamera = scenario.camera ?? .default
         settings.hasSeenCameraIntro = startsInApp && !scenario.firstRun
         settings.hasTakenFirstPhoto = startsInApp
 
@@ -122,7 +122,7 @@ extension AppDependencies.Services {
 extension LaunchScenario {
     /// The pick the mock picker brings in, posed as taken with the scenario's camera.
     fileprivate func importDraft(clock: any DateProviding) -> Photo {
-        SeedData.importDraft(clock: clock, camera: camera ?? .film, isVideo: variant == .video)
+        SeedData.importDraft(clock: clock, camera: camera ?? .default, isVideo: variant == .video)
     }
 }
 #endif

@@ -6,16 +6,14 @@ import Testing
 
 @MainActor
 final class PhotoImageLoaderTests {
-    private let folder = PhotoLibraryFolder(
-        url: FileManager.default.temporaryDirectory.appendingPathComponent("PhotoImageLoaderTests-\(UUID().uuidString)")
-    )
+    private let folder = PhotoLibraryFolder.temporary(for: "PhotoImageLoaderTests")
 
     init() throws {
         try FileManager.default.createDirectory(at: folder.url, withIntermediateDirectories: true)
     }
 
     deinit {
-        try? FileManager.default.removeItem(at: folder.url)
+        folder.removeFromDisk()
     }
 
     private func writeJPEG(_ name: String, width: Int, height: Int, orientation: CGImagePropertyOrientation = .up) throws {

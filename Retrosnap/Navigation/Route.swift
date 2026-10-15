@@ -25,3 +25,15 @@ nonisolated enum Route: Hashable, Sendable {
     /// so the screen carries it whole.
     case develop(Photo)
 }
+
+extension PhotoAction {
+    /// The screen the action opens on the photo; nil for share and delete, which act in place.
+    nonisolated func route(for id: Photo.ID) -> Route? {
+        switch self {
+        case .edit: .edit(id)
+        case .print: .print(id)
+        case .collage: .collage(seed: id)
+        case .share, .delete: nil
+        }
+    }
+}

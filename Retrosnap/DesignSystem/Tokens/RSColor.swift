@@ -1,3 +1,4 @@
+import CoreImage
 import SwiftUI
 
 /// The red, green and blue of a `0xRRGGBB` literal, each from 0 to 1.
@@ -15,11 +16,15 @@ extension Color {
 
 /// Colour tokens from the design system board.
 nonisolated enum RSColor {
+    private static let inkHex: UInt32 = 0x0E0D0C
+    private static let raisedHex: UInt32 = 0x26231F
+    private static let paperHex: UInt32 = 0xF4EEE6
+
     // Core
-    static let ink = Color(hex: 0x0E0D0C)
+    static let ink = Color(hex: inkHex)
     static let surface = Color(hex: 0x1B1916)
-    static let raised = Color(hex: 0x26231F)
-    static let paper = Color(hex: 0xF4EEE6)
+    static let raised = Color(hex: raisedHex)
+    static let paper = Color(hex: paperHex)
     static let secondaryText = Color(hex: 0xA79F94)
     static let amber = Color(hex: 0xF2A33A)
     static let record = Color(hex: 0xE5483B)
@@ -34,7 +39,7 @@ nonisolated enum RSColor {
 
     // Controls
     static let toggleOff = Color(hex: 0x3A3631)
-    static let hairline = Color(hex: 0xF4EEE6, opacity: 0.07)
+    static let hairline = Color(hex: paperHex, opacity: 0.07)
 
     // Prints
     static let printFrameHex: UInt32 = 0xF7F3EC
@@ -50,6 +55,19 @@ nonisolated enum RSColor {
 
     /// Ink at partial opacity, for sheets and bars over content.
     static func ink(_ opacity: Double) -> Color {
-        Color(hex: 0x0E0D0C, opacity: opacity)
+        Color(hex: inkHex, opacity: opacity)
+    }
+
+    /// The raised fill at partial opacity, for pills over content.
+    static func raised(_ opacity: Double) -> Color {
+        Color(hex: raisedHex, opacity: opacity)
+    }
+}
+
+extension CIColor {
+    /// An sRGB colour from a `0xRRGGBB` literal, as written in the design files.
+    nonisolated convenience init(hex: UInt32) {
+        let rgb = rgbComponents(hex: hex)
+        self.init(red: rgb.red, green: rgb.green, blue: rgb.blue)
     }
 }

@@ -9,11 +9,6 @@ final class ImporterSpy: PhotoImporting {
     private(set) var discarded: [Photo] = []
     private var completion: (@MainActor (ImportOutcome) -> Void)?
 
-    /// The picker is up.
-    var isPicking: Bool {
-        completion != nil
-    }
-
     func pick(completion: @escaping @MainActor (ImportOutcome) -> Void) {
         pickCount += 1
         self.completion = completion

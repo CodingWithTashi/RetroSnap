@@ -11,12 +11,4 @@ nonisolated struct PhotoStampText: Hashable, Sendable {
     let dateBackPlain: String
     let tapeDate: String
     let tapeTime: String
-
-    init(date: String, dateBack: String = "", dateBackPlain: String = "", tapeDate: String, tapeTime: String) {
-        self.date = date
-        self.dateBack = dateBack
-        self.dateBackPlain = dateBackPlain
-        self.tapeDate = tapeDate
-        self.tapeTime = tapeTime
-    }
 }

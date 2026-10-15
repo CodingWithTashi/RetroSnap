@@ -114,7 +114,7 @@ extension View {
     }
 }
 
-enum RSFont {
+nonisolated enum RSFont {
     /// VT323, the date-stamp motif. Never used for UI text.
     static func stamp(_ size: CGFloat) -> Font {
         .custom("VT323-Regular", fixedSize: size)

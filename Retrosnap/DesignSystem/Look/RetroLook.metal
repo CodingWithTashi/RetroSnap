@@ -8,6 +8,9 @@ using namespace metal;
 // files and video frames that leave the app.
 // All maths runs on gamma-encoded sRGB and clamps after every step, as CSS filters and blend modes do.
 
+// Rec. 709 luma weights, applied to the gamma-encoded values.
+constant float3 rs_luma = float3(0.2126, 0.7152, 0.0722);
+
 // MARK: CSS filter functions (W3C Filter Effects)
 
 // op.x: 0 none, 1 sepia, 2 saturate, 3 contrast, 4 brightness, 5 hue-rotate (radians). op.y: amount.
@@ -96,7 +99,7 @@ static float rs_curve(float v, float4 a, float4 b, float4 c) {
 constant float rs_hueCentre[8] = {0.0, 45.0, 90.0, 135.0, 180.0, 225.0, 270.0, 315.0};
 
 static float3 rs_hueAdjust(float3 c, float4 s0, float4 s1, float4 g0, float4 g1, float4 l0, float4 l1) {
-    const float3 luma = float3(0.2126, 0.7152, 0.0722);
+    const float3 luma = rs_luma;
     float y = dot(c, luma);
     float u = c.r - y;
     float v = c.b - y;
@@ -170,7 +173,7 @@ static float3 rs_colorCube(float3 c, texture2d<half> cube, float size) {
 // The bright parts of the picture as the glow that halation spreads around them; black elsewhere.
 // params: threshold, amount. The onset is squared, so the glow starts gently.
 static float3 rs_halationGlow(float3 c, float2 params, float3 tint) {
-    float l = dot(c, float3(0.2126, 0.7152, 0.0722));
+    float l = dot(c, rs_luma);
     float k = clamp((l - params.x) / max(1.0 - params.x, 0.001), 0.0, 1.0);
     return clamp(tint * (k * k * params.y), 0.0, 1.0);
 }
@@ -282,7 +285,7 @@ static float3 rs_overlays(float3 c, float2 p, float2 size, float4 tint, float4 w
         float mono = rs_fractalNoise(g, 11u) * 2.0 - 1.0;
         float3 split = float3(rs_fractalNoise(g, 12u), rs_fractalNoise(g, 13u), rs_fractalNoise(g, 14u)) * 2.0 - 1.0;
         float3 noise = mix(float3(mono), split, film.z);
-        float l = clamp(dot(c, float3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
+        float l = clamp(dot(c, rs_luma), 0.0, 1.0);
         float weight = 0.2 + 0.8 * pow(l, 0.7) * pow(1.0 - l, 1.5) / 0.252;
         c = clamp(c + noise * (film.y * weight), 0.0, 1.0);
     }
@@ -366,8 +369,6 @@ static float3 rs_adjust(float3 c, float brightness, float contrast) {
     return float4(c * color.a, color.a);
 }
 
-// size: the photo box in points. scale: pixels per point, so grain, scanlines and gradients keep the
-// size they have on screen. Core Image counts rows from the bottom; the look counts them from the top.
 [[ stitchable ]] float4 rsColorKernel(coreimage::sample_t color, float4 m0, float4 m1, float4 m2,
                                       float4 r0, float4 r1, float4 r2, float4 g0, float4 g1, float4 g2,
                                       float4 b0, float4 b1, float4 b2,
@@ -378,6 +379,8 @@ static float3 rs_adjust(float3 c, float brightness, float contrast) {
     return float4(c * color.a, color.a);
 }
 
+// size: the photo box in points. scale: pixels per point, so grain, scanlines and gradients keep the
+// size they have on screen. Core Image counts rows from the bottom; the look counts them from the top.
 [[ stitchable ]] float4 rsOverlaysKernel(coreimage::sample_t color, float2 size, float scale,
                                          float4 tint, float4 warm, float4 fx, float2 fx2, float4 film,
                                          coreimage::destination destination) {

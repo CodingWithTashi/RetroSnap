@@ -6,9 +6,9 @@
 import sys, json, numpy as np
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from colour import ColourStage, srgb_to_lab
+from images import load_rgb as load
 from PIL import Image
 from scipy import ndimage
-def load(p): return np.asarray(Image.open(p).convert("RGB")).astype(float)/255
 def hp(x, s=2.5): return x - ndimage.gaussian_filter(x, s)
 for pair in sys.argv[1:]:
     cam = pair.split("/")[-1].split("-")[0]

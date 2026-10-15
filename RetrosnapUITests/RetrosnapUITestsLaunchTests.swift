@@ -1,10 +1,3 @@
-//
-//  RetrosnapUITestsLaunchTests.swift
-//  RetrosnapUITests
-//
-//  Created by Kunchok Tashi on 2026-10-10.
-//
-
 import XCTest
 
 final class RetrosnapUITestsLaunchTests: XCTestCase {
@@ -21,9 +14,6 @@ final class RetrosnapUITestsLaunchTests: XCTestCase {
     func testLaunch() throws {
         let app = XCUIApplication()
         app.launch()
-
-        // Insert steps here to perform after app launch but before taking a screenshot,
-        // such as logging into a test account or navigating somewhere in the app
 
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "Launch Screen"

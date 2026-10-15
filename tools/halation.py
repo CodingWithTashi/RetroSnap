@@ -23,6 +23,7 @@ from scipy import ndimage
 
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from colour import ColourStage, delta_e2000, srgb_to_lab  # noqa: E402
+from images import box, load_rgb as load  # noqa: E402
 
 LUMA = np.array([0.2126, 0.7152, 0.0722])
 TINTS = {"white": (1.0, 1.0, 1.0), "cool": (0.88, 0.94, 1.0), "warm": (1.0, 0.54, 0.31)}
@@ -49,15 +50,6 @@ WINDOW_POINTS = {
 COARSE_GRID = {"threshold": (0.6, 0.7, 0.8, 0.9), "radius": (3, 6, 10, 16, 24), "amount": (0.15, 0.3, 0.5, 0.75, 1.0), "tint": tuple(TINTS)}
 FINE_GRID = {"threshold": (0.4, 0.5, 0.6, 0.7), "radius": (0.75, 1.5, 2.5, 4, 6), "amount": (0.15, 0.25, 0.4, 0.6), "tint": ("white", "cool")}
 WIDE_GRID = {"threshold": (0.4, 0.5, 0.6, 0.7), "radius": (0.75, 1.5, 2.5, 4, 6, 10, 16), "amount": (0.15, 0.25, 0.4, 0.6), "tint": ("white", "cool")}
-
-
-def load(path):
-    return np.asarray(Image.open(path).convert("RGB")).astype(np.float64) / 255
-
-
-def box(a, n=4):
-    h, w = a.shape[0] // n, a.shape[1] // n
-    return a[: h * n, : w * n].reshape(h, n, w, n, 3).mean(axis=(1, 3))
 
 
 def glow_of(photo, threshold, amount, tint):

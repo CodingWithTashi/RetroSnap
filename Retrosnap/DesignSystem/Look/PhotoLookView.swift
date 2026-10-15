@@ -8,7 +8,7 @@ struct PhotoLookView: View {
     var image: PhotoImage
     var camera: CameraStyle
     var adjustments = PhotoAdjustments.neutral
-    /// Cameras with a canvas get it when this is set: the Instant print's frame, the film strip, the slide mount.
+    /// Cameras with a canvas (`LookFrame`) are drawn on it when this is set.
     var framed = false
     /// Stamp text; nil draws no stamp.
     var stamp: PhotoStampText?
@@ -21,24 +21,25 @@ struct PhotoLookView: View {
     /// Enlarges the picture inside its box, under the look: a still scene standing in for a zoomed lens.
     var magnification: CGFloat = 1
     /// The photo's own width over its height: which way a frame's window turns, and where a film's stamp lands.
-    var photoAspect: CGFloat = 3.0 / 4
+    var photoAspect: CGFloat = Photo.cameraAspect
     /// Which of the square print's and the slide mount's cards the photo gets.
     var frameDesign = FrameDesign()
 
     var body: some View {
         GeometryReader { proxy in
             let model = LookRenderModel(camera: camera, adjustments: adjustments, framed: framed, stampEnabled: stamp != nil)
+            let uniforms = LookUniforms(model)
             let size = proxy.size
             if let frame = model.frame {
                 let window = frame.window(in: size, photoAspect: photoAspect)
                 ZStack(alignment: .topLeading) {
                     Color(hex: frame.baseHex)
-                    photo(model, size: window.size)
+                    photo(model, uniforms, size: window.size)
                         .offset(x: window.minX, y: window.minY)
                     LookFrameView(frame: frame, size: size, photoAspect: photoAspect, design: frameDesign)
                 }
             } else {
-                photo(model, size: size)
+                photo(model, uniforms, size: size)
             }
         }
     }
@@ -53,7 +54,7 @@ struct PhotoLookView: View {
         let fitted = size.width / size.height <= ratio
             ? CGSize(width: size.width, height: size.width / ratio)
             : CGSize(width: size.height * ratio, height: size.height)
-        return CGRect(x: (size.width - fitted.width) / 2, y: (size.height - fitted.height) / 2, width: fitted.width, height: fitted.height)
+        return CGRect(centredIn: size, size: fitted)
     }
 
     private func source(_ size: CGSize) -> some View {
@@ -65,7 +66,7 @@ struct PhotoLookView: View {
 
     /// The picture through the lens and the film: soft corners and halation, when the camera has them.
     @ViewBuilder
-    private func optics(_ model: LookRenderModel, size: CGSize) -> some View {
+    private func optics(_ model: LookRenderModel, _ uniforms: LookUniforms, size: CGSize) -> some View {
         if model.soft == nil && model.halation == nil {
             source(size)
         } else {
@@ -77,12 +78,12 @@ struct PhotoLookView: View {
                         .mask {
                             Rectangle()
                                 .fill(.white)
-                                .colorEffect(LookShaders.softMask(model))
+                                .colorEffect(LookShaders.softMask(uniforms))
                         }
                 }
                 if let halation = model.halation {
                     source(size)
-                        .colorEffect(LookShaders.halationGlow(model))
+                        .colorEffect(LookShaders.halationGlow(uniforms))
                         .blur(radius: halation.radius, opaque: true)
                         .blendMode(.screen)
                 }
@@ -92,28 +93,28 @@ struct PhotoLookView: View {
         }
     }
 
-    private func rendered(_ model: LookRenderModel, size: CGSize) -> some View {
+    private func rendered(_ model: LookRenderModel, _ uniforms: LookUniforms, size: CGSize) -> some View {
         ZStack {
             RSColor.photoBacking
             if model.lookOpacity < 1 {
                 source(size)
             }
             if model.lookOpacity > 0 {
-                optics(model, size: size)
+                optics(model, uniforms, size: size)
                     .blur(radius: model.blurRadius, opaque: true)
-                    .colorEffect(LookShaders.color(model))
+                    .colorEffect(LookShaders.color(uniforms))
                     .opacity(model.lookOpacity)
             }
         }
         .frame(width: size.width, height: size.height)
         .clipped()
         .compositingGroup()
-        .colorEffect(LookShaders.overlays(model))
+        .colorEffect(LookShaders.overlays(uniforms))
     }
 
-    private func photo(_ model: LookRenderModel, size: CGSize) -> some View {
+    private func photo(_ model: LookRenderModel, _ uniforms: LookUniforms, size: CGSize) -> some View {
         ZStack {
-            rendered(model, size: size)
+            rendered(model, uniforms, size: size)
             if let stamp {
                 PhotoStampView(
                     text: stamp, kind: model.stamp, size: size, bottomInset: stampBottom, topInset: stampTop,
@@ -122,7 +123,7 @@ struct PhotoLookView: View {
                 .blendMode(model.stamp.isScreened ? .screen : .normal)
             }
             if let videoDuration {
-                videoBadge(model, duration: videoDuration, size: size)
+                videoBadge(model, uniforms, duration: videoDuration, size: size)
             }
         }
         .frame(width: size.width, height: size.height)
@@ -133,11 +134,11 @@ struct PhotoLookView: View {
         )
     }
 
-    private func videoBadge(_ model: LookRenderModel, duration: String, size: CGSize) -> some View {
+    private func videoBadge(_ model: LookRenderModel, _ uniforms: LookUniforms, duration: String, size: CGSize) -> some View {
         let diameter = min(72, max(28, size.width * 0.18))
         return ZStack {
             // backdrop-filter: blur(12px) — the photo again, blurred, showing only through the disc.
-            rendered(model, size: size)
+            rendered(model, uniforms, size: size)
                 .compositingGroup()
                 .blur(radius: 12, opaque: true)
                 .mask { Circle().frame(width: diameter, height: diameter) }

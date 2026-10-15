@@ -17,21 +17,8 @@ struct BakeVersusScreenTests {
         let original = CIImage(cgImage: picture)
         let model = LookRenderModel(camera: camera, adjustments: .neutral, framed: true, stampEnabled: false)
         let layout = BakeLayout(source: original.extent.size, frame: model.frame)
-        var artwork: CIImage?
-        if let frame = model.frame {
-            let size = layout.canvasPointSize
-            let frameRenderer = ImageRenderer(
-                content: LookFrameView(frame: frame, size: size).frame(width: size.width, height: size.height)
-            )
-            frameRenderer.scale = layout.artworkScale
-            if let drawn = frameRenderer.cgImage {
-                let image = CIImage(cgImage: drawn)
-                artwork = image.transformed(by: CGAffineTransform(
-                    scaleX: layout.canvas.width / image.extent.width, y: layout.canvas.height / image.extent.height
-                ))
-            }
-        }
-        let paper = CIColor(hex: model.frame?.baseHex ?? RSColor.printFrameHex)
+        let artwork = BakeArtwork.frame(model.frame, layout: layout, photoAspect: Photo.cameraAspect, design: FrameDesign())
+        let paper = CIColor(hex: model.paperHex)
         let baked = renderer.picture(from: original, model: model, layout: layout, stamp: nil, paper: paper, artwork: artwork)
         let output = ReferencePairTests.pairs.appendingPathComponent("bake-\(camera.rawValue).png")
         try renderer.context.writePNGRepresentation(
@@ -71,38 +58,10 @@ struct ReferenceExportTests {
             let model = LookRenderModel(camera: camera, adjustments: .neutral, framed: true, stampEnabled: true)
             let layout = BakeLayout(source: original.extent.size, frame: model.frame)
             let photoAspect = original.extent.width / original.extent.height
-            var artwork: CIImage?
-            if let frame = model.frame, frame != .fullFrame {
-                let size = layout.canvasPointSize
-                let frameRenderer = ImageRenderer(
-                    content: LookFrameView(frame: frame, size: size, photoAspect: photoAspect, design: picture.design)
-                        .frame(width: size.width, height: size.height)
-                )
-                frameRenderer.scale = layout.artworkScale
-                if let drawn = frameRenderer.cgImage {
-                    let image = CIImage(cgImage: drawn)
-                    artwork = image.transformed(by: CGAffineTransform(
-                        scaleX: layout.canvas.width / image.extent.width, y: layout.canvas.height / image.extent.height
-                    ))
-                }
-            }
-            var stamp: CIImage?
-            if model.stamp != .none {
-                let size = layout.pointSize
-                let date = ISO8601DateFormatter().date(from: picture.taken) ?? FixedClock.design.now
-                let stampRenderer = ImageRenderer(
-                    content: PhotoStampView(text: labeler.stamp(for: date), kind: model.stamp, size: size)
-                        .frame(width: size.width, height: size.height)
-                )
-                stampRenderer.scale = layout.stampScale
-                if let drawn = stampRenderer.cgImage {
-                    let image = CIImage(cgImage: drawn)
-                    stamp = image.transformed(by: CGAffineTransform(
-                        scaleX: layout.crop.width / image.extent.width, y: layout.crop.height / image.extent.height
-                    ))
-                }
-            }
-            let paper = CIColor(hex: model.frame?.baseHex ?? RSColor.printFrameHex)
+            let artwork = BakeArtwork.frame(model.frame, layout: layout, photoAspect: photoAspect, design: picture.design)
+            let date = ISO8601DateFormatter().date(from: picture.taken) ?? FixedClock.design.now
+            let stamp = BakeArtwork.stamp(labeler.stamp(for: date), kind: model.stamp, layout: layout)
+            let paper = CIColor(hex: model.paperHex)
             let baked = renderer.picture(from: original, model: model, layout: layout, stamp: stamp, paper: paper, artwork: artwork)
             // Small enough to look at: 1200 px wide.
             let factor = 1200 / baked.extent.width

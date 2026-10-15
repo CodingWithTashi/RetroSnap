@@ -7,7 +7,7 @@ struct MockPhotoStoreTests {
     private let clock = FixedClock.design
 
     private func photo(_ id: String) -> Photo {
-        Photo(id: id, image: .photo(1011), camera: .film, capturedAt: clock.now)
+        Photo.fixture(id, at: clock.now)
     }
 
     private func store(_ ids: String...) -> MockPhotoStore {

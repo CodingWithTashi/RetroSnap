@@ -15,13 +15,15 @@ struct ResultViewModelTests {
     }
 
     private func make(
-        _ id: Photo.ID? = nil, isProcessing: Bool = false, saver: PhotosSaver? = nil, sharing: (any PhotoSharing)? = nil
+        _ id: Photo.ID? = nil, isPosedProcessing: Bool = false, saver: PhotosSaver? = nil,
+        sharing: (any PhotoSharing)? = nil, in other: TestWorld? = nil
     ) -> ResultViewModel {
-        ResultViewModel(
+        let world = other ?? self.world
+        return ResultViewModel(
             photoID: id ?? fresh.id, photos: world.photos, saver: saver ?? world.saver,
             sharing: sharing ?? world.sharing, importer: world.importer, router: world.router,
-            toasts: world.toasts, scheduler: world.scheduler, dayLabeler: DayLabeler(clock: world.clock),
-            isProcessing: isProcessing
+            toasts: world.toasts, scheduler: world.scheduler, dayLabeler: world.dayLabeler,
+            isPosedProcessing: isPosedProcessing
         )
     }
 
@@ -47,7 +49,7 @@ struct ResultViewModelTests {
     }
 
     @Test func processingBoardNeverFinishes() {
-        let vm = make(isProcessing: true)
+        let vm = make(isPosedProcessing: true)
         vm.appeared()
         world.scheduler.advance(by: .seconds(10))
         #expect(vm.isDeveloping)
@@ -77,7 +79,7 @@ struct ResultViewModelTests {
     }
 
     @Test func theProcessingBoardIsStuckPartWay() {
-        #expect(make(isProcessing: true).processingProgress == 0.62)
+        #expect(make(isPosedProcessing: true).processingProgress == 0.62)
     }
 
     @Test func metaLineNamesTheCameraAndWhen() {
@@ -116,11 +118,7 @@ struct ResultViewModelTests {
     }
 
     @Test func aShotKeptInsideTheAppSaysSoInsteadOfPhotos() {
-        let inApp = PhotosSaver(
-            exporter: world.exporter, permissions: MockPermissionService(photoLibraryAccess: .denied),
-            settings: world.settings, toasts: world.toasts
-        )
-        let vm = make(saver: inApp)
+        let vm = make(saver: world.makeSaver(access: .denied))
         vm.appeared()
         world.scheduler.advance(by: ResultViewModel.developTime)
         #expect(vm.statusText == "Saved in RetroSnap")
@@ -179,12 +177,7 @@ struct ResultViewModelTests {
     private func fromLibrary() -> (world: TestWorld, vm: ResultViewModel) {
         let world = TestWorld(path: [.gallery, .result(fresh.id)])
         world.photos.add(fresh)
-        let vm = ResultViewModel(
-            photoID: fresh.id, photos: world.photos, saver: world.saver, sharing: world.sharing,
-            importer: world.importer, router: world.router, toasts: world.toasts, scheduler: world.scheduler,
-            dayLabeler: DayLabeler(clock: world.clock)
-        )
-        return (world, vm)
+        return (world, make(in: world))
     }
 
     @Test func aDevelopedPickOffersAnotherAndClosesToThePhotos() {

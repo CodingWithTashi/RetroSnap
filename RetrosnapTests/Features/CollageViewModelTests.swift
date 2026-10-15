@@ -7,10 +7,11 @@ struct CollageViewModelTests {
     private let world = TestWorld(path: [.gallery, .viewer("s1"), .collage(seed: "s1")])
 
     private func make(
-        seed: Photo.ID? = "s1", step: Int = 1, exporter: (any PhotoExporting)? = nil,
-        saver: PhotosSaver? = nil, sharing: (any PhotoSharing)? = nil
+        seed: Photo.ID? = "s1", step: CollageStep = .layout, exporter: (any PhotoExporting)? = nil,
+        saver: PhotosSaver? = nil, sharing: (any PhotoSharing)? = nil, in other: TestWorld? = nil
     ) -> CollageViewModel {
-        CollageViewModel(
+        let world = other ?? self.world
+        return CollageViewModel(
             seedID: seed, photos: world.photos, exporter: exporter ?? world.exporter, saver: saver ?? world.saver,
             sharing: sharing ?? world.sharing, router: world.router, toasts: world.toasts,
             feedback: world.feedback, startStep: step, boardPicks: SeedData.arrangeBoardPicks
@@ -37,6 +38,15 @@ struct CollageViewModelTests {
         #expect(make(seed: clip.id).pickedIDs.isEmpty)
         #expect(make(seed: nil).pickedIDs.isEmpty)
         #expect(make(seed: "missing").pickedIDs.isEmpty)
+    }
+
+    @Test func templatesPicksAndCellsDescribeThemselvesForVoiceOver() {
+        let vm = make()
+        #expect(vm.templateLabel(for: .feature) == "Feature, 3 photos")
+        vm.actionTapped()
+        #expect(vm.pickLabel(for: world.photos.photos[0]) == "D Classic photo, selected")
+        #expect(vm.pickLabel(for: world.photos.photos[1]) == "Disposable photo")
+        #expect(vm.cellLabel(for: 0) == "Photo 1")
     }
 
     @Test func templatesMatchTheDesign() {
@@ -187,11 +197,7 @@ struct CollageViewModelTests {
 
     @Test func saveFromAResultOpensTheGallery() {
         let world = TestWorld(path: [.result("s1"), .collage(seed: "s1")])
-        let vm = CollageViewModel(
-            seedID: "s1", photos: world.photos, exporter: world.exporter, saver: world.saver, sharing: world.sharing,
-            router: world.router, toasts: world.toasts, feedback: world.feedback, startStep: 3,
-            boardPicks: SeedData.arrangeBoardPicks
-        )
+        let vm = make(step: .arrange, in: world)
         vm.actionTapped()
         #expect(world.router.path == [.gallery])
     }
@@ -252,11 +258,7 @@ struct CollageViewModelTests {
     }
 
     @Test func aCollageKeptInsideTheAppSaysSo() {
-        let inApp = PhotosSaver(
-            exporter: world.exporter, permissions: MockPermissionService(photoLibraryAccess: .denied),
-            settings: world.settings, toasts: world.toasts
-        )
-        let vm = arranged(saver: inApp)
+        let vm = arranged(saver: world.makeSaver(access: .denied))
         vm.actionTapped()
         #expect(world.photos.photos.count == 14)
         #expect(world.exporter.savedIDs.isEmpty)
@@ -299,7 +301,7 @@ struct CollageViewModelTests {
     }
 
     @Test func arrangeBoardPresetStartsWithThreePhotosPicked() {
-        let vm = make(step: 3)
+        let vm = make(step: .arrange)
         #expect(vm.step == .arrange)
         #expect(vm.arrangedPhotos.map(\.id) == ["s1", "s3", "s2"])
     }

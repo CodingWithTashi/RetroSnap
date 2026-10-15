@@ -45,8 +45,8 @@ struct DevelopView: View {
         .gesture(
             DragGesture(minimumDistance: 0)
                 .onEnded { value in
-                    if abs(value.translation.width) > 40 {
-                        viewModel.pictureSwiped(value.translation.width < 0 ? .left : .right)
+                    if let direction = SwipeDirection(translation: value.translation.width) {
+                        viewModel.pictureSwiped(direction)
                     } else {
                         viewModel.pictureTapped()
                     }
@@ -54,9 +54,9 @@ struct DevelopView: View {
         )
         .accessibilityElement()
         .accessibilityLabel(viewModel.pictureLabel)
-        .accessibilityHint("Swipe left or right to change camera")
+        .accessibilityHint("Swipe up or down to change camera")
         .accessibilityAdjustableAction { direction in
-            viewModel.pictureSwiped(direction == .increment ? .left : .right)
+            viewModel.pictureSwiped(SwipeDirection(direction))
         }
     }
 
@@ -69,32 +69,8 @@ struct DevelopView: View {
                 .padding(.top, layout.top(56))
                 .frame(maxHeight: .infinity, alignment: .top)
 
-            CameraChip(
-                style: viewModel.style, isVisible: viewModel.isChipVisible, isStripOpen: viewModel.isStripVisible,
-                label: viewModel.chipLabel, action: viewModel.chipTapped
-            )
-            .padding(.bottom, layout.bottom(146))
-            .frame(maxHeight: .infinity, alignment: .bottom)
-
-            CameraStrip(
-                style: viewModel.style, isVisible: viewModel.isStripVisible, isFirstRun: false,
-                title: viewModel.stripTitle, subtitle: viewModel.stripSubtitle,
-                onClose: viewModel.closeStripTapped, onPick: viewModel.pick
-            )
-            .padding(.horizontal, 8)
-            .padding(.bottom, layout.bottom(136))
-            .frame(maxHeight: .infinity, alignment: .bottom)
-
-            bottomBar
-                .padding(.horizontal, 30)
-                .padding(.bottom, layout.bottom(40))
-                .frame(maxHeight: .infinity, alignment: .bottom)
-
-            if !reduceMotion {
-                CameraNameLabel(name: viewModel.style.name, trigger: viewModel.styleChangeCount)
-                    .padding(.top, layout.top(120))
-                    .frame(maxHeight: .infinity, alignment: .top)
-                    .allowsHitTesting(false)
+            CameraChooserControls(viewModel: viewModel) {
+                bottomBar
             }
         }
     }

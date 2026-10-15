@@ -4,20 +4,15 @@ import SwiftUI
 /// Debug-only: the design system on one screen, for checking tokens and components against the design board.
 /// `-rsScreen look -rsCamera <id>` shows one look full screen instead.
 struct DesignCatalogView: View {
-    let arguments: [String]
-
-    private func value(_ flag: String) -> String? {
-        guard let index = arguments.firstIndex(of: flag), index + 1 < arguments.count else { return nil }
-        return arguments[index + 1]
-    }
+    let scenario: LaunchScenario
 
     static let designStamp = PhotoStampText(date: "'26 10 11", dateBack: "'26年 10月11日", dateBackPlain: "10 11 '26", tapeDate: "OCT 11 2026", tapeTime: "4:12 PM")
 
     var body: some View {
-        if value("-rsScreen") == "look" {
+        if scenario.screen == .look {
             PhotoLookView(
                 image: .sceneBack,
-                camera: CameraStyle(rawValue: value("-rsCamera") ?? "film") ?? .film,
+                camera: scenario.camera ?? .default,
                 stamp: Self.designStamp,
                 stampBottom: 0.27,
                 stampTop: 0.17
@@ -89,8 +84,8 @@ struct DesignCatalogView: View {
                         ForEach(CameraStyle.allCases) { camera in
                             VStack(alignment: .leading, spacing: 10) {
                                 PhotoLookView(image: .photo(1011), camera: camera, stamp: Self.designStamp)
-                                    .aspectRatio(3 / 4, contentMode: .fit)
-                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                                    .aspectRatio(Photo.cameraAspect, contentMode: .fit)
+                                    .clipShape(RoundedRectangle(cornerRadius: RSRadius.card))
                                 HStack {
                                     Text(camera.name).rsText(.label)
                                     Spacer()
@@ -131,9 +126,9 @@ struct DesignCatalogView: View {
 
     private func swatch(_ name: String, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            RoundedRectangle(cornerRadius: 16)
+            RoundedRectangle(cornerRadius: RSRadius.card)
                 .fill(color)
-                .overlay { RoundedRectangle(cornerRadius: 16).strokeBorder(RSColor.paper.opacity(0.15)) }
+                .overlay { RoundedRectangle(cornerRadius: RSRadius.card).strokeBorder(RSColor.paper.opacity(0.15)) }
                 .frame(height: 64)
             Text(name).font(.system(size: 13, weight: .semibold))
         }

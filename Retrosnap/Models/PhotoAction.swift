@@ -16,16 +16,6 @@ nonisolated enum PhotoAction: CaseIterable, Identifiable, Hashable, Sendable {
         }
     }
 
-    var icon: RSIcon {
-        switch self {
-        case .share: .share
-        case .edit: .sliders
-        case .print: .printer
-        case .collage: .collage
-        case .delete: .trash
-        }
-    }
-
     var isDestructive: Bool {
         self == .delete
     }

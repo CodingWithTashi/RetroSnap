@@ -7,10 +7,7 @@ struct PhotosSaverTests {
     private let exporter = MockPhotoExporter()
 
     private func saver(_ access: PhotoLibraryAccess) -> PhotosSaver {
-        PhotosSaver(
-            exporter: exporter, permissions: MockPermissionService(photoLibraryAccess: access), settings: world.settings,
-            toasts: world.toasts
-        )
+        world.makeSaver(access: access, exporter: exporter)
     }
 
     @Test func aShotGoesToPhotosOnceAccessIsGiven() {
@@ -54,10 +51,7 @@ struct PhotosSaverTests {
     @Test func aShotPhotosDoesNotTakeSaysSo() {
         let exporter = ExporterSpy()
         exporter.savesToPhotos = false
-        let saver = PhotosSaver(
-            exporter: exporter, permissions: MockPermissionService(photoLibraryAccess: .granted),
-            settings: world.settings, toasts: world.toasts
-        )
+        let saver = world.makeSaver(access: .granted, exporter: exporter)
         saver.save(world.photo("a"))
         #expect(exporter.savedIDs == ["a"])
         #expect(world.toasts.current?.text == "Couldn’t save to Photos")

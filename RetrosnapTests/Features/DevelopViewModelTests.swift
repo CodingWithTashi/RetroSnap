@@ -18,7 +18,7 @@ struct DevelopViewModelTests {
         DevelopViewModel(
             draft: draft ?? self.draft, photos: world.photos, saver: world.saver, importer: world.importer,
             player: world.clipPlayer, feedback: world.feedback, router: world.router, toasts: world.toasts,
-            scheduler: world.scheduler, dayLabeler: DayLabeler(clock: world.clock)
+            scheduler: world.scheduler, dayLabeler: world.dayLabeler
         )
     }
 

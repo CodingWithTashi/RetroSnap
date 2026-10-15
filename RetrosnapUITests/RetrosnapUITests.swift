@@ -1,10 +1,3 @@
-//
-//  RetrosnapUITests.swift
-//  RetrosnapUITests
-//
-//  Created by Kunchok Tashi on 2026-10-10.
-//
-
 import XCTest
 
 /// Taps through the whole app the way a person would: onboarding, shooting, and every screen behind a photo.
@@ -24,6 +17,23 @@ final class RetrosnapUITests: XCTestCase {
 
     private func buttonStarting(with prefix: String) -> XCUIElement {
         app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", prefix)).firstMatch
+    }
+
+    private func launch(_ arguments: String...) {
+        app.launchArguments = arguments
+        app.launch()
+    }
+
+    private func tapButton(startingWith prefix: String, file: StaticString = #filePath, line: UInt = #line) {
+        let element = buttonStarting(with: prefix)
+        XCTAssertTrue(element.waitForExistence(timeout: 5), "No button starting “\(prefix)”", file: file, line: line)
+        element.tap()
+    }
+
+    private func toggle(_ label: String, file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
+        let element = app.switches[label].firstMatch
+        XCTAssertTrue(element.waitForExistence(timeout: 5), "No switch “\(label)”", file: file, line: line)
+        return element
     }
 
     private func tap(_ label: String, file: StaticString = #filePath, line: UInt = #line) {
@@ -71,9 +81,7 @@ final class RetrosnapUITests: XCTestCase {
         expectButton("Take photo")
 
         // One tap on a card switches the look and folds the strip into the chip.
-        let instant = buttonStarting(with: "Inst C.")
-        XCTAssertTrue(instant.waitForExistence(timeout: 5))
-        instant.tap()
+        tapButton(startingWith: "Inst C.")
         expectButton("Camera: Inst C. Change camera")
 
         // The first photo opens the result.
@@ -107,8 +115,7 @@ final class RetrosnapUITests: XCTestCase {
 
     @MainActor
     func testOnboardingShowsOnceAndTheCameraLibraryAndSettingsAreRemembered() throws {
-        app.launchArguments = ["-rsLive", "fresh"]
-        app.launch()
+        launch("-rsLive", "fresh")
         tap("Continue")
         tap("Continue")
         // The live services ask iOS itself, so the camera prompt may come up here.
@@ -119,9 +126,7 @@ final class RetrosnapUITests: XCTestCase {
         expectText("Saving inside RetroSnap only")
 
         // Leave the camera on Inst C with the flash on, take one photo, then turn the timer on.
-        let instant = buttonStarting(with: "Inst C.")
-        XCTAssertTrue(instant.waitForExistence(timeout: 5))
-        instant.tap()
+        tapButton(startingWith: "Inst C.")
         tap("Flash: auto")
         tap("Take photo")
         tap("Take another")
@@ -129,14 +134,12 @@ final class RetrosnapUITests: XCTestCase {
 
         tap("Open photos")
         tap("Settings")
-        let haptics = app.switches["Haptics"].firstMatch
-        XCTAssertTrue(haptics.waitForExistence(timeout: 5))
+        let haptics = toggle("Haptics")
         haptics.tap()
         XCTAssertEqual(haptics.value as? String, "Off")
 
         app.terminate()
-        app.launchArguments = ["-rsLive", "1"]
-        app.launch()
+        launch("-rsLive", "1")
 
         // Straight to the camera, as it was left: no onboarding and no first-launch strip.
         expectButton("Camera: Inst C. Change camera")
@@ -156,8 +159,7 @@ final class RetrosnapUITests: XCTestCase {
 
     @MainActor
     func testGalleryViewerEditPrintCollageDeleteAndSettings() throws {
-        app.launchArguments = ["-rsScenario", "returning"]
-        app.launch()
+        launch("-rsScenario", "returning")
 
         // Returning user: straight to the camera, no prompts.
         expectButton("Take photo")
@@ -220,8 +222,7 @@ final class RetrosnapUITests: XCTestCase {
 
         // Settings and back, then back to the camera.
         tap("Settings")
-        let haptics = app.switches["Haptics"].firstMatch
-        XCTAssertTrue(haptics.waitForExistence(timeout: 5))
+        let haptics = toggle("Haptics")
         XCTAssertEqual(haptics.value as? String, "On")
         haptics.tap()
         XCTAssertEqual(haptics.value as? String, "Off")
@@ -239,8 +240,7 @@ final class RetrosnapUITests: XCTestCase {
 
     @MainActor
     func testAPictureFromTheLibraryGetsItsLookAndIsDeveloped() throws {
-        app.launchArguments = ["-rsScenario", "returning"]
-        app.launch()
+        launch("-rsScenario", "returning")
 
         // The gallery's add button opens the picker; the mock hands a pick over at once.
         tap("Open photos")
@@ -250,9 +250,7 @@ final class RetrosnapUITests: XCTestCase {
 
         // The same strip as the camera's; a card changes the look.
         tap("Camera: D Classic. Change camera")
-        let digicam = buttonStarting(with: "Digicam.")
-        XCTAssertTrue(digicam.waitForExistence(timeout: 5))
-        digicam.tap()
+        tapButton(startingWith: "Digicam.")
         expectButton("Camera: Digicam. Change camera")
 
         // The shutter develops it: the result shows it as just taken, and offers another pick.
@@ -273,8 +271,7 @@ final class RetrosnapUITests: XCTestCase {
 
     @MainActor
     func testZoomButtonAndPinchZoomTheViewfinder() throws {
-        app.launchArguments = ["-rsScenario", "returning"]
-        app.launch()
+        launch("-rsScenario", "returning")
 
         // The button steps through the lenses and comes round again.
         tap("Zoom: 1×")
@@ -299,8 +296,7 @@ final class RetrosnapUITests: XCTestCase {
 
     @MainActor
     func testVideoRecordsThenShowsTheClip() throws {
-        app.launchArguments = ["-rsScenario", "returning", "-rsCamera", "vhs"]
-        app.launch()
+        launch("-rsScenario", "returning", "-rsCamera", "vhs")
 
         tap("Video")
         tap("Start recording")
@@ -316,6 +312,7 @@ final class RetrosnapUITests: XCTestCase {
     /// A probe for a phone: the look screen of every fitted camera, screenshotted and kept in the result bundle,
     /// so the phone's own rendering can be measured against the simulator's and the bake (the calibration notes in
     /// `docs/camera-lineup.md`). On the simulator it only checks that the screens come up.
+    @MainActor
     func testLookScreensAreKeptAsScreenshotsForTheDeviceProbe() throws {
         // The look screen is the phone against the simulator (`tools/device_probe.py`); the viewer is the phone
         // against the bake of the same photo (`tools/screen_vs_bake.py`), the export checked on a device.

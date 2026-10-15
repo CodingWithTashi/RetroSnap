@@ -4,16 +4,14 @@ import Testing
 
 @MainActor
 final class LiveStorageMonitorTests {
-    private let folder = PhotoLibraryFolder(
-        url: FileManager.default.temporaryDirectory.appendingPathComponent("LiveStorageMonitorTests-\(UUID().uuidString)")
-    )
+    private let folder = PhotoLibraryFolder.temporary(for: "LiveStorageMonitorTests")
 
     init() throws {
         try FileManager.default.createDirectory(at: folder.url, withIntermediateDirectories: true)
     }
 
     deinit {
-        try? FileManager.default.removeItem(at: folder.url)
+        folder.removeFromDisk()
     }
 
     private func write(_ name: String, megabytes: Double) throws {

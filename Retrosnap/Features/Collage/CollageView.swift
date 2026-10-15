@@ -37,7 +37,7 @@ struct CollageView: View {
             ScreenHeader(title: viewModel.title, subtitle: viewModel.subtitle) {
                 CircleIconButton(icon: .chevronLeft, label: "Back", action: viewModel.backTapped)
             } trailing: {
-                Color.clear.frame(width: 44, height: 44)
+                HeaderSpacer()
             }
             .padding(.horizontal, 16)
             .padding(.top, layout.top(54))
@@ -81,13 +81,8 @@ struct CollageView: View {
                                 }
                                 .padding(10)
                             }
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 18.5)
-                                    .strokeBorder(RSColor.amber, lineWidth: 2.5)
-                                    .padding(-2.5)
-                                    .opacity(isSelected ? 1 : 0)
-                            }
+                            .clipShape(RoundedRectangle(cornerRadius: RSRadius.card))
+                            .selectionRing(cornerRadius: RSRadius.card, isSelected: isSelected)
                         Text(template.label)
                             .rsText(.text(13, .semibold))
                             .foregroundStyle(isSelected ? RSColor.paper : RSColor.secondaryText)
@@ -95,8 +90,8 @@ struct CollageView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .animation(.easeInOut(duration: 0.18), value: isSelected)
-                .accessibilityLabel("\(template.label), \(template.photoCount) photos")
+                .animation(RSMotion.choice, value: isSelected)
+                .accessibilityLabel(viewModel.templateLabel(for: template))
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
         }
@@ -113,7 +108,7 @@ struct CollageView: View {
                         viewModel.togglePick(photo.id)
                     } label: {
                         RSColor.surface
-                            .aspectRatio(3.0 / 4.0, contentMode: .fit)
+                            .aspectRatio(Photo.cameraAspect, contentMode: .fit)
                             .overlay {
                                 PhotoLookView(
                                     image: photo.image, camera: photo.camera, adjustments: photo.adjustments,
@@ -138,7 +133,7 @@ struct CollageView: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("\(photo.camera.name) photo\(number == nil ? "" : ", selected")")
+                    .accessibilityLabel(viewModel.pickLabel(for: photo))
                     .accessibilityAddTraits(number == nil ? [] : .isSelected)
                 }
             }
@@ -170,7 +165,7 @@ struct CollageView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Photo \(index + 1)")
+                .accessibilityLabel(viewModel.cellLabel(for: index))
                 .accessibilityAddTraits(viewModel.swapSelection == index ? .isSelected : [])
             }
             .padding(viewModel.frameInset)

@@ -4,15 +4,18 @@ import Testing
 @MainActor
 struct GalleryViewModelTests {
 
-    private func make(_ world: TestWorld) -> GalleryViewModel {
-        GalleryViewModel(
+    private let world = TestWorld(path: [.gallery])
+
+    private func make(_ other: TestWorld? = nil) -> GalleryViewModel {
+        let world = other ?? self.world
+        return GalleryViewModel(
             photos: world.photos, settings: world.settings, importer: world.importer, router: world.router,
-            toasts: world.toasts, dayLabeler: DayLabeler(clock: world.clock)
+            toasts: world.toasts, dayLabeler: world.dayLabeler
         )
     }
 
     @Test func groupsPhotosByDayNewestFirst() {
-        let vm = make(TestWorld(path: [.gallery]))
+        let vm = make()
         #expect(vm.sections.map(\.title) == ["Today", "Yesterday", "October 4"])
         #expect(vm.sections.map(\.countText) == ["4", "5", "4"])
         #expect(vm.sections[0].photos.map(\.id) == ["s1", "s2", "s3", "s4"])
@@ -21,16 +24,14 @@ struct GalleryViewModelTests {
     }
 
     @Test func aNewShotLeadsToday() {
-        let world = TestWorld(path: [.gallery])
-        let vm = make(world)
+        let vm = make()
         world.photos.add(world.camera.capturePhoto(style: .digicam, facing: .back))
         #expect(vm.sections[0].countText == "5")
         #expect(vm.sections[0].photos.first?.camera == .digicam)
     }
 
     @Test func daysWithNoPhotosLeftDisappear() {
-        let world = TestWorld(path: [.gallery])
-        let vm = make(world)
+        let vm = make()
         for id in ["s1", "s2", "s3", "s4"] {
             world.photos.delete(id: id)
         }
@@ -38,7 +39,7 @@ struct GalleryViewModelTests {
     }
 
     @Test func cameraPillIsQuietWhenThereArePhotos() {
-        let vm = make(TestWorld(path: [.gallery]))
+        let vm = make()
         #expect(vm.actionTitle == "Camera")
         #expect(!vm.isActionPrimary)
     }
@@ -52,15 +53,13 @@ struct GalleryViewModelTests {
     }
 
     @Test func openingAPhotoPushesTheViewer() {
-        let world = TestWorld(path: [.gallery])
-        let vm = make(world)
+        let vm = make()
         vm.open(vm.sections[1].photos[2])
         #expect(world.router.path == [.gallery, .viewer("s7")])
     }
 
     @Test func closeAndCameraPillBothReturnToTheCamera() {
-        let world = TestWorld(path: [.gallery])
-        make(world).closeTapped()
+        make().closeTapped()
         #expect(world.router.path.isEmpty)
 
         let other = TestWorld(path: [.gallery])
@@ -69,28 +68,25 @@ struct GalleryViewModelTests {
     }
 
     @Test func settingsOpensFromTheGallery() {
-        let world = TestWorld(path: [.gallery])
-        make(world).settingsTapped()
+        make().settingsTapped()
         #expect(world.router.path == [.gallery, .settings])
     }
 
     @Test func tilesDescribeThemselvesForVoiceOver() {
-        let world = TestWorld(path: [.gallery])
-        let vm = make(world)
-        #expect(vm.accessibilityLabel(for: world.photos.photos[0]) == "D Classic photo, Today")
+        let vm = make()
+        #expect(vm.photoLabel(for: world.photos.photos[0]) == "D Classic photo, Today")
         let clip = world.camera.finishRecording(seconds: 5, style: .camcorder, facing: .back)
-        #expect(vm.accessibilityLabel(for: clip) == "Camcorder video, Today")
+        #expect(vm.photoLabel(for: clip) == "Camcorder video, Today")
         var collage = world.photo("collage")
         collage.isCollage = true
-        #expect(vm.accessibilityLabel(for: collage) == "Collage, Today")
+        #expect(vm.photoLabel(for: collage) == "Collage, Today")
     }
 
     // MARK: Bringing in a picture from the library
 
     @Test func addOpensThePickerAndThePickGoesToDevelopOnTheCurrentCamera() {
-        let world = TestWorld(path: [.gallery])
         world.settings.lastCamera = .digicam
-        let vm = make(world)
+        let vm = make()
         vm.addTapped()
         #expect(world.importer.pickCount == 1)
         #expect(world.router.path == [.gallery])
@@ -103,8 +99,7 @@ struct GalleryViewModelTests {
     }
 
     @Test func aPickThatIsCalledOffChangesNothing() {
-        let world = TestWorld(path: [.gallery])
-        let vm = make(world)
+        let vm = make()
         vm.addTapped()
         world.importer.deliver(.cancelled)
         #expect(world.router.path == [.gallery])
@@ -112,8 +107,7 @@ struct GalleryViewModelTests {
     }
 
     @Test func aPickThatCannotBeOpenedSaysSo() {
-        let world = TestWorld(path: [.gallery])
-        let vm = make(world)
+        let vm = make()
         vm.addTapped()
         world.importer.deliver(.failed)
         #expect(world.router.path == [.gallery])
@@ -121,8 +115,7 @@ struct GalleryViewModelTests {
     }
 
     @Test func thePickIsNotAskedForTwiceWhileOneIsOnItsWayIn() {
-        let world = TestWorld(path: [.gallery])
-        let vm = make(world)
+        let vm = make()
         #expect(!vm.isImporting)
         #expect(vm.addLabel == "Add from your library")
         world.importer.isImporting = true

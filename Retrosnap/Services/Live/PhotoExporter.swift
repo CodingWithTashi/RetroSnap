@@ -30,6 +30,8 @@ final class PhotoExporter: PhotoExporting {
         dayLabeler = DayLabeler(clock: clock)
     }
 
+    // MARK: Photos library
+
     func saveToPhotos(_ photo: Photo, completion: @escaping @MainActor (Bool) -> Void) {
         Task {
             completion(await addToPhotos(photo))
@@ -65,6 +67,8 @@ final class PhotoExporter: PhotoExporting {
         }
     }
 
+    // MARK: Files to hand out
+
     func export(_ photo: Photo, completion: @escaping @MainActor (URL?) -> Void) {
         Task {
             completion(await file(for: photo))
@@ -89,6 +93,21 @@ final class PhotoExporter: PhotoExporting {
             return nil
         }
     }
+
+    /// Writes a baked picture into the temporary folder under this name, for the share sheet or the printer.
+    private func temporaryFile(named name: String, holding picture: Data) -> URL? {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+        do {
+            try picture.write(to: file, options: .atomic)
+            return file
+        } catch {
+            Self.log.error("A picture could not be written out: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    /// "2026-10-11 16.12.00": readable in a file name, and it sorts by time.
+    private static let fileDate = PhotoMetadata.formatter("yyyy-MM-dd HH.mm.ss")
 
     // MARK: Collages
 
@@ -138,7 +157,7 @@ final class PhotoExporter: PhotoExporting {
             cells.append(CollageCell(original: original, model: model, frame: cell))
         }
         guard cells.count == collage.template.photoCount else { return nil }
-        return await Self.encode(cells, frameSize: layout.frameSize, paper: CIColor(hex: collage.border.hex), with: renderer)
+        return await Self.encodeCollage(cells, frameSize: layout.frameSize, paper: CIColor(hex: collage.border.hex), with: renderer)
     }
 
     /// One photo's place in a collage: its picture, its look, and its cell in points from the top-left corner.
@@ -149,7 +168,7 @@ final class PhotoExporter: PhotoExporting {
     }
 
     @concurrent
-    private nonisolated static func encode(
+    private nonisolated static func encodeCollage(
         _ cells: [CollageCell], frameSize: CGSize, paper: CIColor, with renderer: LookRenderer
     ) async -> Data? {
         let scale = CollageLayout.pixelsPerPoint
@@ -192,44 +211,31 @@ final class PhotoExporter: PhotoExporting {
         let layout = BakeLayout(
             source: original.extent.size, paper: job.size.paperSize, border: job.hasBorder ? job.size.borderWidth : 0
         )
-        let stamp = stampImage(dayLabeler.stamp(for: photo.capturedAt), kind: model.stamp, layout: layout)
-        guard let picture = await Self.encode(
+        let stamp = BakeArtwork.stamp(dayLabeler.stamp(for: photo.stampDate), kind: model.stamp, layout: layout)
+        guard let picture = await Self.encodePicture(
             original, model: model, layout: layout, stamp: stamp, artwork: nil, paper: .white, metadata: [:], with: renderer
         ) else { return nil }
         return temporaryFile(named: "RetroSnap print \(photo.id).jpg", holding: picture)
     }
 
-    /// Writes a baked picture into the temporary folder under this name, for the share sheet or the printer.
-    private func temporaryFile(named name: String, holding picture: Data) -> URL? {
-        let file = FileManager.default.temporaryDirectory.appendingPathComponent(name)
-        do {
-            try picture.write(to: file, options: .atomic)
-            return file
-        } catch {
-            Self.log.error("A picture could not be written out: \(error.localizedDescription)")
-            return nil
-        }
-    }
-
-    /// "2026-10-11 16.12.00": readable in a file name, and it sorts by time.
-    private static let fileDate = PhotoMetadata.formatter("yyyy-MM-dd HH.mm.ss")
+    // MARK: Baking
 
     /// The photo as it leaves the app, or nil when its original cannot be read.
     func bake(_ photo: Photo) async -> Data? {
         guard let renderer, let original = await original(of: photo.image) else { return nil }
         let model = LookRenderModel(camera: photo.camera, adjustments: photo.adjustments, framed: true, stampEnabled: true)
         let layout = BakeLayout(source: original.extent.size, frame: model.frame)
-        let stamp = stampImage(dayLabeler.stamp(for: photo.stampDate), kind: model.stamp, layout: layout)
-        let artwork = frameImage(
+        let stamp = BakeArtwork.stamp(dayLabeler.stamp(for: photo.stampDate), kind: model.stamp, layout: layout)
+        let artwork = BakeArtwork.frame(
             model.frame, layout: layout, photoAspect: original.extent.width / original.extent.height,
             design: FrameDesign.forPhoto(id: photo.id)
         )
         let metadata = PhotoMetadata.properties(
             original: original.properties, capturedAt: photo.capturedAt, location: photo.location
         )
-        return await Self.encode(
+        return await Self.encodePicture(
             original, model: model, layout: layout, stamp: stamp, artwork: artwork,
-            paper: CIColor(hex: model.frame?.baseHex ?? RSColor.printFrameHex), metadata: metadata, with: renderer
+            paper: CIColor(hex: model.paperHex), metadata: metadata, with: renderer
         )
     }
 
@@ -243,11 +249,9 @@ final class PhotoExporter: PhotoExporting {
         progress[photo.id] = 0
         defer { progress[photo.id] = nil }
         do {
-            guard let track = try await asset.loadTracks(withMediaType: .video).first else { return nil }
-            let (size, transform) = try await track.load(.naturalSize, .preferredTransform)
-            let upright = CGRect(origin: .zero, size: size).applying(transform).size
-            let layout = BakeLayout(source: CGSize(width: abs(upright.width), height: abs(upright.height)), frame: nil)
-            let stamp = stampImage(dayLabeler.stamp(for: photo.stampDate), kind: model.stamp, layout: layout)
+            guard let size = try await asset.uprightVideoSize() else { return nil }
+            let layout = BakeLayout(source: size, frame: nil)
+            let stamp = BakeArtwork.stamp(dayLabeler.stamp(for: photo.stampDate), kind: model.stamp, layout: layout)
 
             let composition = try await AVMutableVideoComposition.videoComposition(with: asset) { request in
                 let frame = request.sourceImage
@@ -304,122 +308,12 @@ final class PhotoExporter: PhotoExporting {
         CIImage(contentsOf: url, options: [.applyOrientationProperty: true])
     }
 
-    /// The same stamp the screen draws, as a transparent picture exactly the size of the photo.
-    private func stampImage(_ text: PhotoStampText, kind: LookStamp, layout: BakeLayout) -> CIImage? {
-        guard kind != .none else { return nil }
-        let size = layout.pointSize
-        let renderer = ImageRenderer(
-            content: PhotoStampView(text: text, kind: kind, size: size).frame(width: size.width, height: size.height)
-        )
-        renderer.scale = layout.stampScale
-        guard let drawn = renderer.cgImage else { return nil }
-        let image = CIImage(cgImage: drawn)
-        return image.transformed(by: CGAffineTransform(
-            scaleX: layout.crop.width / image.extent.width, y: layout.crop.height / image.extent.height
-        ))
-    }
-
-    /// The frame's artwork as the screen draws it, as a transparent picture exactly the size of the file.
-    private func frameImage(_ frame: LookFrame?, layout: BakeLayout, photoAspect: CGFloat, design: FrameDesign) -> CIImage? {
-        guard let frame, frame != .fullFrame else { return nil }
-        let size = layout.canvasPointSize
-        let renderer = ImageRenderer(
-            content: LookFrameView(frame: frame, size: size, photoAspect: photoAspect, design: design)
-                .frame(width: size.width, height: size.height)
-        )
-        renderer.scale = layout.artworkScale
-        guard let drawn = renderer.cgImage else { return nil }
-        let image = CIImage(cgImage: drawn)
-        return image.transformed(by: CGAffineTransform(
-            scaleX: layout.canvas.width / image.extent.width, y: layout.canvas.height / image.extent.height
-        ))
-    }
-
     @concurrent
-    private nonisolated static func encode(
+    private nonisolated static func encodePicture(
         _ original: CIImage, model: LookRenderModel, layout: BakeLayout, stamp: CIImage?, artwork: CIImage?,
         paper: CIColor, metadata: [String: Any], with renderer: LookRenderer
     ) async -> Data? {
         let picture = renderer.picture(from: original, model: model, layout: layout, stamp: stamp, paper: paper, artwork: artwork)
         return renderer.jpeg(picture.settingProperties(metadata), quality: quality)
     }
-}
-
-/// The metadata written into a baked picture.
-nonisolated enum PhotoMetadata {
-    /// The original's own metadata, corrected for a picture that is now upright and may have been re-encoded,
-    /// with the capture date filled in when the original carries none, and the place when the shot has one.
-    static func properties(original: [String: Any], capturedAt: Date, location: PhotoLocation?) -> [String: Any] {
-        var properties = original
-        properties[kCGImagePropertyOrientation as String] = CGImagePropertyOrientation.up.rawValue
-        properties[kCGImagePropertyPixelWidth as String] = nil
-        properties[kCGImagePropertyPixelHeight as String] = nil
-
-        var tiff = properties[kCGImagePropertyTIFFDictionary as String] as? [String: Any] ?? [:]
-        tiff[kCGImagePropertyTIFFOrientation as String] = CGImagePropertyOrientation.up.rawValue
-        properties[kCGImagePropertyTIFFDictionary as String] = tiff
-
-        var exif = properties[kCGImagePropertyExifDictionary as String] as? [String: Any] ?? [:]
-        exif[kCGImagePropertyExifPixelXDimension as String] = nil
-        exif[kCGImagePropertyExifPixelYDimension as String] = nil
-        if exif[kCGImagePropertyExifDateTimeOriginal as String] == nil {
-            exif[kCGImagePropertyExifDateTimeOriginal as String] = exifDate.string(from: capturedAt)
-            exif[kCGImagePropertyExifOffsetTimeOriginal as String] = exifOffset.string(from: capturedAt)
-        }
-        properties[kCGImagePropertyExifDictionary as String] = exif
-
-        if let location {
-            properties[kCGImagePropertyGPSDictionary as String] = gps(location)
-        }
-        return properties
-    }
-
-    /// EXIF stores a place as positive degrees with a hemisphere beside each.
-    private static func gps(_ location: PhotoLocation) -> [String: Any] {
-        var gps: [String: Any] = [
-            kCGImagePropertyGPSLatitude as String: abs(location.latitude),
-            kCGImagePropertyGPSLatitudeRef as String: location.latitude >= 0 ? "N" : "S",
-            kCGImagePropertyGPSLongitude as String: abs(location.longitude),
-            kCGImagePropertyGPSLongitudeRef as String: location.longitude >= 0 ? "E" : "W",
-        ]
-        if let altitude = location.altitude {
-            gps[kCGImagePropertyGPSAltitude as String] = abs(altitude)
-            gps[kCGImagePropertyGPSAltitudeRef as String] = altitude >= 0 ? 0 : 1
-        }
-        return gps
-    }
-
-    /// The same two facts for a movie: when it was taken, and where if the clip has a place.
-    static func items(capturedAt: Date, location: PhotoLocation?) -> [AVMetadataItem] {
-        func item(_ identifier: AVMetadataIdentifier, _ value: String) -> AVMetadataItem {
-            let item = AVMutableMetadataItem()
-            item.identifier = identifier
-            item.value = value as NSString
-            return item
-        }
-        var items = [item(.quickTimeMetadataCreationDate, ISO8601DateFormatter().string(from: capturedAt))]
-        if let location {
-            items.append(item(.quickTimeMetadataLocationISO6709, iso6709(location)))
-        }
-        return items
-    }
-
-    /// "+27.7172+085.3240+1400.000/": signed latitude, longitude and, when known, altitude in metres.
-    static func iso6709(_ location: PhotoLocation) -> String {
-        let place = String(format: "%+08.4f%+09.4f", location.latitude, location.longitude)
-        let height = location.altitude.map { String(format: "%+.3f", $0) } ?? ""
-        return place + height + "/"
-    }
-
-    /// A formatter that writes the same digits whatever the phone's region and calendar are.
-    static func formatter(_ format: String) -> DateFormatter {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = format
-        return formatter
-    }
-
-    /// EXIF writes local time and its offset from UTC separately.
-    private static let exifDate = formatter("yyyy:MM:dd HH:mm:ss")
-    private static let exifOffset = formatter("xxx")
 }

@@ -15,14 +15,15 @@ nonisolated enum RSIcon: CaseIterable, Sendable {
         case roundedRect(x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat, radius: CGFloat)
     }
 
+    private static let boltPath = "M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12z"
     private static let cameraBody = "M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"
 
     fileprivate var elements: [Element] {
         switch self {
         case .bolt:
-            [.path("M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12z")]
+            [.path(Self.boltPath)]
         case .boltSlash:
-            [.path("M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12z"), .path("M3.5 3.5l17 17")]
+            [.path(Self.boltPath), .path("M3.5 3.5l17 17")]
         case .timer:
             [.circle(cx: 12, cy: 13, r: 8), .path("M12 9v4l2.5 2M9.5 2.5h5")]
         case .chevronUp:
@@ -78,7 +79,7 @@ nonisolated struct RSIconShape: Shape {
             case .path(let data):
                 path.addPath(SVGPath.path(data))
             case .circle(let cx, let cy, let r):
-                path.addEllipse(in: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
+                path.addEllipse(in: CGRect(centre: CGPoint(x: cx, y: cy), radius: r))
             case .roundedRect(let x, let y, let width, let height, let radius):
                 path.addRoundedRect(
                     in: CGRect(x: x, y: y, width: width, height: height),
@@ -94,9 +95,9 @@ nonisolated struct RSIconShape: Shape {
 /// A stroked (or filled) icon. `lineWidth` is in the icon's own 24-unit space, like SVG `stroke-width`.
 struct RSIconView: View {
     let icon: RSIcon
-    var size: CGFloat = 24
-    var lineWidth: CGFloat = 1.8
-    var filled = false
+    let size: CGFloat
+    let lineWidth: CGFloat
+    let filled: Bool
 
     init(_ icon: RSIcon, size: CGFloat = 24, lineWidth: CGFloat = 1.8, filled: Bool = false) {
         self.icon = icon

@@ -5,9 +5,8 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
-/// A flat JPEG of the given pixel size, optionally tagged with an EXIF orientation, as a camera would deliver it.
-/// It is the fixtures' orange unless a grey level is given.
-func makeJPEG(width: Int, height: Int, orientation: CGImagePropertyOrientation = .up, grey: Double? = nil) -> Data {
+/// A flat sRGB picture of the given pixel size: the fixtures' orange unless a grey level is given.
+func makeCGImage(width: Int, height: Int, grey: Double? = nil) -> CGImage {
     let context = CGContext(
         data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
         space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
@@ -16,10 +15,17 @@ func makeJPEG(width: Int, height: Int, orientation: CGImagePropertyOrientation =
         ?? CGColor(srgbRed: 200 / 255, green: 120 / 255, blue: 40 / 255, alpha: 1)
     context.setFillColor(fill)
     context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+    return context.makeImage()!
+}
+
+/// A flat JPEG of the given pixel size, optionally tagged with an EXIF orientation, as a camera would deliver it.
+/// It is the fixtures' orange unless a grey level is given.
+func makeJPEG(width: Int, height: Int, orientation: CGImagePropertyOrientation = .up, grey: Double? = nil) -> Data {
+    let image = makeCGImage(width: width, height: height, grey: grey)
     let data = NSMutableData()
     let destination = CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil)!
     CGImageDestinationAddImage(
-        destination, context.makeImage()!, [kCGImagePropertyOrientation: orientation.rawValue] as CFDictionary
+        destination, image, [kCGImagePropertyOrientation: orientation.rawValue] as CFDictionary
     )
     CGImageDestinationFinalize(destination)
     return data as Data

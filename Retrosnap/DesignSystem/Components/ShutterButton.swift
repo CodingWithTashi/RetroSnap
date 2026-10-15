@@ -56,15 +56,21 @@ struct ShutterButton: View {
                     startRadius: 0,
                     endRadius: 61.7
                 )
-                .shadow(.inner(color: .black.opacity(0.18), radius: 3, y: -3))
-                .shadow(.inner(color: .white.opacity(0.5), radius: 1, y: 2))
+                .pressedIn()
             )
         } else {
             AnyShapeStyle(
                 RSColor.record
-                    .shadow(.inner(color: .black.opacity(0.18), radius: 3, y: -3))
-                    .shadow(.inner(color: .white.opacity(0.5), radius: 1, y: 2))
+                    .pressedIn()
             )
         }
+    }
+}
+
+private extension ShapeStyle {
+    /// The design's light along the top of the inner shape and its pressed-in shadow along the bottom.
+    func pressedIn() -> some ShapeStyle {
+        shadow(.inner(color: .black.opacity(0.18), radius: 3, y: -3))
+            .shadow(.inner(color: .white.opacity(0.5), radius: 1, y: 2))
     }
 }

@@ -15,7 +15,7 @@ struct ResultView: View {
             RSColor.ink
             VStack(spacing: 0) {
                 header
-                print
+                printPreview
                     .padding(.top, 24)
                 Text(viewModel.metaText)
                     .rsText(.caption)
@@ -61,18 +61,18 @@ struct ResultView: View {
             }
             .accessibilityElement(children: .combine)
             Spacer(minLength: 0)
-            Color.clear.frame(width: 44, height: 44)
+            HeaderSpacer()
         }
         .padding(.horizontal, 16)
         .frame(height: 44)
     }
 
-    private var print: some View {
+    private var printPreview: some View {
         let isInstant = viewModel.isInstant
         let width: CGFloat = isInstant ? 296 : 312
         return ZStack {
             if let photo = viewModel.photo {
-                PhotoLookView(photo: photo, framed: true, stamp: viewModel.stamp)
+                PhotoLookView(photo: photo, framed: !photo.isVideo, stamp: viewModel.stamp)
             }
             if let progress = viewModel.processingProgress {
                 processingCover(progress)

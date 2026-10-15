@@ -70,7 +70,7 @@ xcrun simctl io booted screenshot out.png
 | --- | --- |
 | `-rsScreen` | `welcome` `how` `permCam` `permLib` `camera` `carousel` `result` `gallery` `viewer` `edit` `collage` `print` `settings` `develop`, plus `catalog` (the design system on one page) and `look` (one camera look full screen) |
 | `-rsVariant` | `capture` `saved` `processing` `recording` `videoMode` `video` `denied` `unavailable` `libDenied` `lowStorage` `empty` (`video` also makes the `develop` screen's pick a clip) |
-| `-rsCamera` | any `CameraStyle` id: `film` `disp` `inst` `digi` `vhs` `negative` `plastic35` `slide` `mediumFormat` `tlr`. On a photo screen (`result`, `viewer`, `edit`, `print`, `collage`) it also poses the photo shown as taken with that camera |
+| `-rsCamera` | any `CameraStyle` id: `film` `disp` `inst` `digi` `vhs` `negative` `plastic35` `slide` `mediumFormat` `tlr` `compactPro` `classicSLR` `instSquare`. On a photo screen (`result`, `viewer`, `edit`, `print`, `collage`) it also poses the photo shown as taken with that camera |
 | `-rsScenario returning` | skips onboarding and opens on the camera |
 | `-rsLive` | `1` runs the live services on what earlier launches saved; `fresh` wipes that first |
 
@@ -126,14 +126,14 @@ The mocks, `SeedData`, `LaunchScenario`, the design catalog and `MockSamples.xca
 - The viewfinder is not a preview layer. Each camera frame becomes a `CGImage` in a `FrameFeed`, and `PhotoPicture` draws a `.live` image from the feed in the `liveFrames` environment value, so the look's shaders apply to it like to any photo.
 - Zoom is in the numbers a camera shows (`CameraZoom`: 1 is the main lens, 0.5 the ultra-wide). The back camera is the phone's multi-lens device, and `LensZoom` maps its own zoom numbers onto those.
 - The shutter's flash and fly-to-gallery start at the tap, from the viewfinder frame frozen in `LiveCameraService.shotFeed`. The photo lands later (over a second with flash), and until then `CameraViewModel.pendingShot` makes the gallery button show that frozen frame.
-- The camera chip, the camera strip, the viewfinder picture and the glass buttons are shared views in `CameraChooserViews.swift`, because the develop screen is the camera pointed at a pick from the library.
+- The develop screen is the camera pointed at a pick from the library, so the two share their chooser: `CameraChooserControls` places the chip, the strip and the name label (`CameraChooserViews.swift`) for either view model through `CameraChoosing`; the viewfinder picture, its scrims and the shutter flash are in `ViewfinderViews.swift`, and `GlassIconButton` is in `Buttons.swift`.
 
 ### Bringing in a picture from the library
 
 - The gallery's add button asks `PhotoImporting` for a pick. `PhotoImporter` shows the system picker (no permission needed) and copies the pick into the library folder the way a shot is filed, as a draft `Photo` that is not in the library yet; `MockPhotoImporter` hands over the same sample at once.
 - `DevelopViewModel` shows the draft under a look with the same chip and strip as the camera; its shutter adds the draft to the library, saves it to Photos and replaces the screen with the result. Cancel, or picking another, discards the draft's files. Files no photo owns are also removed at the next launch, so a crash leaves nothing behind.
 - A pick keeps its own shape: `Photo.pixelSize` is set for imports and nil for the camera's 3:4 shots, and `Photo.displayAspect` is the box the result, viewer and edit screens give a photo. `BakeLayout` already bakes a frameless original whole, so the screen and the file agree.
-- An import is dated when it was brought in, not when it was taken, so it lands in Today and its stamp shows today; the baked file keeps the original's EXIF date.
+- An import is dated when it was brought in, not when it was taken, so it lands in Today; its stamp, on every screen and in every file, shows the date its file says it was taken (`Photo.stampDate`), else the day it was brought in.
 - Nothing audio or file related may run on the main actor at the shutter: on a phone the click's `AVAudioPlayer` cost 70 ms to build and 90 ms to start, and opening a HEIC cost 30 ms. `ClickSound` has its own queue, and files are opened in `@concurrent` functions.
 
 ### Photos and persistence
@@ -149,7 +149,7 @@ The mocks, `SeedData`, `LaunchScenario`, the design catalog and `MockSamples.xca
 
 A camera's look is drawn in four stages, each mirroring a part of the prototype's Photo component:
 
-1. `CameraStyle.look` returns a `CameraLook` recipe: for the first five cameras transcribed from the `LOOKS` table; for the cameras matched to the reference app, a measured 3D colour table (`colorCube`, loaded from `Resources/Looks/<id>.cube` by `ColorCubes`) over a `ColorStage` (matrix, tone curves, per-hue terms) that is its prior and fallback, both fitted in sRGB by `tools/lut.py` and `tools/fit.py`, plus the camera's `LookFrame`, whose canvas has the camera's own shape (`Photo.displayAspect`) with the picture cropped to the film's ratio in its window.
+1. `CameraStyle.look` returns a `CameraLook` recipe: for the three cameras still on the design's looks (`disp`, `digi`, `vhs`) transcribed from the `LOOKS` table; for the cameras matched to the reference app, a measured 3D colour table (`colorCube`, loaded from `Resources/Looks/<id>.cube` by `ColorCubes`) over a `ColorStage` (matrix, tone curves, per-hue terms) that is its prior and fallback, both fitted in sRGB by `tools/lut.py` and `tools/fit.py`, plus the camera's `LookFrame`, whose canvas has the camera's own shape (`Photo.displayAspect`) with the picture cropped to the film's ratio in its window. The recipes are the `switch` in `CameraLook.swift`, which `tools/pairs.py` and `tools/apply_recipes.py` read and rewrite; keep its shape. The recipe's types are in `CameraLookTypes.swift`.
 2. `LookRenderModel` combines the recipe with the `PhotoAdjustments` sliders. It is pure and unit-tested, and mirrors `renderVals()`.
 3. `PhotoLookView` draws the layers in the prototype's order: image, filtered image, overlays, stamps, then Light and Contrast over everything.
 4. `LookShaders` is the only caller of `ShaderLibrary`; `RetroLook.metal` implements the CSS filter and blend maths on gamma-encoded sRGB.
@@ -157,8 +157,9 @@ A camera's look is drawn in four stages, each mirroring a part of the prototype'
 Those four stages are the screen. Pictures that leave the app are drawn a second time, by different code that must give the same result:
 
 - `LookRenderer` draws the look with Core Image for everything `PhotoExporter` bakes: photos saved to Photos, shared or printed, collages, and every frame of a clip.
-- `RetroLook.metal` therefore enters each of its functions twice: as a SwiftUI colour effect (`rsFilterChain`, `rsColor`, `rsOverlays`, `rsAdjust`) and as a Core Image kernel (`rsFilterChainKernel`, `rsColorKernel`, `rsOverlaysKernel`, `rsAdjustKernel`). The colour table is the one layer drawn by different code on each side: `rsColorCube` samples it as a texture on screen, `CIColorCube` interpolates it in the bake; `BakeVersusScreenTests` and `tools/screen_vs_bake.py` hold the two together.
-- `LookUniforms` turns a `LookRenderModel` into the numbers both entries take.
+- `RetroLook.metal` therefore enters each of its functions twice: as a SwiftUI colour effect (`rsFilterChain`, `rsColor`, `rsColorCube`, `rsOverlays`, `rsHalationGlow`, `rsSoftMask`, `rsAdjust`) and as a Core Image kernel (`rsFilterChainKernel`, `rsColorKernel`, `rsOverlaysKernel`, `rsHalationGlowKernel`, `rsSoftMaskKernel`, `rsAdjustKernel`). The colour table is the one layer drawn by different code on each side: `rsColorCube` samples it as a texture on screen, `CIColorCube` interpolates it in the bake; `BakeVersusScreenTests` and `tools/screen_vs_bake.py` hold the two together.
+- `LookUniforms` turns a `LookRenderModel` into the numbers both entries take, built once per drawing, and decides the colour pass under the table (`colorPass`); each side checks for itself that the table loads.
+- `BakeArtwork` draws a baked file's stamp and frame artwork with the screen's own views (`PhotoStampView`, `LookFrameView`), for `PhotoExporter` and the calibration tests alike.
 - `BakeLayout` sizes a baked file so that grain, scanlines and stamps, which are measured in points, come out as they look on the design's 390pt-wide screen.
 
 A change to a function's signature in `RetroLook.metal` needs the matching change in `LookShaders` and in `LookRenderer`. A change to the layers or their order needs it in `PhotoLookView` and in `LookRenderer.render`.
@@ -168,7 +169,8 @@ A change to a function's signature in `RetroLook.metal` needs the matching chang
 `DesignSystem/` ports the prototype's CSS rather than using system styling:
 
 - `DesignLayout` (the `designLayout` environment value) maps offsets measured on the design's 390×844 frame onto the real screen. Screens draw edge to edge with `.ignoresSafeArea()` and position content with `layout.top(y)` and `layout.bottom(y)`.
-- Tokens: `RSColor`, `RSTextStyle` applied with `.rsText(…)`, `RSSpacing`, `RSRadius`, `RSMotion`.
+- Tokens: `RSColor`, `RSTextStyle` applied with `.rsText(…)`, `RSRadius`, `RSMotion`. There is no spacing scale: positions are the design's measured offsets.
+- Frames: `DesignSystem/Look/Frames/` has one file per frame family, its geometry beside its `Canvas` artwork; `LookFrame` and `LookFrameView` dispatch to them. The stamps are `PhotoStampView.swift` (the dispatch, the date and tape stamps) and `DateBackStamps.swift` (the two date backs and their dot-matrix font).
 - Icons are `RSIcon`, the design's own SVG paths, not SF Symbols. The VT323 font is only for photo stamps.
 - `CSSLinearGradient`, `BalancedWrap` and `GlassContainer` / `.glass()` reproduce CSS `linear-gradient`, `text-wrap: pretty` and `backdrop-filter`.
 
@@ -183,7 +185,8 @@ The app target builds in Swift 5 mode with `SWIFT_DEFAULT_ACTOR_ISOLATION = Main
 ### Tests
 
 - Unit tests use Swift Testing: `@MainActor struct …Tests`, `@Test`, `#expect`.
-- `RetrosnapTests/Support` has `TestWorld` (a fully mocked app for view-model tests), `ManualScheduler` (virtual time, moved with `advance(by:)`) and the spies. A mock answers at once; a spy such as `CameraSpy` holds the completion until the test calls `deliver`, `fail` or `comeBack`, which is how the time while a capture is under way gets tested.
+- `RetrosnapTests/Support` has `TestWorld` (a fully mocked app for view-model tests), `ManualScheduler` (virtual time, moved with `advance(by:)`) and the spies. A mock answers at once; a spy such as `CameraSpy` holds the completion until the test calls `deliver`, `fail` or `comeBack`, which is how the time while a capture is under way gets tested. `TestWorld` also has a `dayLabeler` and `makeSaver(access:)`; `Support/Fixtures.swift` has `Photo.fixture`, `PhotoLocation.kathmandu` and `PhotoLibraryFolder.temporary(for:)`.
+- The camera view model's tests are `CameraViewModelTests` with nested suites (`Zoom`, `Shutter`, `Session`, `Video`, `Notices`) that share `CameraViewModelSuite`; `-only-testing:RetrosnapTests/CameraViewModelTests` runs them all.
 - The unit tests run on the app target's debug-only mocks, `SeedData` and `FixedClock.design`, and assert on what those contain (photo ids `s1` to `s13`, the day title "October 4"). So the tests build only in the Debug configuration, and a change to the seed data changes test expectations.
 - UI tests are XCTest and find elements by accessibility label and visible text. Changing copy or a VoiceOver label can break them, and the same strings are asserted in the view-model unit tests.
 - The UI tests run the import flow on the mock importer; the real picker was checked by hand in the simulator (`-rsLive 1`, with media added through `xcrun simctl addmedia`).

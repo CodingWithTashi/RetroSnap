@@ -5,12 +5,10 @@ import Testing
 
 @MainActor
 final class PhotoLibraryFolderTests {
-    private let folder = PhotoLibraryFolder(
-        url: FileManager.default.temporaryDirectory.appendingPathComponent("PhotoLibraryFolderTests-\(UUID().uuidString)")
-    )
+    private let folder = PhotoLibraryFolder.temporary(for: "PhotoLibraryFolderTests")
 
     deinit {
-        try? FileManager.default.removeItem(at: folder.url)
+        folder.removeFromDisk()
     }
 
     private func contents() -> [String] {

@@ -126,6 +126,8 @@ struct SettingsViewModelTests {
         let storage = StorageSpy()
         storage.usedText = "356 MB"
         let vm = make(storage: storage)
+        #expect(storage.refreshCount == 0)
+        vm.appeared()
         #expect(storage.refreshCount == 1)
         let rows = vm.groups.flatMap { $0 }
         #expect(rows.first { $0.label == "Storage" }?.kind == .value("356 MB"))

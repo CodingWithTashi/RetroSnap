@@ -25,6 +25,12 @@ final class OnboardingViewModel {
         self.settings = settings
     }
 
+    /// "Thirteen looks. One tap to switch.": the count follows the lineup.
+    /// The first step's detail, counting the lineup in digits so it keeps to the card's one line as cameras are added.
+    var chooseCameraDetail: String {
+        "\(CameraStyle.allCases.count) looks. One tap to switch."
+    }
+
     private var step: OnboardingStep? {
         if case .onboarding(let step) = router.root { step } else { nil }
     }

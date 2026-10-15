@@ -44,10 +44,12 @@ nonisolated final class LookRenderer: @unchecked Sendable {
         )
     }
 
+    // MARK: The look
+
     /// The photo with its look: the looked picture at the effect strength over the plain one, the
     /// tint/flash/fade/bleed/scanline/vignette/warmth/grain layers, the stamp, then Light and Contrast.
     /// The looked picture is the plain one through the lens (soft corners), the film's halation, the camera's
-    /// blur, and then its colour: the fitted colour stage, or the design's filter chain.
+    /// blur, and then its colour: the camera's table, else its fitted colour stage, else the design's filter chain.
     /// - Parameters:
     ///   - photo: The picture upright, with its bottom-left corner at zero.
     ///   - scale: Pixels per point.
@@ -75,18 +77,21 @@ nonisolated final class LookRenderer: @unchecked Sendable {
             if model.blurRadius > 0 {
                 filtered = Self.blurred(filtered, sigma: model.blurRadius * scale)
             }
-            if let name = model.colorCube, let table = ColorCubes.cubeData(named: name) {
+            if let name = uniforms.colorCube, let table = ColorCubes.cubeData(named: name) {
                 let cube = CIFilter.colorCubeWithColorSpace()
                 cube.inputImage = filtered
                 cube.cubeDimension = Float(table.size)
                 cube.cubeData = table.data
                 cube.colorSpace = colorSpace
                 filtered = cube.outputImage?.cropped(to: extent) ?? filtered
-            } else if let stage = uniforms.colorStage {
-                filtered = colorStage.apply(extent: extent, arguments: [filtered] + stage.map(Self.vector)) ?? filtered
             } else {
-                let operations = uniforms.operations.map { CIVector(x: $0.kind, y: $0.amount) }
-                filtered = filterChain.apply(extent: extent, arguments: [filtered] + operations) ?? filtered
+                switch uniforms.colorPass {
+                case .stage(let stage):
+                    filtered = colorStage.apply(extent: extent, arguments: [filtered] + stage.map(Self.vector)) ?? filtered
+                case .chain(let operations):
+                    let steps = operations.map { CIVector(x: $0.kind, y: $0.amount) }
+                    filtered = filterChain.apply(extent: extent, arguments: [filtered] + steps) ?? filtered
+                }
             }
             image = model.lookOpacity < 1 ? Self.blend(filtered, over: photo, opacity: model.lookOpacity) : filtered
         }
@@ -97,7 +102,7 @@ nonisolated final class LookRenderer: @unchecked Sendable {
             scale,
             Self.vector(uniforms.tint),
             Self.vector(uniforms.warm),
-            CIVector(x: uniforms.flash, y: uniforms.fade, z: uniforms.chroma, w: uniforms.scan),
+            Self.vector(uniforms.effects),
             CIVector(x: uniforms.vignette, y: uniforms.grain),
             Self.vector(uniforms.filmGrain),
         ]) ?? image
@@ -110,6 +115,8 @@ nonisolated final class LookRenderer: @unchecked Sendable {
         }
         return image
     }
+
+    // MARK: The saved picture
 
     /// The whole picture as it is saved: the part of the original the layout uses, with its look, on paper
     /// wherever the layout leaves a margin (the Instant print's frame, a film's strip, a print's border), and
@@ -135,6 +142,8 @@ nonisolated final class LookRenderer: @unchecked Sendable {
         }
         return picture.cropped(to: canvas)
     }
+
+    // MARK: Compositing
 
     private static func blurred(_ image: CIImage, sigma: CGFloat) -> CIImage {
         image.clampedToExtent().applyingGaussianBlur(sigma: sigma).cropped(to: image.extent)
@@ -164,19 +173,13 @@ nonisolated final class LookRenderer: @unchecked Sendable {
         return filter.outputImage?.cropped(to: bottom.extent) ?? bottom
     }
 
+    // MARK: Arguments
+
     private static func vector(_ color: LookUniforms.Color) -> CIVector {
         CIVector(x: color.red, y: color.green, z: color.blue, w: color.opacity)
     }
 
     private static func vector(_ vector: LookUniforms.Vector) -> CIVector {
         CIVector(x: vector.x, y: vector.y, z: vector.z, w: vector.w)
-    }
-}
-
-extension CIColor {
-    /// An sRGB colour from a `0xRRGGBB` literal, as written in the design files.
-    nonisolated convenience init(hex: UInt32) {
-        let rgb = rgbComponents(hex: hex)
-        self.init(red: rgb.red, green: rgb.green, blue: rgb.blue)
     }
 }

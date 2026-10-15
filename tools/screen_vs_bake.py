@@ -14,11 +14,7 @@ from PIL import Image
 
 sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from colour import delta_e2000, srgb_to_lab  # noqa: E402
-
-
-def box(a, n=4):
-    h, w = a.shape[0] // n, a.shape[1] // n
-    return a[: h * n, : w * n].reshape(h, n, w, n, 3).mean(axis=(1, 3))
+from images import box  # noqa: E402
 
 
 def main(cam, shot, pairs="ref/pairs", points=(390.0, 844.0), safe_top=47.0):

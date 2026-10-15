@@ -12,22 +12,20 @@ struct RootView: View {
                 RSColor.ink.ignoresSafeArea()
                 switch app.router.root {
                 case .onboarding(let step):
-                    OnboardingView(step: step, viewModel: app.onboarding, stamp: app.dayLabeler.stamp(for: app.services.clock.now))
+                    OnboardingView(step: step, viewModel: app.onboarding, stamp: currentStamp)
                 case .camera:
                     NavigationStack(path: $router.path) {
                         // The viewfinder's stamp shows the time, so it is redrawn as the minute turns.
                         TimelineView(.everyMinute) { _ in
                             CameraView(
-                                viewModel: app.cameraViewModel, stamp: app.dayLabeler.stamp(for: app.services.clock.now),
+                                viewModel: app.cameraViewModel, stamp: currentStamp,
                                 shotFrames: app.services.shotPreview
                             )
                         }
-                            .background(PopGestureDisabler())
-                            .toolbar(.hidden, for: .navigationBar)
+                            .stackScreenChrome()
                             .navigationDestination(for: Route.self) { route in
                                 destination(route)
-                                    .background(PopGestureDisabler())
-                                    .toolbar(.hidden, for: .navigationBar)
+                                    .stackScreenChrome()
                             }
                     }
                     .transition(.opacity)
@@ -45,6 +43,10 @@ struct RootView: View {
         .environment(\.liveFrames, app.services.viewfinder)
         .preferredColorScheme(.dark)
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+    }
+
+    private var currentStamp: PhotoStampText {
+        app.dayLabeler.stamp(for: app.services.clock.now)
     }
 
     @ViewBuilder
@@ -67,16 +69,13 @@ struct RootView: View {
         case .develop(let draft):
             DevelopView(viewModel: app.makeDevelopViewModel(draft: draft))
         case .cameraCarousel:
-            CameraCarouselView(
-                viewModel: app.cameraViewModel, stamp: app.dayLabeler.stamp(for: app.services.clock.now),
-                onClose: app.router.returnToCamera
-            )
+            CameraCarouselView(viewModel: app.cameraViewModel, stamp: currentStamp)
         }
     }
 }
 
 /// Draws the current toast under the status bar, above every screen.
-struct ToastHost: View {
+private struct ToastHost: View {
     let toasts: ToastCenter
     @Environment(\.designLayout) private var layout
 
@@ -92,5 +91,12 @@ struct ToastHost: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .ignoresSafeArea()
         .animation(RSMotion.toast, value: toasts.current)
+    }
+}
+
+private extension View {
+    /// What every screen on the stack has: no swipe-back, no navigation bar (each screen draws its own header).
+    func stackScreenChrome() -> some View {
+        background(PopGestureDisabler()).toolbar(.hidden, for: .navigationBar)
     }
 }

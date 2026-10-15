@@ -104,7 +104,7 @@ final class LiveCameraService: CameraServicing {
         shotFeed.show(feed.frame)
         let id = UUID().uuidString
         let capturedAt = clock.now
-        let angle = rotation?.videoRotationAngleForHorizonLevelCapture ?? Self.portraitAngle
+        let angle = captureAngle
         Task { [session, folder, loader] in
             do {
                 let captured = try await session.capturePhoto(flash: shot.flash, rotationAngle: angle)
@@ -125,7 +125,7 @@ final class LiveCameraService: CameraServicing {
 
     func startRecording(_ shot: Shot) {
         recording = (shot, UUID().uuidString, clock.now)
-        let angle = rotation?.videoRotationAngleForHorizonLevelCapture ?? Self.portraitAngle
+        let angle = captureAngle
         enqueue { [session] in
             do {
                 try await session.startRecording(rotationAngle: angle, light: shot.flash)
@@ -227,6 +227,10 @@ final class LiveCameraService: CameraServicing {
     private var previewAngle: CGFloat {
         guard let rotation, rotation.previewLayer != nil else { return Self.portraitAngle }
         return rotation.videoRotationAngleForHorizonLevelPreview
+    }
+
+    private var captureAngle: CGFloat {
+        rotation?.videoRotationAngleForHorizonLevelCapture ?? Self.portraitAngle
     }
 
     /// Keeps the viewfinder upright as the interface turns, and tells captures how the device is held.
